@@ -1,0 +1,15 @@
+﻿---
+BasedOnStyle: Google
+AlignArrayOfStructures: Right
+AlignConsecutiveAssignments:
+  Enabled: true
+AlignConsecutiveMacros:
+  Enabled: true
+AlignEscapedNewlines: LeftWithLastLine
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+BinPackArguments: false
+BinPackParameters: false
+ColumnLimit: 120
+DerivePointerAlignment: false
+IndentWidth: 4
