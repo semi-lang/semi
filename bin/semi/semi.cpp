@@ -97,7 +97,7 @@ const char* getInstructionType(Opcode opcode) {
 }
 
 void printInstruction(Instruction instruction, PCLocation pc) {
-    Opcode opcode          = (Opcode)get_opcode(instruction);
+    Opcode opcode          = (Opcode)GET_OPCODE(instruction);
     const char* opcodeName = (opcode < sizeof(opcodeNames) / sizeof(opcodeNames[0])) ? opcodeNames[opcode] : "UNKNOWN";
     const char* type       = getInstructionType(opcode);
 

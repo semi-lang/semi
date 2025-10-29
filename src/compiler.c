@@ -3109,7 +3109,7 @@ static void parseDefer(Compiler* compiler) {
         // TODO: Spill with OP_EXTRA_ARG
         SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_TOO_MANY_CONSTANTS, "Too many constants in a module");
     }
-    emitCode(compiler, INSTRUCTION_DEFER_FUNCTION(0, (uint16_t)fnIndex, false, false));
+    emitCode(compiler, INSTRUCTION_DEFER_CALL(0, (uint16_t)fnIndex, false, false));
 }
 
 static void parseBlock(Compiler* compiler) {

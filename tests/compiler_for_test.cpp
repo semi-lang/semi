@@ -390,7 +390,7 @@ TEST_F(CompilerForTest, ForLoopWithBreakAndContinue) {
 
     for (size_t i = 0; i < GetCodeSize(); i++) {
         Instruction instr = GetInstruction(i);
-        if (get_opcode(instr) == OP_JUMP) {
+        if (GET_OPCODE(instr) == OP_JUMP) {
             JInstruction jumpInstr = decodeJInstruction(instr);
             // Continue jumps should be backward (s=false) and break jumps should be forward (s=true)
             if (!jumpInstr.signFlag) {
@@ -418,7 +418,7 @@ TEST_F(CompilerForTest, NestedForLoopsWithBreakAndContinue) {
     size_t jumpCount = 0;
     for (size_t i = 0; i < GetCodeSize(); i++) {
         Instruction instr = GetInstruction(i);
-        if (get_opcode(instr) == OP_JUMP) {
+        if (GET_OPCODE(instr) == OP_JUMP) {
             jumpCount++;
         }
     }

@@ -325,7 +325,7 @@ static JInstruction makeJInstruction(uint8_t opcode, uint32_t jumpOffset, bool s
 
 // Helper functions to extract instruction fields into semantic structures
 static TInstruction decodeTInstruction(Instruction instr) {
-    return (TInstruction){.opcode     = (uint8_t)get_opcode(instr),
+    return (TInstruction){.opcode     = (uint8_t)GET_OPCODE(instr),
                           .destReg    = OPERAND_T_A(instr),
                           .srcReg1    = OPERAND_T_B(instr),
                           .srcReg2    = OPERAND_T_C(instr),
@@ -334,7 +334,7 @@ static TInstruction decodeTInstruction(Instruction instr) {
 }
 
 static KInstruction decodeKInstruction(Instruction instr) {
-    return (KInstruction){.opcode     = (uint8_t)get_opcode(instr),
+    return (KInstruction){.opcode     = (uint8_t)GET_OPCODE(instr),
                           .destReg    = OPERAND_K_A(instr),
                           .constant   = OPERAND_K_K(instr),
                           .inlineFlag = OPERAND_K_I(instr),
@@ -343,7 +343,7 @@ static KInstruction decodeKInstruction(Instruction instr) {
 
 static JInstruction decodeJInstruction(Instruction instr) {
     return (JInstruction){
-        .opcode = (uint8_t)get_opcode(instr), .jumpOffset = OPERAND_J_J(instr), .signFlag = OPERAND_J_S(instr)};
+        .opcode = (uint8_t)GET_OPCODE(instr), .jumpOffset = OPERAND_J_J(instr), .signFlag = OPERAND_J_S(instr)};
 }
 
 // Helper functions to create instructions from semantic structures

@@ -433,7 +433,7 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
         }
         instruction = code[pc];
 
-        switch (get_opcode(instruction)) {
+        switch (GET_OPCODE(instruction)) {
             /* Null Instructions --------------------------------------------------- */
             case OP_NOOP:
                 break;
@@ -615,7 +615,7 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                 targetDict->values[k] = stack[a];
                 break;
             }
-            case OP_DEFER_FUNCTION: {
+            case OP_DEFER_CALL: {
                 // TODO: Implement defer functionality and remove early return.
                 vm->error = SEMI_ERROR_UNIMPLEMENTED_FEATURE;
                 return vm->error;

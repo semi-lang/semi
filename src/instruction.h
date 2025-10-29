@@ -38,7 +38,7 @@ typedef uint32_t Instruction;
 #define MAX_OPERAND_K ((Instruction)(UINT16_MAX))
 #define MAX_OPERAND_J ((Instruction)(1 << (24)) - 1)
 
-#define get_opcode(instruction) (instruction & OPCODE_MASK)  // Bits 0-5
+#define GET_OPCODE(instruction) (instruction & OPCODE_MASK)  // Bits 0-5
 
 // T-type instructions
 #define MAKE_INSTRUCTION_T(name)                                                                      \
@@ -104,7 +104,7 @@ typedef enum {
                               //            Mod is the module of the current frame
     OP_SET_MODULE_VAR,        // |   K   |  s ? (Mod.exports[K] := R[A]) : (Mod.globals[K] := R[A])
                               //            Mod is the module of the current frame
-    OP_DEFER_FUNCTION,        // |   K   |  push Mod.constants[K] to the defer stack
+    OP_DEFER_CALL,            // |   K   |  push Mod.constants[K] to the defer stack
                               //            Mod is the module of the current frame
 
     OP_MOVE,                  // |   T   |  R[A] := R[B], if C != 0, pc += (kc ? C : -C)
@@ -156,7 +156,7 @@ typedef enum {
 
 // Instruction creation macros: 10 opcodes per macro call
 MAKE_INSTRUCTION_MACRO_K(LOAD_CONSTANT, LOAD_BOOL, LOAD_INLINE_INTEGER, LOAD_INLINE_STRING, TRAP, C_JUMP)
-MAKE_INSTRUCTION_MACRO_K(GET_MODULE_VAR, SET_MODULE_VAR, DEFER_FUNCTION)
+MAKE_INSTRUCTION_MACRO_K(GET_MODULE_VAR, SET_MODULE_VAR, DEFER_CALL)
 MAKE_INSTRUCTION_MACRO_T(MAKE_RANGE)
 MAKE_INSTRUCTION_MACRO_T(ADD, SUBTRACT, MULTIPLY, DIVIDE, FLOOR_DIVIDE, NEGATE, MODULO, POWER)
 MAKE_INSTRUCTION_MACRO_T(GT, GE, EQ, NEQ)

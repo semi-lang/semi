@@ -128,17 +128,17 @@ TEST_F(ExprParserBooleanLedTest, VariableAndConstant) {
 
         // First instruction should be MOVE
         Instruction instr0 = GetInstruction(0);
-        ASSERT_EQ(get_opcode(instr0), OP_MOVE) << test_case.description << " - first instruction should be MOVE";
+        ASSERT_EQ(GET_OPCODE(instr0), OP_MOVE) << test_case.description << " - first instruction should be MOVE";
 
         // Second instruction should be C_JUMP
         Instruction instr1 = GetInstruction(1);
-        ASSERT_EQ(get_opcode(instr1), OP_C_JUMP) << test_case.description << " - second instruction should be C_JUMP";
+        ASSERT_EQ(GET_OPCODE(instr1), OP_C_JUMP) << test_case.description << " - second instruction should be C_JUMP";
         // Note: C_JUMP checks the result register, not the original variable register
 
         // Third instruction should load the constant
         Instruction instr2 = GetInstruction(2);
-        bool is_load_bool  = get_opcode(instr2) == OP_LOAD_BOOL;
-        bool is_load_int   = get_opcode(instr2) == OP_LOAD_INLINE_INTEGER;
+        bool is_load_bool  = GET_OPCODE(instr2) == OP_LOAD_BOOL;
+        bool is_load_int   = GET_OPCODE(instr2) == OP_LOAD_INLINE_INTEGER;
         ASSERT_TRUE(is_load_bool || is_load_int) << test_case.description << " - third instruction should be load";
     }
 }
@@ -169,15 +169,15 @@ TEST_F(ExprParserBooleanLedTest, VariableAndVariable) {
 
         // First instruction should be MOVE
         Instruction instr0 = GetInstruction(0);
-        ASSERT_EQ(get_opcode(instr0), OP_MOVE) << test_case.description << " - first instruction should be MOVE";
+        ASSERT_EQ(GET_OPCODE(instr0), OP_MOVE) << test_case.description << " - first instruction should be MOVE";
 
         // Second instruction should be C_JUMP
         Instruction instr1 = GetInstruction(1);
-        ASSERT_EQ(get_opcode(instr1), OP_C_JUMP) << test_case.description << " - second instruction should be C_JUMP";
+        ASSERT_EQ(GET_OPCODE(instr1), OP_C_JUMP) << test_case.description << " - second instruction should be C_JUMP";
 
         // Third instruction should be MOVE
         Instruction instr2 = GetInstruction(2);
-        ASSERT_EQ(get_opcode(instr2), OP_MOVE) << test_case.description << " - third instruction should be MOVE";
+        ASSERT_EQ(GET_OPCODE(instr2), OP_MOVE) << test_case.description << " - third instruction should be MOVE";
     }
 }
 
@@ -210,7 +210,7 @@ TEST_F(ExprParserBooleanLedTest, ExpressionAndExpression) {
         bool found_c_jump = false;
         for (size_t i = 0; i < GetCodeSize(); i++) {
             Instruction instr = GetInstruction(i);
-            if (get_opcode(instr) == OP_C_JUMP) {
+            if (GET_OPCODE(instr) == OP_C_JUMP) {
                 found_c_jump = true;
                 break;
             }
@@ -250,7 +250,7 @@ TEST_F(ExprParserBooleanLedTest, BooleanWithAssignment) {
 
         // Should generate appropriate load instruction
         Instruction instr = GetInstruction(0);
-        ASSERT_EQ(get_opcode(instr), test_case.expected_opcode)
+        ASSERT_EQ(GET_OPCODE(instr), test_case.expected_opcode)
             << test_case.description << " - should be correct opcode";
         ASSERT_EQ(OPERAND_K_A(instr), var->registerId)
             << test_case.description << " - should load into variable's register";

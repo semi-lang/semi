@@ -409,7 +409,7 @@ TEST_F(CompilerIfTest, JumpInstructionVerification) {
     bool foundCJump = false;
     for (size_t i = 0; i < GetCodeSize(); i++) {
         Instruction inst = GetInstruction(i);
-        if (get_opcode(inst) == OP_C_JUMP) {
+        if (GET_OPCODE(inst) == OP_C_JUMP) {
             foundCJump = true;
             break;
         }
@@ -428,7 +428,7 @@ TEST_F(CompilerIfTest, CloseUpvaluesInstruction) {
 
     // The last instruction should be CLOSE_UPVALUES
     Instruction lastInst = GetInstruction(GetCodeSize() - 1);
-    EXPECT_EQ(get_opcode(lastInst), OP_CLOSE_UPVALUES) << "Last instruction should be CLOSE_UPVALUES";
+    EXPECT_EQ(GET_OPCODE(lastInst), OP_CLOSE_UPVALUES) << "Last instruction should be CLOSE_UPVALUES";
 }
 
 // Complex Nested Cases

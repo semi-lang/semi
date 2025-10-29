@@ -30,7 +30,7 @@ TEST_F(InstructionTest, OpcodeExtraction) {
     };
 
     for (const auto& test_case : test_cases) {
-        ASSERT_EQ(get_opcode(test_case.input), test_case.expected_opcode) << test_case.description;
+        ASSERT_EQ(GET_OPCODE(test_case.input), test_case.expected_opcode) << test_case.description;
     }
 }
 
@@ -47,7 +47,7 @@ TEST_F(InstructionTest, InstructionTypeBoundaryAndMinimumValues) {
 
     for (const auto& test_case : t_test_cases) {
         Instruction instr = INSTRUCTION_ADD(test_case.A, test_case.B, test_case.C, test_case.kb, test_case.kc);
-        ASSERT_EQ(get_opcode(instr), test_case.opcode) << test_case.description;
+        ASSERT_EQ(GET_OPCODE(instr), test_case.opcode) << test_case.description;
         ASSERT_EQ(OPERAND_T_A(instr), test_case.A) << test_case.description;
         ASSERT_EQ(OPERAND_T_B(instr), test_case.B) << test_case.description;
         ASSERT_EQ(OPERAND_T_C(instr), test_case.C) << test_case.description;
@@ -67,7 +67,7 @@ TEST_F(InstructionTest, InstructionTypeBoundaryAndMinimumValues) {
 
     for (const auto& test_case : k_test_cases) {
         Instruction instr = INSTRUCTION_TRAP(test_case.A, test_case.K, test_case.i, test_case.s);
-        ASSERT_EQ(get_opcode(instr), test_case.opcode) << test_case.description;
+        ASSERT_EQ(GET_OPCODE(instr), test_case.opcode) << test_case.description;
         ASSERT_EQ(OPERAND_K_A(instr), test_case.A) << test_case.description;
         ASSERT_EQ(OPERAND_K_K(instr), test_case.K) << test_case.description;
         ASSERT_EQ(OPERAND_K_I(instr), test_case.i) << test_case.description;
@@ -86,7 +86,7 @@ TEST_F(InstructionTest, InstructionTypeBoundaryAndMinimumValues) {
 
     for (const auto& test_case : j_test_cases) {
         Instruction instr = INSTRUCTION_JUMP(test_case.J, test_case.s);
-        ASSERT_EQ(get_opcode(instr), test_case.opcode) << test_case.description;
+        ASSERT_EQ(GET_OPCODE(instr), test_case.opcode) << test_case.description;
         ASSERT_EQ(OPERAND_J_J(instr), test_case.J) << test_case.description;
         ASSERT_EQ(OPERAND_J_S(instr), test_case.s) << test_case.description;
     }
@@ -110,7 +110,7 @@ TEST_F(InstructionTest, TTypeInstructionCreation) {
 
     for (const auto& test_case : test_cases) {
         Instruction instr = INSTRUCTION_ADD(test_case.A, test_case.B, test_case.C, test_case.kb, test_case.kc);
-        ASSERT_EQ(get_opcode(instr), test_case.opcode) << test_case.description;
+        ASSERT_EQ(GET_OPCODE(instr), test_case.opcode) << test_case.description;
         ASSERT_EQ(OPERAND_T_A(instr), test_case.A) << test_case.description;
         ASSERT_EQ(OPERAND_T_B(instr), test_case.B) << test_case.description;
         ASSERT_EQ(OPERAND_T_C(instr), test_case.C) << test_case.description;
@@ -138,7 +138,7 @@ TEST_F(InstructionTest, KTypeInstructionCreation) {
     for (const auto& test_case : test_cases) {
         Instruction instr = INSTRUCTION_TRAP(test_case.A, test_case.K, test_case.i, test_case.s);
 
-        ASSERT_EQ(get_opcode(instr), test_case.opcode) << test_case.description;
+        ASSERT_EQ(GET_OPCODE(instr), test_case.opcode) << test_case.description;
         ASSERT_EQ(OPERAND_K_A(instr), test_case.A) << test_case.description;
         ASSERT_EQ(OPERAND_K_K(instr), test_case.K) << test_case.description;
         ASSERT_EQ(OPERAND_K_I(instr), test_case.i) << test_case.description;
@@ -165,7 +165,7 @@ TEST_F(InstructionTest, JTypeInstructionCreation) {
     for (const auto& test_case : test_cases) {
         Instruction instr = INSTRUCTION_JUMP(test_case.J, test_case.s);
 
-        ASSERT_EQ(get_opcode(instr), test_case.opcode) << test_case.description;
+        ASSERT_EQ(GET_OPCODE(instr), test_case.opcode) << test_case.description;
         ASSERT_EQ(OPERAND_J_J(instr), test_case.J) << test_case.description;
         ASSERT_EQ(OPERAND_J_S(instr), test_case.s) << test_case.description;
     }

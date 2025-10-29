@@ -22,14 +22,14 @@ TEST_F(CompilerModuleAssignmentTest, ModuleIntegerAssignment) {
 
     // First instruction: Load value into register
     Instruction instr1 = GetInstruction(0);
-    ASSERT_EQ(get_opcode(instr1), OP_LOAD_INLINE_INTEGER) << "First instruction should be LOAD_INLINE_INTEGER";
+    ASSERT_EQ(GET_OPCODE(instr1), OP_LOAD_INLINE_INTEGER) << "First instruction should be LOAD_INLINE_INTEGER";
     ASSERT_EQ(OPERAND_K_K(instr1), 42) << "Should load constant 42";
     ASSERT_TRUE(OPERAND_K_I(instr1)) << "Should be inline constant";
     ASSERT_TRUE(OPERAND_K_S(instr1)) << "Should be positive";
 
     // Second instruction: Store register to module variable
     Instruction instr2 = GetInstruction(1);
-    ASSERT_EQ(get_opcode(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
+    ASSERT_EQ(GET_OPCODE(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
     ASSERT_EQ(OPERAND_K_K(instr2), moduleVarId) << "Should use correct module variable ID";
     ASSERT_FALSE(OPERAND_K_S(instr2)) << "Should target globals, not exports";
 }
@@ -47,7 +47,7 @@ TEST_F(CompilerModuleAssignmentTest, ModuleDoubleAssignment) {
 
     // First instruction: Load value into register
     Instruction instr1 = GetInstruction(0);
-    ASSERT_EQ(get_opcode(instr1), OP_LOAD_CONSTANT) << "First instruction should be LOAD_CONSTANT";
+    ASSERT_EQ(GET_OPCODE(instr1), OP_LOAD_CONSTANT) << "First instruction should be LOAD_CONSTANT";
     ASSERT_FALSE(OPERAND_K_I(instr1)) << "Floats always use constant table";
 
     // The value should be stored in the constant table
@@ -59,7 +59,7 @@ TEST_F(CompilerModuleAssignmentTest, ModuleDoubleAssignment) {
 
     // Second instruction: Store register to module variable
     Instruction instr2 = GetInstruction(1);
-    ASSERT_EQ(get_opcode(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
+    ASSERT_EQ(GET_OPCODE(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
     ASSERT_EQ(OPERAND_K_K(instr2), moduleVarId) << "Should use correct module variable ID";
     ASSERT_FALSE(OPERAND_K_S(instr2)) << "Should target globals, not exports";
 }
@@ -77,13 +77,13 @@ TEST_F(CompilerModuleAssignmentTest, ModuleBooleanAssignment) {
 
     // First instruction: Load value into register
     Instruction instr1 = GetInstruction(0);
-    ASSERT_EQ(get_opcode(instr1), OP_LOAD_BOOL) << "First instruction should be LOAD_BOOL";
+    ASSERT_EQ(GET_OPCODE(instr1), OP_LOAD_BOOL) << "First instruction should be LOAD_BOOL";
     ASSERT_EQ(OPERAND_K_I(instr1), 1) << "Should load true";
     ASSERT_FALSE(OPERAND_K_S(instr1)) << "Should not jump (K=0)";
 
     // Second instruction: Store register to module variable
     Instruction instr2 = GetInstruction(1);
-    ASSERT_EQ(get_opcode(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
+    ASSERT_EQ(GET_OPCODE(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
     ASSERT_EQ(OPERAND_K_K(instr2), moduleVarId) << "Should use correct module variable ID";
     ASSERT_FALSE(OPERAND_K_S(instr2)) << "Should target globals, not exports";
 }
@@ -101,7 +101,7 @@ TEST_F(CompilerModuleAssignmentTest, ModuleStringAssignment) {
 
     // First instruction: Load value into register
     Instruction instr1 = GetInstruction(0);
-    ASSERT_EQ(get_opcode(instr1), OP_LOAD_CONSTANT) << "First instruction should be LOAD_CONSTANT";
+    ASSERT_EQ(GET_OPCODE(instr1), OP_LOAD_CONSTANT) << "First instruction should be LOAD_CONSTANT";
 
     // The value should be stored in the constant table
     uint16_t constIdx = OPERAND_K_K(instr1);
@@ -115,7 +115,7 @@ TEST_F(CompilerModuleAssignmentTest, ModuleStringAssignment) {
 
     // Second instruction: Store register to module variable
     Instruction instr2 = GetInstruction(1);
-    ASSERT_EQ(get_opcode(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
+    ASSERT_EQ(GET_OPCODE(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
     ASSERT_EQ(OPERAND_K_K(instr2), moduleVarId) << "Should use correct module variable ID";
     ASSERT_FALSE(OPERAND_K_S(instr2)) << "Should target globals, not exports";
 }
@@ -133,14 +133,14 @@ TEST_F(CompilerModuleAssignmentTest, ModuleExpressionAssignment) {
 
     // First instruction: Load value into register
     Instruction instr1 = GetInstruction(0);
-    ASSERT_EQ(get_opcode(instr1), OP_LOAD_INLINE_INTEGER) << "First instruction should be LOAD_INLINE_INTEGER";
+    ASSERT_EQ(GET_OPCODE(instr1), OP_LOAD_INLINE_INTEGER) << "First instruction should be LOAD_INLINE_INTEGER";
     ASSERT_EQ(OPERAND_K_K(instr1), 15) << "Should load constant 15";
     ASSERT_TRUE(OPERAND_K_I(instr1)) << "Should be inline constant";
     ASSERT_TRUE(OPERAND_K_S(instr1)) << "Should be positive";
 
     // Second instruction: Store register to module variable
     Instruction instr2 = GetInstruction(1);
-    ASSERT_EQ(get_opcode(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
+    ASSERT_EQ(GET_OPCODE(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
     ASSERT_EQ(OPERAND_K_K(instr2), moduleVarId) << "Should use correct module variable ID";
     ASSERT_FALSE(OPERAND_K_S(instr2)) << "Should target globals, not exports";
 }
@@ -164,14 +164,14 @@ TEST_F(CompilerModuleAssignmentTest, ModuleVariableToModuleVariableAssignment) {
 
     // First instruction: Load x into register
     Instruction instr1 = GetInstruction(0);
-    ASSERT_EQ(get_opcode(instr1), OP_GET_MODULE_VAR) << "First instruction should be GET_MODULE_VAR";
+    ASSERT_EQ(GET_OPCODE(instr1), OP_GET_MODULE_VAR) << "First instruction should be GET_MODULE_VAR";
 
     ASSERT_EQ(OPERAND_K_K(instr1), moduleVarIdX) << "Should read from x's module variable ID";
     ASSERT_FALSE(OPERAND_K_S(instr1)) << "Should read from globals, not exports";
 
     // Second instruction: Store register to y's module variable
     Instruction instr2 = GetInstruction(1);
-    ASSERT_EQ(get_opcode(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
+    ASSERT_EQ(GET_OPCODE(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
 
     ASSERT_EQ(OPERAND_K_K(instr2), moduleVarIdY) << "Should write to y's module variable ID";
     ASSERT_FALSE(OPERAND_K_S(instr2)) << "Should write to globals, not exports";
@@ -192,12 +192,12 @@ TEST_F(CompilerModuleAssignmentTest, ModuleVariableReassignment) {
 
     // First instruction: Load value into register
     Instruction instr1 = GetInstruction(0);
-    ASSERT_EQ(get_opcode(instr1), OP_LOAD_INLINE_INTEGER) << "First instruction should be LOAD_INLINE_INTEGER";
+    ASSERT_EQ(GET_OPCODE(instr1), OP_LOAD_INLINE_INTEGER) << "First instruction should be LOAD_INLINE_INTEGER";
     ASSERT_EQ(OPERAND_K_K(instr1), 100) << "Should load 100";
 
     // Second instruction: Store register to module variable
     Instruction instr2 = GetInstruction(1);
-    ASSERT_EQ(get_opcode(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
+    ASSERT_EQ(GET_OPCODE(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
     ASSERT_EQ(OPERAND_K_K(instr2), moduleVarId) << "Should use same module variable ID";
     ASSERT_FALSE(OPERAND_K_S(instr2)) << "Should target globals, not exports";
 }
@@ -268,14 +268,14 @@ TEST_F(CompilerModuleAssignmentTest, ExportIntegerAssignment) {
 
     // First instruction: Load value into register
     Instruction instr1 = GetInstruction(0);
-    ASSERT_EQ(get_opcode(instr1), OP_LOAD_INLINE_INTEGER) << "First instruction should be LOAD_INLINE_INTEGER";
+    ASSERT_EQ(GET_OPCODE(instr1), OP_LOAD_INLINE_INTEGER) << "First instruction should be LOAD_INLINE_INTEGER";
     ASSERT_EQ(OPERAND_K_K(instr1), 42) << "Should load constant 42";
     ASSERT_TRUE(OPERAND_K_I(instr1)) << "Should be inline constant";
     ASSERT_TRUE(OPERAND_K_S(instr1)) << "Should be positive";
 
     // Second instruction: Store register to module variable
     Instruction instr2 = GetInstruction(1);
-    ASSERT_EQ(get_opcode(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
+    ASSERT_EQ(GET_OPCODE(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
     ASSERT_EQ(OPERAND_K_K(instr2), moduleVarId) << "Should use correct module variable ID";
     ASSERT_TRUE(OPERAND_K_S(instr2)) << "Should target exports, not globals";
 }
@@ -293,11 +293,11 @@ TEST_F(CompilerModuleAssignmentTest, ExportDoubleAssignment) {
 
     // First instruction: Load value into register
     Instruction instr1 = GetInstruction(0);
-    ASSERT_EQ(get_opcode(instr1), OP_LOAD_CONSTANT) << "First instruction should be LOAD_CONSTANT";
+    ASSERT_EQ(GET_OPCODE(instr1), OP_LOAD_CONSTANT) << "First instruction should be LOAD_CONSTANT";
 
     // Second instruction: Store register to module variable
     Instruction instr2 = GetInstruction(1);
-    ASSERT_EQ(get_opcode(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
+    ASSERT_EQ(GET_OPCODE(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
     ASSERT_EQ(OPERAND_K_K(instr2), moduleVarId) << "Should use correct module variable ID";
     ASSERT_TRUE(OPERAND_K_S(instr2)) << "Should target exports, not globals";
 }
@@ -315,11 +315,11 @@ TEST_F(CompilerModuleAssignmentTest, ExportBooleanAssignment) {
 
     // First instruction: Load value into register
     Instruction instr1 = GetInstruction(0);
-    ASSERT_EQ(get_opcode(instr1), OP_LOAD_BOOL) << "First instruction should be LOAD_BOOL";
+    ASSERT_EQ(GET_OPCODE(instr1), OP_LOAD_BOOL) << "First instruction should be LOAD_BOOL";
 
     // Second instruction: Store register to module variable
     Instruction instr2 = GetInstruction(1);
-    ASSERT_EQ(get_opcode(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
+    ASSERT_EQ(GET_OPCODE(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
     ASSERT_EQ(OPERAND_K_K(instr2), moduleVarId) << "Should use correct module variable ID";
     ASSERT_TRUE(OPERAND_K_S(instr2)) << "Should target exports, not globals";
 }
@@ -337,11 +337,11 @@ TEST_F(CompilerModuleAssignmentTest, ExportStringAssignment) {
 
     // First instruction: Load value into register
     Instruction instr1 = GetInstruction(0);
-    ASSERT_EQ(get_opcode(instr1), OP_LOAD_CONSTANT) << "First instruction should be LOAD_CONSTANT";
+    ASSERT_EQ(GET_OPCODE(instr1), OP_LOAD_CONSTANT) << "First instruction should be LOAD_CONSTANT";
 
     // Second instruction: Store register to module variable
     Instruction instr2 = GetInstruction(1);
-    ASSERT_EQ(get_opcode(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
+    ASSERT_EQ(GET_OPCODE(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
     ASSERT_EQ(OPERAND_K_K(instr2), moduleVarId) << "Should use correct module variable ID";
     ASSERT_TRUE(OPERAND_K_S(instr2)) << "Should target exports, not globals";
 }
@@ -359,12 +359,12 @@ TEST_F(CompilerModuleAssignmentTest, ExportExpressionAssignment) {
 
     // First instruction: Load value into register
     Instruction instr1 = GetInstruction(0);
-    ASSERT_EQ(get_opcode(instr1), OP_LOAD_INLINE_INTEGER) << "First instruction should be LOAD_INLINE_INTEGER";
+    ASSERT_EQ(GET_OPCODE(instr1), OP_LOAD_INLINE_INTEGER) << "First instruction should be LOAD_INLINE_INTEGER";
     ASSERT_EQ(OPERAND_K_K(instr1), 256) << "Should load constant 256";
 
     // Second instruction: Store register to module variable
     Instruction instr2 = GetInstruction(1);
-    ASSERT_EQ(get_opcode(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
+    ASSERT_EQ(GET_OPCODE(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
     ASSERT_EQ(OPERAND_K_K(instr2), moduleVarId) << "Should use correct module variable ID";
     ASSERT_TRUE(OPERAND_K_S(instr2)) << "Should target exports, not globals";
 }
@@ -389,13 +389,13 @@ TEST_F(CompilerModuleAssignmentTest, ExportVariableToExportVariableAssignment) {
 
     // First instruction: Load baseValue into register
     Instruction instr1 = GetInstruction(0);
-    ASSERT_EQ(get_opcode(instr1), OP_GET_MODULE_VAR) << "First instruction should be GET_MODULE_VAR";
+    ASSERT_EQ(GET_OPCODE(instr1), OP_GET_MODULE_VAR) << "First instruction should be GET_MODULE_VAR";
     ASSERT_EQ(OPERAND_K_K(instr1), moduleVarIdBase) << "Should read from baseValue's module variable ID";
     ASSERT_TRUE(OPERAND_K_S(instr1)) << "Should read from exports";
 
     // Second instruction: Store register to derivedValue's module variable
     Instruction instr2 = GetInstruction(1);
-    ASSERT_EQ(get_opcode(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
+    ASSERT_EQ(GET_OPCODE(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
     ASSERT_EQ(OPERAND_K_K(instr2), moduleVarIdDerived) << "Should write to derivedValue's module variable ID";
     ASSERT_TRUE(OPERAND_K_S(instr2)) << "Should write to exports";
 }
@@ -419,13 +419,13 @@ TEST_F(CompilerModuleAssignmentTest, GlobalVariableToExportVariableAssignment) {
 
     // First instruction: Load globalVar into register
     Instruction instr1 = GetInstruction(0);
-    ASSERT_EQ(get_opcode(instr1), OP_GET_MODULE_VAR) << "First instruction should be GET_MODULE_VAR";
+    ASSERT_EQ(GET_OPCODE(instr1), OP_GET_MODULE_VAR) << "First instruction should be GET_MODULE_VAR";
     ASSERT_EQ(OPERAND_K_K(instr1), moduleVarIdGlobal) << "Should read from globalVar's module variable ID";
     ASSERT_FALSE(OPERAND_K_S(instr1)) << "Should read from globals";
 
     // Second instruction: Store register to publicVar's module variable
     Instruction instr2 = GetInstruction(1);
-    ASSERT_EQ(get_opcode(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
+    ASSERT_EQ(GET_OPCODE(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
     ASSERT_EQ(OPERAND_K_K(instr2), moduleVarIdPublic) << "Should write to publicVar's module variable ID";
     ASSERT_TRUE(OPERAND_K_S(instr2)) << "Should write to exports";
 }
@@ -445,12 +445,12 @@ TEST_F(CompilerModuleAssignmentTest, ExportVariableReassignment) {
 
     // First instruction: Load value into register
     Instruction instr1 = GetInstruction(0);
-    ASSERT_EQ(get_opcode(instr1), OP_LOAD_INLINE_INTEGER) << "First instruction should be LOAD_INLINE_INTEGER";
+    ASSERT_EQ(GET_OPCODE(instr1), OP_LOAD_INLINE_INTEGER) << "First instruction should be LOAD_INLINE_INTEGER";
     ASSERT_EQ(OPERAND_K_K(instr1), 500) << "Should load 500";
 
     // Second instruction: Store register to module variable
     Instruction instr2 = GetInstruction(1);
-    ASSERT_EQ(get_opcode(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
+    ASSERT_EQ(GET_OPCODE(instr2), OP_SET_MODULE_VAR) << "Second instruction should be SET_MODULE_VAR";
     ASSERT_EQ(OPERAND_K_K(instr2), moduleVarId) << "Should use same module variable ID";
     ASSERT_TRUE(OPERAND_K_S(instr2)) << "Should target exports";
 }

@@ -23,7 +23,7 @@ TEST_F(CompilerGlobalVariableTest, GlobalVariableCorrectlyResolvedDuringCompilat
     ASSERT_EQ(GetCodeSize(), 1) << "Should generate exactly 1 instruction";
 
     Instruction instr = GetInstruction(0);
-    ASSERT_EQ(get_opcode(instr), OP_LOAD_CONSTANT) << "Should be LOAD_CONSTANT instruction";
+    ASSERT_EQ(GET_OPCODE(instr), OP_LOAD_CONSTANT) << "Should be LOAD_CONSTANT instruction";
     ASSERT_FALSE(OPERAND_K_I(instr)) << "Should not be inline constant";
     ASSERT_TRUE(OPERAND_K_S(instr)) << "Should have global flag set";
     ASSERT_EQ(OPERAND_K_K(instr), 0) << "Should reference global constant at index 0";
@@ -47,7 +47,7 @@ TEST_F(CompilerGlobalVariableTest, MultipleGlobalVariablesResolvedCorrectly) {
     ASSERT_EQ(GetCodeSize(), 1) << "Should generate exactly 1 instruction";
 
     Instruction instr = GetInstruction(0);
-    ASSERT_EQ(get_opcode(instr), OP_LOAD_CONSTANT) << "Should be LOAD_CONSTANT instruction";
+    ASSERT_EQ(GET_OPCODE(instr), OP_LOAD_CONSTANT) << "Should be LOAD_CONSTANT instruction";
     ASSERT_FALSE(OPERAND_K_I(instr)) << "Should not be inline constant";
     ASSERT_TRUE(OPERAND_K_S(instr)) << "Should have global flag set";
     ASSERT_EQ(OPERAND_K_K(instr), 1) << "Should reference global constant at index 1";
@@ -88,7 +88,7 @@ TEST_F(CompilerGlobalVariableTest, GlobalVariableGeneratesCorrectInstruction) {
     ASSERT_EQ(GetCodeSize(), 1) << "Should generate exactly 1 instruction";
 
     Instruction instr = GetInstruction(0);
-    ASSERT_EQ(get_opcode(instr), OP_LOAD_CONSTANT) << "Should be LOAD_CONSTANT instruction";
+    ASSERT_EQ(GET_OPCODE(instr), OP_LOAD_CONSTANT) << "Should be LOAD_CONSTANT instruction";
 
     uint8_t targetReg    = OPERAND_K_A(instr);
     uint16_t constantIdx = OPERAND_K_K(instr);
@@ -144,7 +144,7 @@ TEST_F(CompilerGlobalVariableTest, GlobalVariableAccessInComplexExpression) {
 
     // The first instruction should load the global variable
     Instruction firstInstr = GetInstruction(0);
-    ASSERT_EQ(get_opcode(firstInstr), OP_LOAD_CONSTANT) << "First instruction should be LOAD_CONSTANT";
+    ASSERT_EQ(GET_OPCODE(firstInstr), OP_LOAD_CONSTANT) << "First instruction should be LOAD_CONSTANT";
     ASSERT_TRUE(OPERAND_K_S(firstInstr)) << "Should have global flag set";
     ASSERT_EQ(OPERAND_K_K(firstInstr), 0) << "Should reference global constant at index 0";
 }
@@ -164,7 +164,7 @@ TEST_F(CompilerGlobalVariableTest, GlobalVariableInAssignmentExpression) {
     bool foundGlobalLoad = false;
     for (size_t i = 0; i < GetCodeSize(); i++) {
         Instruction instr = GetInstruction(i);
-        if (get_opcode(instr) == OP_LOAD_CONSTANT && OPERAND_K_S(instr)) {
+        if (GET_OPCODE(instr) == OP_LOAD_CONSTANT && OPERAND_K_S(instr)) {
             foundGlobalLoad = true;
             ASSERT_EQ(OPERAND_K_K(instr), 0) << "Should reference global constant at index 0";
             break;

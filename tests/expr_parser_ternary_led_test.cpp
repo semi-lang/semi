@@ -47,22 +47,22 @@ TEST_F(ExprParserTernaryLedTest, VariableConditionExpression) {
     ASSERT_EQ(GetCodeSize(), 4) << "Should generate 4 instructions";
 
     Instruction instr0 = GetInstruction(0);
-    ASSERT_EQ(get_opcode(instr0), OP_C_JUMP) << "First instruction should be C_JUMP";
+    ASSERT_EQ(GET_OPCODE(instr0), OP_C_JUMP) << "First instruction should be C_JUMP";
     ASSERT_FALSE(OPERAND_K_I(instr0)) << "Should jump if falsy (i=false)";
     ASSERT_TRUE(OPERAND_K_S(instr0)) << "Should be positive jump";
     ASSERT_EQ(OPERAND_K_K(instr0), 3) << "Should jump 3 instructions ahead to falsy branch";
 
     Instruction instr1 = GetInstruction(1);
-    ASSERT_EQ(get_opcode(instr1), OP_LOAD_INLINE_INTEGER) << "Second instruction should load truthy value";
+    ASSERT_EQ(GET_OPCODE(instr1), OP_LOAD_INLINE_INTEGER) << "Second instruction should load truthy value";
     ASSERT_EQ(OPERAND_K_K(instr1), 10) << "Should load value 10";
 
     Instruction instr2 = GetInstruction(2);
-    ASSERT_EQ(get_opcode(instr2), OP_JUMP) << "Third instruction should be unconditional JUMP";
+    ASSERT_EQ(GET_OPCODE(instr2), OP_JUMP) << "Third instruction should be unconditional JUMP";
     ASSERT_TRUE(OPERAND_J_S(instr2)) << "Should be positive jump";
     ASSERT_EQ(OPERAND_J_J(instr2), 2) << "Should jump 2 instructions ahead to end";
 
     Instruction instr3 = GetInstruction(3);
-    ASSERT_EQ(get_opcode(instr3), OP_LOAD_INLINE_INTEGER) << "Fourth instruction should load falsy value";
+    ASSERT_EQ(GET_OPCODE(instr3), OP_LOAD_INLINE_INTEGER) << "Fourth instruction should load falsy value";
     ASSERT_EQ(OPERAND_K_K(instr3), 20) << "Should load value 20";
 }
 
@@ -78,24 +78,24 @@ TEST_F(ExprParserTernaryLedTest, RegisterConditionExpression) {
     ASSERT_EQ(GetCodeSize(), 5) << "Should generate 5 instructions";
 
     Instruction instr0 = GetInstruction(0);
-    ASSERT_EQ(get_opcode(instr0), OP_ADD) << "First instruction should be ADD for (x + 1)";
+    ASSERT_EQ(GET_OPCODE(instr0), OP_ADD) << "First instruction should be ADD for (x + 1)";
 
     Instruction instr1 = GetInstruction(1);
-    ASSERT_EQ(get_opcode(instr1), OP_C_JUMP) << "Second instruction should be C_JUMP";
+    ASSERT_EQ(GET_OPCODE(instr1), OP_C_JUMP) << "Second instruction should be C_JUMP";
     ASSERT_FALSE(OPERAND_K_I(instr1)) << "Should jump if falsy (i=false)";
     ASSERT_TRUE(OPERAND_K_S(instr1)) << "Should be positive jump";
     ASSERT_EQ(OPERAND_K_K(instr1), 3) << "Should jump 3 instructions ahead to falsy branch";
 
     Instruction instr2 = GetInstruction(2);
-    ASSERT_EQ(get_opcode(instr2), OP_LOAD_INLINE_INTEGER) << "Third instruction should load truthy value";
+    ASSERT_EQ(GET_OPCODE(instr2), OP_LOAD_INLINE_INTEGER) << "Third instruction should load truthy value";
     ASSERT_EQ(OPERAND_K_K(instr2), 2) << "Should load value 2";
 
     Instruction instr3 = GetInstruction(3);
-    ASSERT_EQ(get_opcode(instr3), OP_JUMP) << "Fourth instruction should be unconditional JUMP";
+    ASSERT_EQ(GET_OPCODE(instr3), OP_JUMP) << "Fourth instruction should be unconditional JUMP";
     ASSERT_TRUE(OPERAND_J_S(instr3)) << "Should be positive jump";
     ASSERT_EQ(OPERAND_J_J(instr3), 2) << "Should jump 2 instructions ahead to end";
 
     Instruction instr4 = GetInstruction(4);
-    ASSERT_EQ(get_opcode(instr4), OP_LOAD_INLINE_INTEGER) << "Fifth instruction should load falsy value";
+    ASSERT_EQ(GET_OPCODE(instr4), OP_LOAD_INLINE_INTEGER) << "Fifth instruction should load falsy value";
     ASSERT_EQ(OPERAND_K_K(instr4), 3) << "Should load value 3";
 }

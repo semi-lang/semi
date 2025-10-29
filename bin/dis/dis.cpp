@@ -38,7 +38,7 @@ void initOpcodeNames() {
     SET_OPCODE_NAME(OP_LOAD_INLINE_STRING);
     SET_OPCODE_NAME(OP_GET_MODULE_VAR);
     SET_OPCODE_NAME(OP_SET_MODULE_VAR);
-    SET_OPCODE_NAME(OP_DEFER_FUNCTION);
+    SET_OPCODE_NAME(OP_DEFER_CALL);
 
     SET_OPCODE_NAME(OP_MOVE);
     SET_OPCODE_NAME(OP_GET_UPVALUE);
@@ -92,7 +92,7 @@ const char* getInstructionType(Opcode opcode) {
         case OP_LOAD_INLINE_STRING:
         case OP_GET_MODULE_VAR:
         case OP_SET_MODULE_VAR:
-        case OP_DEFER_FUNCTION:
+        case OP_DEFER_CALL:
             return "K";
         default:
             return "T";
@@ -100,7 +100,7 @@ const char* getInstructionType(Opcode opcode) {
 }
 
 void printInstruction(Instruction instruction, PCLocation pc) {
-    Opcode opcode          = (Opcode)get_opcode(instruction);
+    Opcode opcode          = (Opcode)GET_OPCODE(instruction);
     const char* opcodeName = (opcode < sizeof(opcodeNames) / sizeof(opcodeNames[0])) ? opcodeNames[opcode] : "UNKNOWN";
     const char* type       = getInstructionType(opcode);
 
