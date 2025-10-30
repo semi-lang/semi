@@ -32,6 +32,8 @@ static inline void* defaultReallocFn(void* ptr, size_t newSize, void* reallocDat
 }
 }
 
+#include "./debug.hpp"
+
 /*
  │ Expression Test Helpers
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
@@ -45,228 +47,6 @@ static inline void enterTestBlock(Compiler* compiler, BlockScope* newBlock) {
     newBlock->variableStackStart  = currentBlock->variableStackEnd;
     newBlock->variableStackEnd    = currentBlock->variableStackEnd;
 }
-
-/*
- │ Test State Helpers
-─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
-
-class VMTest : public ::testing::Test {
-   public:
-    SemiVM* vm;
-
-    void SetUp() override {
-        vm = semiCreateVM(NULL);
-        ASSERT_NE(vm, nullptr) << "Failed to create VM";
-    }
-
-    void TearDown() override {
-        if (vm) {
-            semiDestroyVM(vm);
-            vm = nullptr;
-        }
-    }
-
-    FunctionTemplate* createFunctionObject(uint8_t arity,
-                                           Instruction* code,
-                                           uint32_t codeSize,
-                                           uint8_t maxStackSize,
-                                           uint8_t upvalueCount,
-                                           uint8_t coarity) {
-        FunctionTemplate* func = semiFunctionTemplateCreate(&vm->gc, upvalueCount);
-        Instruction* codeCopy  = (Instruction*)semiMalloc(&vm->gc, sizeof(Instruction) * codeSize);
-        memcpy(codeCopy, code, sizeof(Instruction) * codeSize);
-        func->arity          = arity;
-        func->coarity        = coarity;
-        func->chunk.data     = codeCopy;
-        func->chunk.size     = codeSize;
-        func->chunk.capacity = codeSize;
-        func->maxStackSize   = maxStackSize;
-
-        return func;
-    }
-};
-
-class CompilerTest : public ::testing::Test {
-   public:
-    Compiler compiler;
-    SemiVM* vm;
-
-    // If calling `ParseModule`, this will hold the compiled module.
-    SemiModule* module;
-
-    // If calling `ParseStatement`, this will hold the block scope.
-    BlockScope testBlock;
-
-    void SetUp() override {
-        vm = semiCreateVM(NULL);
-        semiCompilerInit(&vm->gc, &compiler);
-
-        compiler.gc                = &vm->gc;
-        compiler.symbolTable       = &vm->symbolTable;
-        compiler.classes           = &vm->classes;
-        compiler.globalIdentifiers = &vm->globalIdentifiers;
-
-        VariableListInit(&compiler.variables);
-        VariableListEnsureCapacity(&vm->gc, &compiler.variables, 32);
-
-        compiler.artifactModule = semiVMModuleCreate(compiler.gc, SEMI_REPL_MODULE_ID);
-        module                  = nullptr;
-    }
-
-    void TearDown() override {
-        if (module != nullptr) {
-            semiVMModuleDestroy(&vm->gc, module);
-        }
-        semiCompilerCleanup(&compiler);
-        semiDestroyVM(vm);
-    }
-
-    size_t GetCodeSize() {
-        if (module != nullptr && module->moduleInit != nullptr) {
-            return module->moduleInit->chunk.size;
-        }
-        return compiler.rootFunction.chunk.size;
-    }
-
-    Instruction GetInstruction(size_t index) {
-        if (module != nullptr && module->moduleInit != nullptr) {
-            return module->moduleInit->chunk.data[index];
-        }
-        return compiler.rootFunction.chunk.data[index];
-    }
-
-    VariableDescription* FindVariable(const char* identifier) {
-        InternedChar* internedIdentifier = semiSymbolTableGet(&vm->symbolTable, identifier, strlen(identifier));
-        if (internedIdentifier == nullptr) {
-            return nullptr;  // Variable not found
-        }
-
-        IdentifierId identifierId = semiSymbolTableGetId(internedIdentifier);
-        for (uint16_t i = 0; i < compiler.variables.size; ++i) {
-            if (compiler.variables.data[i].identifierId == identifierId) {
-                return compiler.variables.data + i;
-            }
-        }
-
-        return nullptr;
-    }
-
-    void InitializeVariable(const char* var_name) {
-        // Insert identifier into symbol table
-        InternedChar* identifier = semiSymbolTableInsert(&vm->symbolTable, var_name, strlen(var_name));
-        ASSERT_NE(identifier, nullptr) << "Failed to insert identifier '" << var_name << "' into symbol table";
-        IdentifierId identifierId = semiSymbolTableGetId(identifier);
-
-        // Reserve a register for the variable
-        LocalRegisterId registerId = compiler.currentFunction->nextRegisterId;
-        compiler.currentFunction->nextRegisterId++;
-
-        VariableListAppend(&vm->gc,
-                           &compiler.variables,
-                           (VariableDescription){.identifierId = identifierId, .registerId = registerId});
-        compiler.currentFunction->currentBlock->variableStackEnd = compiler.variables.size;
-    }
-
-    ErrorId ParseModule(const char* input) {
-        semiVMModuleDestroy(&vm->gc, compiler.artifactModule);
-        compiler.artifactModule = nullptr;
-
-        SemiModuleSource moduleSource = {
-            .source     = input,
-            .length     = (unsigned int)strlen(input),
-            .name       = "test_module",
-            .nameLength = (unsigned int)strlen("test_module"),
-        };
-        SemiModule* result = semiCompilerCompileModule(&compiler, vm, &moduleSource);
-        if (result == NULL) {
-            return compiler.errorJmpBuf.errorId;
-        }
-
-        module = result;
-        return 0;
-    }
-
-    ErrorId ParseExpression(const char* input, PrattExpr* expr) {
-        if (setjmp(compiler.errorJmpBuf.env) == 0) {
-            PrattState state = {
-                .rightBindingPower = PRECEDENCE_NONE,
-                .targetRegister    = 0,
-            };
-            semiTextInitLexer(&compiler.lexer, &compiler, input, (uint32_t)strlen(input));
-            enterTestBlock(&compiler, &testBlock);
-            semiParseExpression(&compiler, state, expr);
-            return 0;
-        }
-
-        return compiler.errorJmpBuf.errorId;
-    }
-
-    ErrorId ParseStatement(const char* input, bool inBlock) {
-        if (setjmp(compiler.errorJmpBuf.env) == 0) {
-            semiTextInitLexer(&compiler.lexer, &compiler, input, (uint32_t)strlen(input));
-            if (inBlock) {
-                enterTestBlock(&compiler, &testBlock);
-            }
-            semiParseStatement(&compiler);
-            return 0;
-        }
-        return compiler.errorJmpBuf.errorId;
-    }
-
-    ErrorId GetCompilerError() {
-        return compiler.errorJmpBuf.errorId;
-    }
-
-    ModuleVariableId GetModuleVariableId(const char* identifier, bool* isExport = nullptr) {
-        InternedChar* internedIdentifier = semiSymbolTableGet(&vm->symbolTable, identifier, strlen(identifier));
-        if (internedIdentifier == nullptr) {
-            if (isExport) *isExport = false;
-            return INVALID_MODULE_VARIABLE_ID;
-        }
-
-        IdentifierId identifierId = semiSymbolTableGetId(internedIdentifier);
-
-        // Check exports first
-        ValueHash hash  = semiHash64Bits(identifierId);
-        Value v         = semiValueNewInt(identifierId);
-        TupleId tupleId = semiDictFindTupleId(&compiler.artifactModule->exports, v, hash);
-        if (tupleId >= 0 && tupleId <= UINT32_MAX) {
-            if (isExport) *isExport = true;
-            return (ModuleVariableId)tupleId;
-        }
-
-        // Check globals
-        tupleId = semiDictFindTupleId(&compiler.artifactModule->globals, v, hash);
-        if (tupleId >= 0 && tupleId <= UINT32_MAX) {
-            if (isExport) *isExport = false;
-            return (ModuleVariableId)tupleId;
-        }
-
-        if (isExport) *isExport = false;
-        return INVALID_MODULE_VARIABLE_ID;
-    }
-
-    void InitializeModuleVariable(const char* varName, bool isExport = false) {
-        // Insert identifier into symbol table
-        InternedChar* identifier = semiSymbolTableInsert(&vm->symbolTable, varName, strlen(varName));
-        ASSERT_NE(identifier, nullptr) << "Failed to insert identifier '" << varName << "' into symbol table";
-        IdentifierId identifierId = semiSymbolTableGetId(identifier);
-
-        // Add variable to appropriate dictionary
-        ObjectDict* targetDict = isExport ? &compiler.artifactModule->exports : &compiler.artifactModule->globals;
-        Value keyValue         = semiValueNewInt(identifierId);
-        Value dummyValue       = semiValueNewInt(0);  // Dummy value
-        ValueHash hash         = semiHash64Bits(identifierId);
-
-        bool result = semiDictSetWithHash(&vm->gc, targetDict, keyValue, dummyValue, hash);
-        ASSERT_TRUE(result) << "Failed to add module variable '" << varName << "'";
-    }
-
-    void AddGlobalVariable(const char* varName, Value value) {
-        ErrorId result = semiVMAddGlobalVariable(vm, varName, (unsigned int)strlen(varName), value);
-        ASSERT_EQ(result, 0) << "Adding global variable '" << varName << "' should succeed";
-    }
-};
 
 /*
  │ Instruction Helpers
@@ -398,7 +178,7 @@ static Instruction encodeJInstruction(JInstruction jInst) {
     } while (0)
 
 /*
- │ Value Type Helpers
+ │ Value Helpers
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
 
 #undef BOOL_VALUE
@@ -479,5 +259,244 @@ static inline Value createFunctionValue(FunctionTemplate* func) {
     return val;
 }
 #define FUNCTION_VALUE(val) (createFunctionValue(val))
+
+/*
+ │ Test State Helpers
+─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
+
+class VMTest : public ::testing::Test {
+   public:
+    SemiVM* vm;
+
+    void SetUp() override {
+        vm = semiCreateVM(NULL);
+        ASSERT_NE(vm, nullptr) << "Failed to create VM";
+    }
+
+    void TearDown() override {
+        if (vm) {
+            semiDestroyVM(vm);
+            vm = nullptr;
+        }
+    }
+
+    FunctionTemplate* createFunctionObject(uint8_t arity,
+                                           Instruction* code,
+                                           uint32_t codeSize,
+                                           uint8_t maxStackSize,
+                                           uint8_t upvalueCount,
+                                           uint8_t coarity) {
+        FunctionTemplate* func = semiFunctionTemplateCreate(&vm->gc, upvalueCount);
+        Instruction* codeCopy  = (Instruction*)semiMalloc(&vm->gc, sizeof(Instruction) * codeSize);
+        memcpy(codeCopy, code, sizeof(Instruction) * codeSize);
+        func->arity          = arity;
+        func->coarity        = coarity;
+        func->chunk.data     = codeCopy;
+        func->chunk.size     = codeSize;
+        func->chunk.capacity = codeSize;
+        func->maxStackSize   = maxStackSize;
+
+        return func;
+    }
+};
+
+class CompilerTest : public ::testing::Test {
+   public:
+    Compiler compiler;
+    SemiVM* vm;
+
+    // If calling `ParseModule`, this will hold the compiled module.
+    SemiModule* module;
+
+    // If calling `ParseStatement`, this will hold the block scope.
+    BlockScope testBlock;
+
+    void SetUp() override {
+        vm = semiCreateVM(NULL);
+        semiCompilerInit(&vm->gc, &compiler);
+
+        compiler.gc                = &vm->gc;
+        compiler.symbolTable       = &vm->symbolTable;
+        compiler.classes           = &vm->classes;
+        compiler.globalIdentifiers = &vm->globalIdentifiers;
+
+        VariableListInit(&compiler.variables);
+        VariableListEnsureCapacity(&vm->gc, &compiler.variables, 32);
+
+        compiler.artifactModule = semiVMModuleCreate(compiler.gc, SEMI_REPL_MODULE_ID);
+        module                  = nullptr;
+    }
+
+    void TearDown() override {
+        if (module != nullptr) {
+            semiVMModuleDestroy(&vm->gc, module);
+        }
+        semiCompilerCleanup(&compiler);
+        semiDestroyVM(vm);
+    }
+
+    void PrintCode() {
+        Chunk* chunk;
+        if (module != nullptr && module->moduleInit != nullptr) {
+            chunk = &module->moduleInit->chunk;
+        } else {
+            chunk = &compiler.rootFunction.chunk;
+        }
+
+        disassembleCode(chunk->data, chunk->size);
+    }
+
+    size_t GetCodeSize() {
+        if (module != nullptr && module->moduleInit != nullptr) {
+            return module->moduleInit->chunk.size;
+        }
+        return compiler.rootFunction.chunk.size;
+    }
+
+    Instruction GetInstruction(size_t index) {
+        if (module != nullptr && module->moduleInit != nullptr) {
+            return module->moduleInit->chunk.data[index];
+        }
+        return compiler.rootFunction.chunk.data[index];
+    }
+
+    VariableDescription* FindVariable(const char* identifier) {
+        InternedChar* internedIdentifier = semiSymbolTableGet(&vm->symbolTable, identifier, strlen(identifier));
+        if (internedIdentifier == nullptr) {
+            return nullptr;  // Variable not found
+        }
+
+        IdentifierId identifierId = semiSymbolTableGetId(internedIdentifier);
+        for (uint16_t i = 0; i < compiler.variables.size; ++i) {
+            if (compiler.variables.data[i].identifierId == identifierId) {
+                return compiler.variables.data + i;
+            }
+        }
+
+        return nullptr;
+    }
+
+    void InitializeVariable(const char* var_name) {
+        // Insert identifier into symbol table
+        InternedChar* identifier = semiSymbolTableInsert(&vm->symbolTable, var_name, strlen(var_name));
+        ASSERT_NE(identifier, nullptr) << "Failed to insert identifier '" << var_name << "' into symbol table";
+        IdentifierId identifierId = semiSymbolTableGetId(identifier);
+
+        // Reserve a register for the variable
+        LocalRegisterId registerId = compiler.currentFunction->nextRegisterId;
+        compiler.currentFunction->nextRegisterId++;
+
+        VariableListAppend(&vm->gc,
+                           &compiler.variables,
+                           (VariableDescription){.identifierId = identifierId, .registerId = registerId});
+        compiler.currentFunction->currentBlock->variableStackEnd = compiler.variables.size;
+    }
+
+    ErrorId ParseModule(const char* input) {
+        semiVMModuleDestroy(&vm->gc, compiler.artifactModule);
+        compiler.artifactModule = nullptr;
+
+        SemiModuleSource moduleSource = {
+            .source     = input,
+            .length     = (unsigned int)strlen(input),
+            .name       = "test_module",
+            .nameLength = (unsigned int)strlen("test_module"),
+        };
+        SemiModule* result = semiCompilerCompileModule(&compiler, vm, &moduleSource);
+        if (result == NULL) {
+            return compiler.errorJmpBuf.errorId;
+        }
+
+        module = result;
+        return 0;
+    }
+
+    ErrorId ParseExpression(const char* input, PrattExpr* expr) {
+        if (setjmp(compiler.errorJmpBuf.env) == 0) {
+            FunctionScope* currentFunction = compiler.currentFunction;
+            LocalRegisterId registerId     = currentFunction->nextRegisterId++;
+            if (currentFunction->nextRegisterId > currentFunction->maxUsedRegisterCount) {
+                currentFunction->maxUsedRegisterCount = currentFunction->nextRegisterId;
+            }
+
+            PrattState state = {
+                .rightBindingPower = PRECEDENCE_NONE,
+                .targetRegister    = registerId,
+            };
+            semiTextInitLexer(&compiler.lexer, &compiler, input, (uint32_t)strlen(input));
+            enterTestBlock(&compiler, &testBlock);
+            semiParseExpression(&compiler, state, expr);
+            return 0;
+        }
+
+        return compiler.errorJmpBuf.errorId;
+    }
+
+    ErrorId ParseStatement(const char* input, bool inBlock) {
+        if (setjmp(compiler.errorJmpBuf.env) == 0) {
+            semiTextInitLexer(&compiler.lexer, &compiler, input, (uint32_t)strlen(input));
+            if (inBlock) {
+                enterTestBlock(&compiler, &testBlock);
+            }
+            semiParseStatement(&compiler);
+            return 0;
+        }
+        return compiler.errorJmpBuf.errorId;
+    }
+
+    ErrorId GetCompilerError() {
+        return compiler.errorJmpBuf.errorId;
+    }
+
+    ModuleVariableId GetModuleVariableId(const char* identifier, bool* isExport = nullptr) {
+        InternedChar* internedIdentifier = semiSymbolTableGet(&vm->symbolTable, identifier, strlen(identifier));
+        if (internedIdentifier == nullptr) {
+            if (isExport) *isExport = false;
+            return INVALID_MODULE_VARIABLE_ID;
+        }
+
+        IdentifierId identifierId = semiSymbolTableGetId(internedIdentifier);
+
+        // Check exports first
+        ValueHash hash  = semiHash64Bits(identifierId);
+        Value v         = semiValueNewInt(identifierId);
+        TupleId tupleId = semiDictFindTupleId(&compiler.artifactModule->exports, v, hash);
+        if (tupleId >= 0 && tupleId <= UINT32_MAX) {
+            if (isExport) *isExport = true;
+            return (ModuleVariableId)tupleId;
+        }
+
+        // Check globals
+        tupleId = semiDictFindTupleId(&compiler.artifactModule->globals, v, hash);
+        if (tupleId >= 0 && tupleId <= UINT32_MAX) {
+            if (isExport) *isExport = false;
+            return (ModuleVariableId)tupleId;
+        }
+
+        if (isExport) *isExport = false;
+        return INVALID_MODULE_VARIABLE_ID;
+    }
+
+    void InitializeModuleVariable(const char* varName, bool isExport = false) {
+        // Insert identifier into symbol table
+        InternedChar* identifier = semiSymbolTableInsert(&vm->symbolTable, varName, strlen(varName));
+        ASSERT_NE(identifier, nullptr) << "Failed to insert identifier '" << varName << "' into symbol table";
+        IdentifierId identifierId = semiSymbolTableGetId(identifier);
+
+        // Add variable to appropriate dictionary
+        ObjectDict* targetDict = isExport ? &compiler.artifactModule->exports : &compiler.artifactModule->globals;
+        Value keyValue         = semiValueNewInt(identifierId);
+        Value dummyValue       = semiValueNewInt(0);  // Dummy value
+        ValueHash hash         = semiHash64Bits(identifierId);
+
+        bool result = semiDictSetWithHash(&vm->gc, targetDict, keyValue, dummyValue, hash);
+        ASSERT_TRUE(result) << "Failed to add module variable '" << varName << "'";
+    }
+
+    void AddGlobalVariable(const char* varName, Value value) {
+        ErrorId result = semiVMAddGlobalVariable(vm, varName, (unsigned int)strlen(varName), value);
+        ASSERT_EQ(result, 0) << "Adding global variable '" << varName << "' should succeed";
+    }
+};
 
 #endif /* SEMI_TEST_COMMON_HPP */

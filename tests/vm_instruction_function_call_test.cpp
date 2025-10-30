@@ -24,7 +24,7 @@ TEST_F(VMInstructionFunctionCallTest, CallZeroArgumentFunction) {
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Create function from K[0]
-    code[1] = INSTRUCTION_CALL(0, 1, 0, false, false);            // Call function at R[0] with 0 args
+    code[1] = INSTRUCTION_CALL(0, 0, 0, false, false);            // Call function at R[0] with 0 args
     code[2] = INSTRUCTION_TRAP(0, 1, false, false);               // Exit here
 
     module->moduleInit = createFunctionObject(0, code, 3, 254, 0, 0);
@@ -47,7 +47,7 @@ TEST_F(VMInstructionFunctionCallTest, CallFunctionWithArguments) {
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Create function from K[0]
-    code[1] = INSTRUCTION_CALL(0, 2, 2, false, false);            // Call function at R[0] with 2 args
+    code[1] = INSTRUCTION_CALL(0, 2, 0, false, false);            // Call function at R[0] with 2 args
     code[2] = INSTRUCTION_TRAP(0, 1, false, false);               // Exit here
 
     vm->values[2] = semiValueNewInt(42);  // First argument
@@ -75,7 +75,7 @@ TEST_F(VMInstructionFunctionCallTest, NestedFunctionCalls) {
     // Create outer function
     Instruction outerCode[3];
     outerCode[0] = INSTRUCTION_LOAD_CONSTANT(1, innerIndex, false, false);  // Load inner function
-    outerCode[1] = INSTRUCTION_CALL(1, 2, 0, false, false);                 // Outer function calls inner
+    outerCode[1] = INSTRUCTION_CALL(1, 0, 0, false, false);                 // Outer function calls inner
     outerCode[2] = INSTRUCTION_RETURN(255, 0, 0, false, false);             // Outer function returns
 
     FunctionTemplate* outerFunc = createFunctionObject(0, outerCode, 3, 2, 0, 0);
@@ -83,7 +83,7 @@ TEST_F(VMInstructionFunctionCallTest, NestedFunctionCalls) {
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, outerIndex, false, false);  // Load outer function
-    code[1] = INSTRUCTION_CALL(0, 2, 0, false, false);                 // Call outer function
+    code[1] = INSTRUCTION_CALL(0, 0, 0, false, false);                 // Call outer function
     code[2] = INSTRUCTION_TRAP(0, 0, false, false);                    // Success
 
     module->moduleInit = createFunctionObject(0, code, 3, 254, 0, 0);
@@ -120,7 +120,7 @@ TEST_F(VMInstructionFunctionCallTest, CallNonFunctionObject) {
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Load non-function value
-    code[1] = INSTRUCTION_CALL(0, 1, 0, false, false);
+    code[1] = INSTRUCTION_CALL(0, 0, 0, false, false);
     code[2] = INSTRUCTION_TRAP(0, 0, false, false);
 
     module->moduleInit = createFunctionObject(0, code, 3, 254, 0, 0);
@@ -142,7 +142,7 @@ TEST_F(VMInstructionFunctionCallTest, CallArityMismatch) {
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Create function from K[0]
-    code[1] = INSTRUCTION_CALL(0, 1, 2, false, false);            // Call with 2 args
+    code[1] = INSTRUCTION_CALL(0, 2, 0, false, false);            // Call with 2 args
     code[2] = INSTRUCTION_TRAP(0, 0, false, false);
 
     module->moduleInit = createFunctionObject(0, code, 3, 254, 0, 0);
@@ -151,51 +151,6 @@ TEST_F(VMInstructionFunctionCallTest, CallArityMismatch) {
 
     ASSERT_EQ(result, SEMI_ERROR_ARGS_COUNT_MISMATCH) << "Should return arity mismatch error";
     ASSERT_EQ(vm->error, SEMI_ERROR_ARGS_COUNT_MISMATCH) << "VM error should be set";
-}
-
-TEST_F(VMInstructionFunctionCallTest, CallInvalidRegisterBounds) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-
-    Instruction fnCode[1];
-    fnCode[0] = INSTRUCTION_RETURN(255, 0, 0, false, false);
-
-    FunctionTemplate* func = createFunctionObject(0, fnCode, 1, 1, 0, 0);
-    ConstantIndex index    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
-
-    Instruction code[3];
-    code[0] = INSTRUCTION_LOAD_CONSTANT(254, index, false, false);  // Load into register 254
-    code[1] = INSTRUCTION_CALL(254, 0, 0, false,
-                               false);  // Register 254 (> INVALID_LOCAL_REGISTER_ID - 2)
-    code[2] = INSTRUCTION_TRAP(0, 0, false, false);
-
-    module->moduleInit = createFunctionObject(0, code, 3, 254, 0, 0);
-
-    ErrorId result = semiVMRunMainModule(vm, module);
-
-    ASSERT_EQ(result, SEMI_ERROR_INVALID_INSTRUCTION) << "Should return invalid opcode error";
-    ASSERT_EQ(vm->error, SEMI_ERROR_INVALID_INSTRUCTION) << "VM error should be set";
-}
-
-TEST_F(VMInstructionFunctionCallTest, CallTooManyArguments) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-
-    Instruction fnCode[1];
-    fnCode[0] = INSTRUCTION_RETURN(255, 0, 0, false, false);
-
-    FunctionTemplate* func = createFunctionObject(16, fnCode, 1, 20, 0, 0);
-    ConstantIndex index    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
-
-    Instruction code[3];
-    code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Create function from K[0]
-    code[1] = INSTRUCTION_CALL(0, 0, 16, false, false);           // 16 args (>= 16 limit)
-    code[2] = INSTRUCTION_TRAP(0, 0, false, false);
-
-    module->moduleInit = createFunctionObject(0, code, 3, 254, 0, 0);
-
-    ErrorId result = semiVMRunMainModule(vm, module);
-
-    ASSERT_EQ(result, SEMI_ERROR_INVALID_INSTRUCTION) << "Should return invalid opcode error";
-    ASSERT_EQ(vm->error, SEMI_ERROR_INVALID_INSTRUCTION) << "VM error should be set";
 }
 
 // Stack Management Tests
@@ -211,35 +166,35 @@ TEST_F(VMInstructionFunctionCallTest, CallStackGrowth) {
 
     Instruction fnCode3[3];
     fnCode3[0]              = INSTRUCTION_LOAD_CONSTANT(0, index4, false, false);
-    fnCode3[1]              = INSTRUCTION_CALL(0, 1, 0, false, false);
+    fnCode3[1]              = INSTRUCTION_CALL(0, 0, 0, false, false);
     fnCode3[2]              = INSTRUCTION_RETURN(255, 0, 0, false, false);
     FunctionTemplate* func3 = createFunctionObject(0, fnCode3, 3, 254, 0, 0);  // Large stack requirement
     ConstantIndex index3    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func3));
 
     Instruction fnCode2[3];
     fnCode2[0]              = INSTRUCTION_LOAD_CONSTANT(0, index3, false, false);
-    fnCode2[1]              = INSTRUCTION_CALL(0, 1, 0, false, false);
+    fnCode2[1]              = INSTRUCTION_CALL(0, 0, 0, false, false);
     fnCode2[2]              = INSTRUCTION_RETURN(255, 0, 0, false, false);
     FunctionTemplate* func2 = createFunctionObject(0, fnCode2, 3, 254, 0, 0);  // Large stack requirement
     ConstantIndex index2    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func2));
 
     Instruction fnCode1[3];
     fnCode1[0]              = INSTRUCTION_LOAD_CONSTANT(0, index2, false, false);
-    fnCode1[1]              = INSTRUCTION_CALL(0, 1, 0, false, false);
+    fnCode1[1]              = INSTRUCTION_CALL(0, 0, 0, false, false);
     fnCode1[2]              = INSTRUCTION_RETURN(255, 0, 0, false, false);
     FunctionTemplate* func1 = createFunctionObject(0, fnCode1, 3, 254, 0, 0);  // Large stack requirement
     ConstantIndex index1    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func1));
 
     Instruction fnCode0[3];
     fnCode0[0]              = INSTRUCTION_LOAD_CONSTANT(0, index1, false, false);
-    fnCode0[1]              = INSTRUCTION_CALL(0, 1, 0, false, false);
+    fnCode0[1]              = INSTRUCTION_CALL(0, 0, 0, false, false);
     fnCode0[2]              = INSTRUCTION_RETURN(255, 0, 0, false, false);
     FunctionTemplate* func0 = createFunctionObject(0, fnCode0, 3, 254, 0, 0);  // Large stack requirement
     ConstantIndex index0    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func0));
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, index0, false, false);
-    code[1] = INSTRUCTION_CALL(0, 1, 0, false, false);
+    code[1] = INSTRUCTION_CALL(0, 0, 0, false, false);
     code[2] = INSTRUCTION_TRAP(0, 0, false, false);
 
     module->moduleInit = createFunctionObject(0, code, 3, 254, 0, 0);
@@ -270,7 +225,7 @@ TEST_F(VMInstructionFunctionCallTest, ArgumentPositioning) {
 
     Instruction code[5];
     code[0] = INSTRUCTION_LOAD_CONSTANT(5, index, false, false);  // Load function into R[5]
-    code[1] = INSTRUCTION_CALL(5, 6, 3, false, false);            // Call function at R[5] with 3 args
+    code[1] = INSTRUCTION_CALL(5, 3, 0, false, false);            // Call function at R[5] with 3 args
     code[2] = INSTRUCTION_TRAP(0, 0, false, false);               // Success
     code[3] = INSTRUCTION_MOVE(0, 1, 0, false, false);            // Move arg2 to result
     code[4] = INSTRUCTION_RETURN(0, 0, 0, false, false);
@@ -301,8 +256,8 @@ TEST_F(VMInstructionFunctionCallTest, PCCorrectlyRestored) {
     ConstantIndex index    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
 
     Instruction code[4];
-    code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Load function
-    code[1] = INSTRUCTION_CALL(0, 4, 0, false, false);            // Call function
+    code[0] = INSTRUCTION_LOAD_CONSTANT(3, index, false, false);  // Load function
+    code[1] = INSTRUCTION_CALL(3, 0, 0, false, false);            // Call function, the new stack starts at R[4]
     code[2] = INSTRUCTION_MOVE(1, 2, 0, false, false);            // Should execute after return
     code[3] = INSTRUCTION_TRAP(0, 0, false, false);               // Success
 
@@ -332,7 +287,7 @@ TEST_F(VMInstructionFunctionCallTest, FunctionWithMaxArity) {
 
     Instruction code[4];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Load function
-    code[1] = INSTRUCTION_CALL(0, 1, 253, false, false);
+    code[1] = INSTRUCTION_CALL(0, 253, 0, false, false);
     code[2] = INSTRUCTION_TRAP(0, 0, false, false);
     code[3] = INSTRUCTION_RETURN(255, 0, 0, false, false);
 
@@ -359,7 +314,7 @@ TEST_F(VMInstructionFunctionCallTest, ImmediateReturn) {
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Load function
-    code[1] = INSTRUCTION_CALL(0, 1, 0, false, false);
+    code[1] = INSTRUCTION_CALL(0, 0, 0, false, false);
     code[2] = INSTRUCTION_TRAP(0, 0, false, false);
 
     module->moduleInit = createFunctionObject(0, code, 3, 254, 0, 0);
@@ -415,7 +370,7 @@ TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionNoArgs) {
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Load native function
-    code[1] = INSTRUCTION_CALL(0, 1, 0, false, false);            // Call with 0 args
+    code[1] = INSTRUCTION_CALL(0, 0, 0, false, false);            // Call with 0 args
     code[2] = INSTRUCTION_TRAP(0, 0, false, false);
 
     module->moduleInit = createFunctionObject(0, code, 3, 254, 0, 0);
@@ -436,7 +391,7 @@ TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionWithArgs) {
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Load native function
-    code[1] = INSTRUCTION_CALL(0, 1, 2, false, false);            // Call with 2 args
+    code[1] = INSTRUCTION_CALL(0, 2, 0, false, false);            // Call with 2 args
     code[2] = INSTRUCTION_TRAP(0, 0, false, false);
 
     vm->values[1] = semiValueNewInt(10);  // First argument
@@ -460,7 +415,7 @@ TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionWithError) {
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Load native function
-    code[1] = INSTRUCTION_CALL(0, 1, 0, false, false);            // Call with 0 args
+    code[1] = INSTRUCTION_CALL(0, 0, 0, false, false);            // Call with 0 args
     code[2] = INSTRUCTION_TRAP(0, 0, false, false);
 
     module->moduleInit = createFunctionObject(0, code, 3, 254, 0, 0);
@@ -479,7 +434,7 @@ TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionMaxArguments) {
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Load native function
-    code[1] = INSTRUCTION_CALL(0, 1, 253, false, false);          // Call with 255 args (max)
+    code[1] = INSTRUCTION_CALL(0, 253, 0, false, false);          // Call with 255 args (max)
     code[2] = INSTRUCTION_TRAP(0, 0, false, false);
 
     // Set up 255 arguments, each with value equal to its index
@@ -510,7 +465,7 @@ TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionArgumentPositioning) {
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(5, index, false, false);  // Load native function into R[5]
-    code[1] = INSTRUCTION_CALL(5, 6, 2, false, false);            // Call with 2 args starting at R[6]
+    code[1] = INSTRUCTION_CALL(5, 2, 0, false, false);            // Call with 2 args starting at R[6]
     code[2] = INSTRUCTION_TRAP(0, 0, false, false);
 
     vm->values[6] = semiValueNewInt(15);  // First argument
@@ -539,7 +494,7 @@ TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionZeroReturnValue) {
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Load native function
-    code[1] = INSTRUCTION_CALL(0, 1, 0, false, false);            // Call with 0 args
+    code[1] = INSTRUCTION_CALL(0, 0, 0, false, false);            // Call with 0 args
     code[2] = INSTRUCTION_TRAP(0, 0, false, false);
 
     module->moduleInit = createFunctionObject(0, code, 3, 254, 0, 0);
@@ -566,7 +521,7 @@ TEST_F(VMInstructionFunctionCallTest, FunctionReachesEndWithMatchingCoarity) {
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Load function
-    code[1] = INSTRUCTION_CALL(0, 1, 0, false, false);            // Call function with 0 args
+    code[1] = INSTRUCTION_CALL(0, 0, 0, false, false);            // Call function with 0 args
     code[2] = INSTRUCTION_TRAP(0, 0, false, false);               // Success
 
     module->moduleInit = createFunctionObject(0, code, 3, 254, 0, 0);
@@ -591,7 +546,7 @@ TEST_F(VMInstructionFunctionCallTest, FunctionReachesEndWithMismatchedCoarity) {
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Load function
-    code[1] = INSTRUCTION_CALL(0, 1, 0, false, false);            // Call function with 0 args
+    code[1] = INSTRUCTION_CALL(0, 0, 0, false, false);            // Call function with 0 args
     code[2] = INSTRUCTION_TRAP(0, 0, false, false);               // Should not reach here
 
     module->moduleInit = createFunctionObject(0, code, 3, 254, 0, 0);

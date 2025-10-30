@@ -60,7 +60,7 @@ typedef struct Frame {
     // The chain of deferred functions to be executed when this frame is exited.
     ObjectFunction* deferredFn;
     // The register of the caller function as an offset to the VM's stack.
-    uint32_t callerOffset;
+    uint32_t returnValueOffset;
     // The next instruction to be executed in the caller function.
     PCLocation callerPC;
     ModuleId moduleId;

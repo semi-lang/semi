@@ -29,8 +29,8 @@ TEST_F(VMInstructionFunctionUpvalueTest, BasicUpvalueCreation) {
 
     Instruction code[5];
     code[0] = INSTRUCTION_LOAD_INLINE_INTEGER(1, 42, true, true);  // Set local[1] = 42
-    code[1] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);   // Create function, captures local[1]
-    code[2] = INSTRUCTION_CALL(0, 2, 0, false, false);             // Call function
+    code[1] = INSTRUCTION_LOAD_CONSTANT(2, index, false, false);   // Create function, captures local[1]
+    code[2] = INSTRUCTION_CALL(2, 0, 0, false, false);             // Call function
     code[3] = INSTRUCTION_TRAP(0, 0, false, false);                // Exit
     code[4] = INSTRUCTION_TRAP(0, 1, false, false);                // Should not reach
 
@@ -40,7 +40,7 @@ TEST_F(VMInstructionFunctionUpvalueTest, BasicUpvalueCreation) {
 
     ASSERT_EQ(result, 0) << "VM should execute successfully";
     ASSERT_NE(vm->openUpvalues, nullptr) << "Open upvalues should not be closed after function returns";
-    ASSERT_EQ(AS_INT(&vm->values[0]), 42) << "Function should return captured upvalue (42)";
+    ASSERT_EQ(AS_INT(&vm->values[2]), 42) << "Function should return captured upvalue (42)";
 }
 
 TEST_F(VMInstructionFunctionUpvalueTest, MultipleUpvalueCreation) {
@@ -72,7 +72,7 @@ TEST_F(VMInstructionFunctionUpvalueTest, MultipleUpvalueCreation) {
     code[1] = INSTRUCTION_LOAD_INLINE_INTEGER(1, 20, true, true);     // local[1] = 20
     code[2] = INSTRUCTION_LOAD_INLINE_INTEGER(2, 30, true, true);     // local[2] = 30
     code[3] = INSTRUCTION_LOAD_CONSTANT(3, funcIndex, false, false);  // Create function
-    code[4] = INSTRUCTION_CALL(3, 4, 0, false, false);                // Call function
+    code[4] = INSTRUCTION_CALL(3, 0, 0, false, false);                // Call function
     code[5] = INSTRUCTION_TRAP(0, 0, false, false);                   // Exit
     code[6] = INSTRUCTION_TRAP(0, 1, false, false);                   // Should not reach
 
@@ -143,9 +143,9 @@ TEST_F(VMInstructionFunctionUpvalueTest, NestedFunctionsWithUpvalues) {
     // Step 4: Create main code using the actual constant table indices
     Instruction code[6];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, outerIndex, false, false);  // Create outer function
-    code[1] = INSTRUCTION_CALL(0, 1, 0, false, false);                 // Call outer function
-    code[2] = INSTRUCTION_CALL(0, 1, 0, false, false);                 // Call middle function
-    code[3] = INSTRUCTION_CALL(0, 1, 0, false, false);                 // Call inner function
+    code[1] = INSTRUCTION_CALL(0, 0, 0, false, false);                 // Call outer function
+    code[2] = INSTRUCTION_CALL(0, 0, 0, false, false);                 // Call middle function
+    code[3] = INSTRUCTION_CALL(0, 0, 0, false, false);                 // Call inner function
     code[4] = INSTRUCTION_TRAP(0, 0, false, false);                    // Exit
     code[5] = INSTRUCTION_TRAP(0, 1, false, false);                    // Should not reach
 
@@ -206,22 +206,23 @@ TEST_F(VMInstructionFunctionUpvalueTest, UpvalueReuse) {
     ConstantIndex secondIndex = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(second));
 
     // Step 3: Create outer function (depends on first and second)
-    Instruction outerCode[5];
+    Instruction outerCode[6];
     outerCode[0] = INSTRUCTION_LOAD_INLINE_INTEGER(0, 1, true, true);        // local[0] = 1
     outerCode[1] = INSTRUCTION_LOAD_CONSTANT(1, firstIndex, false, false);   // Create function first
     outerCode[2] = INSTRUCTION_LOAD_CONSTANT(2, secondIndex, false, false);  // Create function second
-    outerCode[3] = INSTRUCTION_CALL(1, 3, 0, false, false);                  // Call function first
-    outerCode[4] = INSTRUCTION_RETURN(2, 0, 0, false, false);                // Outer function returns R[2]
+    outerCode[3] = INSTRUCTION_MOVE(3, 1, 0, false, false);                  // Copy first to R[3]
+    outerCode[4] = INSTRUCTION_CALL(3, 0, 0, false, false);                  // Call function first
+    outerCode[5] = INSTRUCTION_RETURN(2, 0, 0, false, false);                // Outer function returns R[2]
 
-    FunctionTemplate* outerFunc = createFunctionObject(0, outerCode, 5, 4, 0, 0);  // 0 upvalue
+    FunctionTemplate* outerFunc = createFunctionObject(0, outerCode, 6, 4, 0, 0);  // 0 upvalue
 
     ConstantIndex outerIndex = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(outerFunc));
 
     // Step 4: Create main code using the actual constant table indices
     Instruction code[5];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, outerIndex, false, false);  // Create outer function
-    code[1] = INSTRUCTION_CALL(0, 1, 0, false, false);                 // Call outer function
-    code[2] = INSTRUCTION_CALL(0, 1, 0, false, false);                 // Call second function
+    code[1] = INSTRUCTION_CALL(0, 0, 0, false, false);                 // Call outer function
+    code[2] = INSTRUCTION_CALL(0, 0, 0, false, false);                 // Call second function
     code[3] = INSTRUCTION_TRAP(0, 0, false, false);                    // Exit
     code[4] = INSTRUCTION_TRAP(0, 1, false, false);                    // Should not reach
 

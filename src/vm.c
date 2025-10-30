@@ -426,11 +426,11 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
     vm->rootFunction->obj.header   = VALUE_TYPE_COMPILED_FUNCTION;
     vm->rootFunction->fnTemplate   = module->moduleInit;
     vm->rootFunction->upvalueCount = 0;
-    vm->frames[0]                  = (Frame){.callerStack  = {.base = vm->values},
-                                             .callerOffset = 0,
-                                             .callerPC     = 0,
-                                             .function     = vm->rootFunction,
-                                             .moduleId     = 0};
+    vm->frames[0]                  = (Frame){.callerStack       = {.base = vm->values},
+                                             .returnValueOffset = 0,
+                                             .callerPC          = 0,
+                                             .function          = vm->rootFunction,
+                                             .moduleId          = 0};
     vm->frameCount                 = 1;
 
     ModuleListEnsureCapacity(&vm->gc, &vm->modules, 1);
@@ -898,66 +898,65 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                 break;
             }
             case OP_CALL: {
-                uint8_t a = OPERAND_T_A(instruction);
-                uint8_t b = OPERAND_T_B(instruction);
-                uint8_t c = OPERAND_T_C(instruction);
+                uint8_t a   = OPERAND_T_A(instruction);
+                uint8_t b   = OPERAND_T_B(instruction);
+                Value* args = &stack[a + 1];
 
-                if (a == INVALID_LOCAL_REGISTER_ID || b <= a || (UINT8_MAX - b) <= c) {
-                    TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_INSTRUCTION, "Invalid CALL instruction operands");
+                switch (VALUE_TYPE(&stack[a])) {
+                    case VALUE_TYPE_NATIVE_FUNCTION: {
+                        NativeFunction* nativeFunc = AS_NATIVE_FUNCTION(&stack[a]);
+                        TRAP_ON_ERROR(vm, (*nativeFunc)(&vm->gc, b, args, &stack[a]), "Native function call failed");
+                        break;
+                    }
+                    case VALUE_TYPE_COMPILED_FUNCTION: {
+                        ObjectFunction* func         = AS_COMPILED_FUNCTION(&stack[a]);
+                        FunctionTemplate* fnTemplate = func->fnTemplate;
+                        if (fnTemplate->arity != b) {
+                            TRAP_ON_ERROR(vm, SEMI_ERROR_ARGS_COUNT_MISMATCH, "Function arguments mismatch");
+                        }
+
+                        uint32_t stackOffset = (uint32_t)(stack - vm->values);
+                        if (stackOffset > SEMI_MAX_STACK_SIZE - (a + 1 + fnTemplate->maxStackSize)) {
+                            TRAP_ON_ERROR(vm, SEMI_ERROR_STACK_OVERFLOW, "Stack overflow on function call");
+                        }
+                        if ((vm->values + vm->valueCapacity) - args < fnTemplate->maxStackSize) {
+                            TRAP_ON_ERROR(vm,
+                                          growVMStackSize(vm, stackOffset + a + 1 + fnTemplate->maxStackSize),
+                                          "Failed to grow VM stack for function call");
+                            stack = vm->values + stackOffset;
+                        }
+                        if (vm->frameCount >= vm->frameCapacity) {
+                            TRAP_ON_ERROR(vm,
+                                          growVMFrameSize(vm, vm->frameCount + 1),
+                                          "Failed to grow VM frame stack for function call");
+                        }
+
+                        PCLocation nextPC = pc + 1;
+                        if (nextPC == UINT32_MAX) {
+                            TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_PC, "Invalid program counter after function call");
+                        }
+                        vm->frames[vm->frameCount] = (Frame){
+                            .callerStack       = {.base = stack},
+                            .returnValueOffset = (uint32_t)(stackOffset + a),
+                            .callerPC          = nextPC,
+                            .function          = func,
+                            .deferredFn        = NULL,
+                            .moduleId          = fnTemplate->moduleId,
+                            .coarity           = fnTemplate->coarity,
+                        };
+                        vm->frameCount++;
+
+                        code     = fnTemplate->chunk.data;
+                        codeSize = fnTemplate->chunk.size;
+                        pc       = 0;
+                        stack    = args;
+
+                        goto start_of_vm_loop;
+                    }
+                    default:
+                        TRAP_ON_ERROR(vm, SEMI_ERROR_UNEXPECTED_TYPE, "Attempted to call a non-function value");
                 }
-
-                if (IS_NATIVE_FUNCTION(&stack[a])) {
-                    NativeFunction* nativeFunc = AS_NATIVE_FUNCTION(&stack[a]);
-
-                    Value* args = &stack[b];
-                    TRAP_ON_ERROR(vm, (*nativeFunc)(&vm->gc, c, args, &stack[a]), "Native function call failed");
-                    break;
-                }
-
-                if (!IS_COMPILED_FUNCTION(&stack[a])) {
-                    TRAP_ON_ERROR(vm, SEMI_ERROR_UNEXPECTED_TYPE, "Attempted to call a non-function value");
-                }
-
-                ObjectFunction* function = AS_COMPILED_FUNCTION(&stack[a]);
-                FunctionTemplate* func   = function->fnTemplate;
-                if (func->arity != c) {
-                    TRAP_ON_ERROR(vm, SEMI_ERROR_ARGS_COUNT_MISMATCH, "Function arguments mismatch");
-                }
-
-                if ((vm->values + vm->valueCapacity) - (stack + b) < func->maxStackSize) {
-                    uint32_t offset = (uint32_t)(stack - vm->values);
-                    TRAP_ON_ERROR(vm,
-                                  growVMStackSize(vm, offset + b + func->maxStackSize),
-                                  "Failed to grow VM stack for function call");
-                    stack = vm->values + offset;
-                }
-                if (vm->frameCount >= vm->frameCapacity) {
-                    TRAP_ON_ERROR(
-                        vm, growVMFrameSize(vm, vm->frameCount + 1), "Failed to grow VM frame stack for function call");
-                }
-
-                Value* args       = &stack[b];
-                PCLocation nextPC = pc + 1;
-                if (nextPC == UINT32_MAX) {
-                    TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_PC, "Invalid program counter after function call");
-                }
-                vm->frames[vm->frameCount] = (Frame){
-                    .callerStack  = {.base = stack},
-                    .callerOffset = (uint32_t)(stack + a - vm->values),
-                    .callerPC     = nextPC,
-                    .function     = function,
-                    .deferredFn   = NULL,
-                    .moduleId     = func->moduleId,
-                    .coarity      = func->coarity,
-                };
-                vm->frameCount++;
-
-                code     = func->chunk.data;
-                codeSize = func->chunk.size;
-                pc       = 0;
-                stack    = args;
-
-                goto start_of_vm_loop;
+                break;
             }
             case OP_RETURN: {
                 uint8_t a = OPERAND_T_A(instruction);
@@ -975,8 +974,8 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
 
                 // TODO: Implement deferred functions execution here.
 
-                if (a != INVALID_LOCAL_REGISTER_ID && frame->callerOffset != UINT32_MAX) {
-                    Value* caller = vm->values + frame->callerOffset;
+                if (a != INVALID_LOCAL_REGISTER_ID && frame->returnValueOffset != UINT32_MAX) {
+                    Value* caller = vm->values + frame->returnValueOffset;
                     *caller       = stack[a];
                 } else if (frame->function->fnTemplate->coarity > 0) {
                     // If the function has coarity, we need to return a value.

@@ -1966,9 +1966,7 @@ static void functionCallLed(Compiler* compiler,
     // OPEN_PAREN ( EXPR ( COMMA EXPR )* COMMA )? CLOSE_PAREN
 
     saveExprToRegister(compiler, leftExpr, state.targetRegister);
-
-    LocalRegisterId argReg      = reserveTempRegister(compiler);
-    LocalRegisterId argRegStart = argReg;
+    uint8_t argCount = 0;
 
     nextToken(&compiler->lexer);
     updateBracketCount(compiler, BRACKET_ROUND, true);
@@ -1980,9 +1978,11 @@ static void functionCallLed(Compiler* compiler,
 
     // we have at least one argument
     while ((t = peekToken(&compiler->lexer)) != TK_EOF) {
-        if (argReg == INVALID_LOCAL_REGISTER_ID) {
+        if (compiler->currentFunction->nextRegisterId == INVALID_LOCAL_REGISTER_ID) {
             SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_TOO_MANY_ARGUMENTS, "Too many arguments in function call");
         }
+        LocalRegisterId argReg = reserveTempRegister(compiler);
+        argCount++;
 
         PrattExpr argExpr;
         PrattState innerState = {
@@ -2016,7 +2016,7 @@ parsed_arguments:
     MATCH_NEXT_TOKEN_OR_ABORT(compiler, TK_CLOSE_PAREN, "Expected closing parenthesis for function call");
     updateBracketCount(compiler, BRACKET_ROUND, false);
 
-    emitCode(compiler, INSTRUCTION_CALL(state.targetRegister, argRegStart, argReg - argRegStart, false, false));
+    emitCode(compiler, INSTRUCTION_CALL(state.targetRegister, argCount, 0, false, false));
     *retExpr = PRATT_EXPR_REG(state.targetRegister);
     restoreNextRegisterId(compiler, state.targetRegister + 1);
 }

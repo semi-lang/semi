@@ -30,7 +30,7 @@ TEST_F(ExprParserFunctionCallLedTest, FunctionCallWithoutArguments) {
     Instruction instr1 = GetInstruction(1);
     ASSERT_EQ(GET_OPCODE(instr1), OP_CALL) << "Should be CALL instruction";
     ASSERT_EQ(OPERAND_T_A(instr1), OPERAND_T_A(instr0)) << "Should call function in the same register as MOVE target";
-    ASSERT_EQ(OPERAND_T_C(instr1), 0) << "Should have 0 arguments";
+    ASSERT_EQ(OPERAND_T_B(instr1), 0) << "Should have 0 arguments";
     ASSERT_EQ(OPERAND_T_A(instr1), expr.value.reg) << "Call target should match the register of the function";
 }
 
@@ -59,9 +59,9 @@ TEST_F(ExprParserFunctionCallLedTest, FunctionCallWithOneArgument) {
     Instruction instr2 = GetInstruction(2);
     ASSERT_EQ(GET_OPCODE(instr2), OP_CALL) << "Should be CALL instruction";
     ASSERT_EQ(OPERAND_T_A(instr2), OPERAND_T_A(instr0)) << "Should call function in the same register as MOVE target";
-    ASSERT_EQ(OPERAND_T_B(instr2), OPERAND_K_A(instr1))
+    ASSERT_EQ(OPERAND_T_A(instr2) + 1, OPERAND_K_A(instr1))
         << "The stack should start with the first argument in the same register";
-    ASSERT_EQ(OPERAND_T_C(instr2), 1) << "Should have 1 argument";
+    ASSERT_EQ(OPERAND_T_B(instr2), 1) << "Should have 1 argument";
     ASSERT_EQ(OPERAND_T_A(instr2), expr.value.reg) << "Call target should match the register of the function";
 }
 
@@ -102,9 +102,9 @@ TEST_F(ExprParserFunctionCallLedTest, FunctionCallWithMultipleArguments) {
     Instruction instr4 = GetInstruction(4);
     ASSERT_EQ(GET_OPCODE(instr4), OP_CALL) << "Should be CALL instruction";
     ASSERT_EQ(OPERAND_T_A(instr4), OPERAND_T_A(instr0)) << "Should call function in the same register as MOVE target";
-    ASSERT_EQ(OPERAND_T_B(instr4), OPERAND_K_A(instr1))
+    ASSERT_EQ(OPERAND_T_A(instr4) + 1, OPERAND_K_A(instr1))
         << "The stack should start with the first argument in the same register";
-    ASSERT_EQ(OPERAND_T_C(instr4), 3) << "Should have 3 arguments";
+    ASSERT_EQ(OPERAND_T_B(instr4), 3) << "Should have 3 arguments";
     ASSERT_EQ(OPERAND_T_A(instr4), expr.value.reg) << "Call target should match the register of the function";
 }
 
@@ -133,7 +133,7 @@ TEST_F(ExprParserFunctionCallLedTest, FunctionCallWithComplexExpressions) {
     // Find the CALL instruction (should be the last one)
     Instruction lastInstr = GetInstruction(GetCodeSize() - 1);
     ASSERT_EQ(GET_OPCODE(lastInstr), OP_CALL) << "Last instruction should be CALL";
-    ASSERT_EQ(OPERAND_T_C(lastInstr), 2) << "Should have 2 arguments";
+    ASSERT_EQ(OPERAND_T_B(lastInstr), 2) << "Should have 2 arguments";
 
     // The first instruction should be MOVE to set up function register
     Instruction firstInstr = GetInstruction(0);
@@ -176,7 +176,7 @@ TEST_F(ExprParserFunctionCallLedTest, NestedFunctionCalls) {
     // Last instruction should be the outer call
     Instruction lastInstr = GetInstruction(GetCodeSize() - 1);
     ASSERT_EQ(GET_OPCODE(lastInstr), OP_CALL) << "Last instruction should be CALL";
-    ASSERT_EQ(OPERAND_T_C(lastInstr), 1) << "Should have 1 argument";
+    ASSERT_EQ(OPERAND_T_B(lastInstr), 1) << "Should have 1 argument";
 
     // Find the first MOVE instruction (should set up outer function)
     Instruction firstInstr = GetInstruction(0);
@@ -205,7 +205,7 @@ TEST_F(ExprParserFunctionCallLedTest, FunctionCallInAssignment) {
     Instruction lastInstr = GetInstruction(GetCodeSize() - 1);
     ASSERT_EQ(GET_OPCODE(lastInstr), OP_CALL) << "Last instruction should be CALL";
     ASSERT_EQ(OPERAND_T_A(lastInstr), result_var->registerId) << "Should call into result register";
-    ASSERT_EQ(OPERAND_T_C(lastInstr), 1) << "Should have 1 argument";
+    ASSERT_EQ(OPERAND_T_B(lastInstr), 1) << "Should have 1 argument";
 
     // Should find a MOVE instruction that moves func to result's register
     bool foundMove = false;

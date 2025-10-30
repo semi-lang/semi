@@ -40,7 +40,7 @@ ifeq ($(WASM), 0)
 ifeq ($(BUILD_MODE),release)
     BUILD_FLAGS := -O3 -flto -fvisibility=hidden -DNDEBUG
 else
-    BUILD_FLAGS := -g --debug -DSEMI_DEBUG -DSEMI_DEBUG_MSG
+    BUILD_FLAGS := -g --debug -DSEMI_DEBUG -DSEMI_DEBUG_MSG -fsanitize=address
 endif
 
 else
@@ -55,7 +55,11 @@ endif
 endif
 
 CFLAGS := -std=c11 -Isrc -Iinclude $(CWARNINGS) $(BUILD_FLAGS)
-LDFLAGS :=
+ifeq ($(BUILD_MODE),release)
+		LDFLAGS :=
+else
+		LDFLAGS := -fsanitize=address
+endif
 
 # Dependency flags
 DEPFLAGS := -MMD -MP

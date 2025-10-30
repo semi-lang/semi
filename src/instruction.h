@@ -143,8 +143,8 @@ typedef enum {
     OP_SET_ITEM,              // |   T   |  R[A][uRK(B, kb)] = R[C]
     OP_DEL_ITEM,              // |   T   |  R[A] = delete R[B][uRK(C, kc)]
     OP_CONTAIN,               // |   T   |  R[A] := RK(B, kb)] in R[C]
-    OP_CALL,                  // |   T   |  R[A](R[B], R[B+1], ..., R[B+C]), B > A, C is the number of arguments
-                              //            TODO: don't need B since B = A + 1
+    OP_CALL,                  // |   T   |  R[A](R[A+1], R[A+2], ..., R[A+B]), B is the number of arguments.
+                              //            The return value is stored in R[A].
     OP_RETURN,                // |   T   |  return from function; if A != 255, copy R[A] to the caller register.
     OP_CHECK_TYPE,            // |   T   |  TODO
     // clang-format on
