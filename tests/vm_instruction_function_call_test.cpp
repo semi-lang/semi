@@ -172,8 +172,8 @@ TEST_F(VMInstructionFunctionCallTest, CallInvalidRegisterBounds) {
 
     ErrorId result = semiVMRunMainModule(vm, module);
 
-    ASSERT_EQ(result, SEMI_ERROR_INVALID_OPCODE) << "Should return invalid opcode error";
-    ASSERT_EQ(vm->error, SEMI_ERROR_INVALID_OPCODE) << "VM error should be set";
+    ASSERT_EQ(result, SEMI_ERROR_INVALID_INSTRUCTION) << "Should return invalid opcode error";
+    ASSERT_EQ(vm->error, SEMI_ERROR_INVALID_INSTRUCTION) << "VM error should be set";
 }
 
 TEST_F(VMInstructionFunctionCallTest, CallTooManyArguments) {
@@ -194,8 +194,8 @@ TEST_F(VMInstructionFunctionCallTest, CallTooManyArguments) {
 
     ErrorId result = semiVMRunMainModule(vm, module);
 
-    ASSERT_EQ(result, SEMI_ERROR_INVALID_OPCODE) << "Should return invalid opcode error";
-    ASSERT_EQ(vm->error, SEMI_ERROR_INVALID_OPCODE) << "VM error should be set";
+    ASSERT_EQ(result, SEMI_ERROR_INVALID_INSTRUCTION) << "Should return invalid opcode error";
+    ASSERT_EQ(vm->error, SEMI_ERROR_INVALID_INSTRUCTION) << "VM error should be set";
 }
 
 // Stack Management Tests

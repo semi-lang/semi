@@ -191,7 +191,8 @@ SEMI_EXPORT SemiVM* semiCreateVM(SemiVMConfig* inputConfig) {
         return NULL;
     }
     memset(vm, 0, sizeof(SemiVM));
-
+    vm->error        = 0;
+    vm->errorMessage = NULL;
     Value* newValues;
     if ((newValues = config.reallocateFn(vm->values, SEMI_MIN_STACK_SIZE * sizeof(Value), config.reallocateUserData)) ==
         NULL) {
@@ -397,6 +398,28 @@ static inline MagicMethodsTable* getMagicMethodsTable(SemiVM* vm, Value* value) 
     return type < vm->classes.classCount ? &vm->classes.classMethods[type] : &vm->classes.classMethods[0];
 }
 
+#ifdef SEMI_DEBUG_MSG
+#define TRAP_ON_ERROR(vm, errorId, message) \
+    do {                                    \
+        SemiVM* _vm    = (vm);              \
+        ErrorId _errId = (errorId);         \
+        if (_errId != 0) {                  \
+            _vm->error        = _errId;     \
+            _vm->errorMessage = (message);  \
+            return _vm->error;              \
+        }                                   \
+    } while (0)
+#else
+#define TRAP_ON_ERROR(vm, errorId, message) \
+    do {                                    \
+        SemiVM* _vm    = (vm);              \
+        ErrorId _errId = (errorId);         \
+        if (_errId != 0) {                  \
+            _vm->error = _errId;            \
+            return _vm->error;              \
+        }                                   \
+    } while (0)
+#endif
 ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
     vm->error                      = 0;
     vm->returnedValue              = NULL;
@@ -425,13 +448,11 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
     PCLocation pc     = 0;
     Value* stack      = vm->values;
 
-    Instruction instruction;
-    do {
+    for (;;) {
         if (pc >= codeSize) {
-            vm->error = SEMI_ERROR_INVALID_PC;
-            goto start_of_vm_loop;
+            TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_PC, "Program counter out of bounds");
         }
-        instruction = code[pc];
+        Instruction instruction = code[pc];
 
         switch (GET_OPCODE(instruction)) {
             /* Null Instructions --------------------------------------------------- */
@@ -449,7 +470,7 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                     } else if (!s && j <= pc) {
                         pc = pc - j;
                     } else {
-                        vm->error = SEMI_ERROR_INVALID_PC;
+                        TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_PC, "Invalid program counter after jump");
                     }
 
                     goto start_of_vm_loop;
@@ -458,14 +479,14 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
             }
 
             case OP_EXTRA_ARG: {
-                vm->error = SEMI_ERROR_UNIMPLEMENTED_FEATURE;
-                return vm->error;
+                TRAP_ON_ERROR(vm, SEMI_ERROR_UNIMPLEMENTED_FEATURE, "OP_EXTRA_ARG is not implemented yet");
+                break;
             }
 
             /* K Type Instructions --------------------------------------------------- */
             case OP_TRAP: {
                 Instruction operand = OPERAND_K_K(instruction);
-                vm->error           = (unsigned int)operand;
+                vm->error           = (ErrorId)operand;
                 return vm->error;
             }
 
@@ -479,10 +500,7 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
 
                 Value boolValue;
                 ErrorId errorId = table->conversionMethods->toBool(&vm->gc, &boolValue, &stack[a]);
-                if (errorId != 0) {
-                    vm->error = errorId;
-                    return vm->error;
-                }
+                TRAP_ON_ERROR(vm, errorId, "Failed to convert value to bool for conditional jump");
 
                 if (AS_BOOL(&boolValue) == i && k != 0) {
                     if (s && k <= UINT32_MAX - pc) {
@@ -490,8 +508,7 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                     } else if (!s && pc >= k) {
                         pc = pc - k;
                     } else {
-                        vm->error = SEMI_ERROR_INVALID_PC;
-                        return vm->error;
+                        TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_PC, "Invalid program counter after conditional jump");
                     }
 
                     goto start_of_vm_loop;
@@ -509,8 +526,8 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                 Value v;
                 if (s) {
                     if (k >= vm->globalIdentifiers.size) {
-                        vm->error = SEMI_ERROR_INVALID_INSTRUCTION;
-                        return vm->error;
+                        // TODO: This should be encoded in the module and checked before running it.
+                        TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_INSTRUCTION, "Invalid global constant index");
                     }
                     v = vm->globalConstants[k];
                 } else {
@@ -520,10 +537,7 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                 if (IS_FUNCTION_TEMPLATE(&v)) {
                     stack[a]                 = semiValueFunctionCreate(&vm->gc, AS_FUNCTION_TEMPLATE(&v));
                     ObjectFunction* function = AS_COMPILED_FUNCTION(&stack[a]);
-                    vm->error                = captureUpvalues(vm, stack, function);
-                    if (vm->error != 0) {
-                        return vm->error;
-                    }
+                    TRAP_ON_ERROR(vm, captureUpvalues(vm, stack, function), "Failed to capture upvalues for function");
                 } else if (IS_OBJECT_RANGE(&v)) {
                     stack[a] = semiValueRangeCreate(
                         &vm->gc, AS_OBJECT_RANGE(&v)->start, AS_OBJECT_RANGE(&v)->end, AS_OBJECT_RANGE(&v)->step);
@@ -580,15 +594,12 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
 
                 ModuleId moduleId = vm->frames[vm->frameCount - 1].moduleId;
                 if (moduleId >= vm->modules.size) {
-                    vm->error = SEMI_ERROR_INTERNAL_ERROR;
-                    return vm->error;
+                    TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_INSTRUCTION, "Invalid module ID");
                 }
                 SemiModule* mod        = vm->modules.data[moduleId];
                 ObjectDict* targetDict = s ? &mod->exports : &mod->globals;
-
                 if (k >= semiDictLen(targetDict)) {
-                    vm->error = SEMI_ERROR_INVALID_INSTRUCTION;
-                    return vm->error;
+                    TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_INSTRUCTION, "Invalid module variable index");
                 }
 
                 stack[a] = targetDict->values[k];
@@ -601,17 +612,13 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
 
                 ModuleId moduleId = vm->frames[vm->frameCount - 1].moduleId;
                 if (moduleId >= vm->modules.size) {
-                    vm->error = SEMI_ERROR_INTERNAL_ERROR;
-                    return vm->error;
+                    TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_INSTRUCTION, "Invalid module ID");
                 }
                 SemiModule* mod        = vm->modules.data[moduleId];
                 ObjectDict* targetDict = s ? &mod->exports : &mod->globals;
-
                 if (k >= semiDictLen(targetDict)) {
-                    vm->error = SEMI_ERROR_INVALID_INSTRUCTION;
-                    return vm->error;
+                    TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_INSTRUCTION, "Invalid module variable index");
                 }
-
                 targetDict->values[k] = stack[a];
                 break;
             }
@@ -634,10 +641,9 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                 }
 
                 ObjectFunction* deferFn = semiObjectFunctionCreate(&vm->gc, AS_FUNCTION_TEMPLATE(&v));
-                vm->error               = captureUpvalues(vm, stack, deferFn);
-                if (vm->error != 0) {
-                    return vm->error;
-                }
+                TRAP_ON_ERROR(
+                    vm, captureUpvalues(vm, stack, deferFn), "Failed to capture upvalues for deferred function");
+
                 deferFn->prevDeferredFn  = currentFrame->deferredFn;
                 currentFrame->deferredFn = deferFn;
                 break;
@@ -658,8 +664,7 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                         } else if (!kc && pc >= c) {
                             pc = pc - c;
                         } else {
-                            vm->error = SEMI_ERROR_INVALID_PC;
-                            return vm->error;
+                            TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_PC, "Invalid program counter after move instruction");
                         }
 
                         goto start_of_vm_loop;
@@ -671,23 +676,13 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
             case OP_GET_UPVALUE: {
                 uint8_t a = OPERAND_T_A(instruction);
                 uint8_t b = OPERAND_T_B(instruction);
-                if (vm->frameCount == 0 || vm->frames[vm->frameCount - 1].function->upvalueCount <= b) {
-                    vm->error = SEMI_ERROR_INTERNAL_ERROR;
-                    return vm->error;
-                }
-
-                stack[a] = *vm->frames[vm->frameCount - 1].function->upvalues[b]->value;
+                stack[a]  = *vm->frames[vm->frameCount - 1].function->upvalues[b]->value;
                 break;
             }
 
             case OP_SET_UPVALUE: {
-                uint8_t a = OPERAND_T_A(instruction);
-                uint8_t b = OPERAND_T_B(instruction);
-                if (vm->frameCount == 0 || vm->frames[vm->frameCount - 1].function->upvalueCount <= a) {
-                    vm->error = SEMI_ERROR_INTERNAL_ERROR;
-                    return vm->error;
-                }
-
+                uint8_t a                                                    = OPERAND_T_A(instruction);
+                uint8_t b                                                    = OPERAND_T_B(instruction);
                 *vm->frames[vm->frameCount - 1].function->upvalues[a]->value = stack[b];
                 break;
             }
@@ -702,133 +697,133 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
-                vm->error                = table->numericMethods->add(&vm->gc, ra, rb, rc);
+                TRAP_ON_ERROR(vm, table->numericMethods->add(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_SUBTRACT: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
-                vm->error                = table->numericMethods->subtract(&vm->gc, ra, rb, rc);
+                TRAP_ON_ERROR(vm, table->numericMethods->subtract(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_MULTIPLY: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
-                vm->error                = table->numericMethods->multiply(&vm->gc, ra, rb, rc);
+                TRAP_ON_ERROR(vm, table->numericMethods->multiply(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_DIVIDE: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
-                vm->error                = table->numericMethods->divide(&vm->gc, ra, rb, rc);
+                TRAP_ON_ERROR(vm, table->numericMethods->divide(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_FLOOR_DIVIDE: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
-                vm->error                = table->numericMethods->floorDivide(&vm->gc, ra, rb, rc);
+                TRAP_ON_ERROR(vm, table->numericMethods->floorDivide(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_MODULO: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
-                vm->error                = table->numericMethods->modulo(&vm->gc, ra, rb, rc);
+                TRAP_ON_ERROR(vm, table->numericMethods->modulo(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_POWER: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
-                vm->error                = table->numericMethods->power(&vm->gc, ra, rb, rc);
+                TRAP_ON_ERROR(vm, table->numericMethods->power(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_NEGATE: {
                 Value *ra, *rb;
                 load_value_ab(vm, instruction, ra, rb);
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
-                vm->error                = table->numericMethods->negate(&vm->gc, ra, rb);
+                TRAP_ON_ERROR(vm, table->numericMethods->negate(&vm->gc, ra, rb), "Arithmetic failed");
                 break;
             }
             case OP_GT: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
-                vm->error                = table->comparisonMethods->gt(&vm->gc, ra, rb, rc);
+                TRAP_ON_ERROR(vm, table->comparisonMethods->gt(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_GE: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
-                vm->error                = table->comparisonMethods->gte(&vm->gc, ra, rb, rc);
+                TRAP_ON_ERROR(vm, table->comparisonMethods->gte(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_EQ: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
-                vm->error                = table->comparisonMethods->eq(&vm->gc, ra, rb, rc);
+                TRAP_ON_ERROR(vm, table->comparisonMethods->eq(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_NEQ: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
-                vm->error                = table->comparisonMethods->neq(&vm->gc, ra, rb, rc);
+                TRAP_ON_ERROR(vm, table->comparisonMethods->neq(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_BITWISE_AND: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
-                vm->error                = table->numericMethods->bitwiseAnd(&vm->gc, ra, rb, rc);
+                TRAP_ON_ERROR(vm, table->numericMethods->bitwiseAnd(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_BITWISE_OR: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
-                vm->error                = table->numericMethods->bitwiseOr(&vm->gc, ra, rb, rc);
+                TRAP_ON_ERROR(vm, table->numericMethods->bitwiseOr(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_BITWISE_XOR: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
-                vm->error                = table->numericMethods->bitwiseXor(&vm->gc, ra, rb, rc);
+                TRAP_ON_ERROR(vm, table->numericMethods->bitwiseXor(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_BITWISE_L_SHIFT: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
-                vm->error                = table->numericMethods->bitwiseShiftLeft(&vm->gc, ra, rb, rc);
+                TRAP_ON_ERROR(vm, table->numericMethods->bitwiseShiftLeft(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_BITWISE_R_SHIFT: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
-                vm->error                = table->numericMethods->bitwiseShiftRight(&vm->gc, ra, rb, rc);
+                TRAP_ON_ERROR(vm, table->numericMethods->bitwiseShiftRight(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_BITWISE_INVERT: {
                 Value *ra, *rb;
                 load_value_ab(vm, instruction, ra, rb);
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
-                vm->error                = table->numericMethods->bitwiseInvert(&vm->gc, ra, rb);
+                TRAP_ON_ERROR(vm, table->numericMethods->bitwiseInvert(&vm->gc, ra, rb), "Arithmetic failed");
                 break;
             }
             case OP_MAKE_RANGE: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
                 if (!IS_NUMBER(ra) || !IS_NUMBER(rb) || !IS_NUMBER(rc)) {
-                    vm->error = SEMI_ERROR_UNEXPECTED_TYPE;
+                    TRAP_ON_ERROR(vm, SEMI_ERROR_UNEXPECTED_TYPE, "Range bounds must be numeric values");
                 } else {
                     uint8_t a = OPERAND_T_A(instruction);
                     stack[a]  = semiValueRangeCreate(&vm->gc, *ra, *rb, *rc);
@@ -849,20 +844,13 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                 closeUpvalues(vm, rb);
 
                 MagicMethodsTable* table = getMagicMethodsTable(vm, &stack[c]);
-
-                vm->error = table->next(&vm->gc, rb, rc);
-                if (vm->error != 0) {
-                    return vm->error;
-                }
-
+                TRAP_ON_ERROR(vm, table->next(&vm->gc, rb, rc), "Failed to get next iterator value");
                 bool hasNext = IS_VALID(rb);
                 if (hasNext && ra != NULL) {
                     Value one = semiValueNewInt(1);
                     table     = getMagicMethodsTable(vm, &stack[a]);
-                    vm->error = table->numericMethods->add(&vm->gc, ra, ra, &one);
-                    if (vm->error != 0) {
-                        return vm->error;
-                    }
+                    TRAP_ON_ERROR(
+                        vm, table->numericMethods->add(&vm->gc, ra, ra, &one), "Failed to increment iterator index");
                 }
                 if (hasNext) {
                     pc += 2;
@@ -874,26 +862,23 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                 Value *ra, *rb;
                 load_value_ab(vm, instruction, ra, rb);
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
-                vm->error                = table->conversionMethods->inverse(&vm->gc, ra, rb);
+                TRAP_ON_ERROR(vm, table->conversionMethods->inverse(&vm->gc, ra, rb), "Arithmetic failed");
                 break;
             }
             case OP_GET_ATTR: {
-                vm->error = SEMI_ERROR_UNIMPLEMENTED_FEATURE;
-                return vm->error;
+                TRAP_ON_ERROR(vm, SEMI_ERROR_UNIMPLEMENTED_FEATURE, "OP_GET_ATTR is not implemented yet");
+                break;
             }
             case OP_SET_ATTR: {
-                vm->error = SEMI_ERROR_UNIMPLEMENTED_FEATURE;
-                return vm->error;
+                TRAP_ON_ERROR(vm, SEMI_ERROR_UNIMPLEMENTED_FEATURE, "OP_SET_ATTR is not implemented yet");
+                break;
             }
             case OP_GET_ITEM: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
 
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
-                vm->error                = table->collectionMethods->getItem(&vm->gc, ra, rb, rc);
-                if (vm->error != 0) {
-                    return vm->error;
-                }
+                TRAP_ON_ERROR(vm, table->collectionMethods->getItem(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_SET_ITEM: {
@@ -901,11 +886,7 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                 load_value_abc(vm, instruction, ra, rb, rc);
 
                 MagicMethodsTable* table = getMagicMethodsTable(vm, ra);
-                vm->error                = table->collectionMethods->setItem(&vm->gc, ra, rb, rc);
-
-                if (vm->error != 0) {
-                    return vm->error;
-                }
+                TRAP_ON_ERROR(vm, table->collectionMethods->setItem(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_CONTAIN: {
@@ -913,11 +894,7 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                 load_value_abc(vm, instruction, ra, rb, rc);
 
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rc);
-                vm->error                = table->collectionMethods->contain(&vm->gc, ra, rb, rc);
-
-                if (vm->error != 0) {
-                    return vm->error;
-                }
+                TRAP_ON_ERROR(vm, table->collectionMethods->contain(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_CALL: {
@@ -926,54 +903,43 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                 uint8_t c = OPERAND_T_C(instruction);
 
                 if (a == INVALID_LOCAL_REGISTER_ID || b <= a || (UINT8_MAX - b) <= c) {
-                    vm->error = SEMI_ERROR_INVALID_OPCODE;
-                    return vm->error;
+                    TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_INSTRUCTION, "Invalid CALL instruction operands");
                 }
 
                 if (IS_NATIVE_FUNCTION(&stack[a])) {
                     NativeFunction* nativeFunc = AS_NATIVE_FUNCTION(&stack[a]);
 
                     Value* args = &stack[b];
-                    vm->error   = (*nativeFunc)(&vm->gc, c, args, &stack[a]);
-                    if (vm->error != 0) {
-                        return vm->error;
-                    }
-
+                    TRAP_ON_ERROR(vm, (*nativeFunc)(&vm->gc, c, args, &stack[a]), "Native function call failed");
                     break;
                 }
 
                 if (!IS_COMPILED_FUNCTION(&stack[a])) {
-                    vm->error = SEMI_ERROR_UNEXPECTED_TYPE;
-                    return vm->error;
+                    TRAP_ON_ERROR(vm, SEMI_ERROR_UNEXPECTED_TYPE, "Attempted to call a non-function value");
                 }
 
                 ObjectFunction* function = AS_COMPILED_FUNCTION(&stack[a]);
                 FunctionTemplate* func   = function->fnTemplate;
                 if (func->arity != c) {
-                    vm->error = SEMI_ERROR_ARGS_COUNT_MISMATCH;
-                    return vm->error;
+                    TRAP_ON_ERROR(vm, SEMI_ERROR_ARGS_COUNT_MISMATCH, "Function arguments mismatch");
                 }
 
                 if ((vm->values + vm->valueCapacity) - (stack + b) < func->maxStackSize) {
                     uint32_t offset = (uint32_t)(stack - vm->values);
-                    vm->error       = growVMStackSize(vm, offset + b + func->maxStackSize);
-                    if (vm->error != 0) {
-                        return vm->error;
-                    }
+                    TRAP_ON_ERROR(vm,
+                                  growVMStackSize(vm, offset + b + func->maxStackSize),
+                                  "Failed to grow VM stack for function call");
                     stack = vm->values + offset;
                 }
                 if (vm->frameCount >= vm->frameCapacity) {
-                    vm->error = growVMFrameSize(vm, vm->frameCount + 1);
-                    if (vm->error != 0) {
-                        return vm->error;
-                    }
+                    TRAP_ON_ERROR(
+                        vm, growVMFrameSize(vm, vm->frameCount + 1), "Failed to grow VM frame stack for function call");
                 }
 
                 Value* args       = &stack[b];
                 PCLocation nextPC = pc + 1;
                 if (nextPC == UINT32_MAX) {
-                    vm->error = SEMI_ERROR_INVALID_PC;
-                    return vm->error;
+                    TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_PC, "Invalid program counter after function call");
                 }
                 vm->frames[vm->frameCount] = (Frame){
                     .callerStack  = {.base = stack},
@@ -1016,8 +982,7 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                     // If the function has coarity, we need to return a value.
                     // This only happens when the last statement of the function doesn't
                     // have return statement.
-                    vm->error = SEMI_ERROR_MISSING_RETURN_VALUE;
-                    return vm->error;
+                    TRAP_ON_ERROR(vm, SEMI_ERROR_MISSING_RETURN_VALUE, "Missing return value for function");
                 }
 
                 closeUpvalues(vm, stack);
@@ -1030,25 +995,25 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                 goto start_of_vm_loop;
             }
             case OP_CHECK_TYPE: {
-                vm->error = SEMI_ERROR_UNIMPLEMENTED_FEATURE;
-                return vm->error;
+                TRAP_ON_ERROR(vm, SEMI_ERROR_UNIMPLEMENTED_FEATURE, "OP_CHECK_TYPE is not implemented yet");
+                break;
             }
-            default:
-                vm->error = SEMI_ERROR_INVALID_OPCODE;
-                return vm->error;
+            default: {
+                TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_INSTRUCTION, "Invalid opcode encountered in VM");
+                break;
+            }
         }
 
         if (pc < UINT32_MAX) {
             pc += 1;
         } else {
-            vm->error = SEMI_ERROR_INVALID_PC;
-            return vm->error;
+            TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_PC, "Invalid program counter after instruction execution");
         }
 
     start_of_vm_loop:
         // label at end of compound statement is a C23 extension
         (void)0;
-    } while (vm->error == 0);
+    }
 
     return vm->error;
 }

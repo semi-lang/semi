@@ -75,6 +75,9 @@ typedef struct SemiVM {
     GC gc;
 
     ErrorId error;
+    // Error message associated with the error ID. Currently we only assign static strings to this field,
+    // so there is no need to free it.
+    const char* errorMessage;
     // A weak reference to the result of the last expression statement (if there is one).
     Value* returnedValue;
 
