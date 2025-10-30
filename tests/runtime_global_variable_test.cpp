@@ -12,41 +12,9 @@ extern "C" {
 #include "semi/error.h"
 }
 
-class RuntimeGlobalVariableTest : public ::testing::Test {
-   protected:
-    SemiVM* vm;
+#include "test_common.hpp"
 
-    void SetUp() override {
-        vm = semiCreateVM(NULL);
-        ASSERT_NE(vm, nullptr) << "Failed to create VM";
-    }
-
-    void TearDown() override {
-        if (vm) {
-            semiDestroyVM(vm);
-            vm = nullptr;
-        }
-    }
-
-    FunctionTemplate* createFunctionObject(
-        uint8_t arity, Instruction* code, uint32_t codeSize, uint8_t maxStackSize, uint8_t upvalueCount) {
-        FunctionTemplate* func = semiFunctionTemplateCreate(&vm->gc, upvalueCount);
-        Instruction* codeCopy  = (Instruction*)semiMalloc(&vm->gc, sizeof(Instruction) * codeSize);
-        memcpy(codeCopy, code, sizeof(Instruction) * codeSize);
-        func->arity          = arity;
-        func->chunk.data     = codeCopy;
-        func->chunk.size     = codeSize;
-        func->chunk.capacity = codeSize;
-        func->maxStackSize   = maxStackSize;
-
-        return func;
-    }
-
-    void AddGlobalVariable(const char* name, Value value) {
-        ErrorId result = semiVMAddGlobalVariable(vm, name, strlen(name), value);
-        ASSERT_EQ(result, 0) << "Adding global variable '" << name << "' should succeed";
-    }
-};
+class RuntimeGlobalVariableTest : public VMTest {};
 
 TEST_F(RuntimeGlobalVariableTest, AccessGlobalIntegerVariable) {
     // Add a global integer variable
@@ -59,7 +27,7 @@ TEST_F(RuntimeGlobalVariableTest, AccessGlobalIntegerVariable) {
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
     SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    module->moduleInit = createFunctionObject(0, code, 2, 254, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error      = 0;
     ErrorId result = semiVMRunMainModule(vm, module);
@@ -80,7 +48,7 @@ TEST_F(RuntimeGlobalVariableTest, AccessGlobalFloatVariable) {
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
     SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    module->moduleInit = createFunctionObject(0, code, 2, 254, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error      = 0;
     ErrorId result = semiVMRunMainModule(vm, module);
@@ -101,7 +69,7 @@ TEST_F(RuntimeGlobalVariableTest, AccessGlobalBooleanVariable) {
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
     SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    module->moduleInit = createFunctionObject(0, code, 2, 254, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error      = 0;
     ErrorId result = semiVMRunMainModule(vm, module);
@@ -122,7 +90,7 @@ TEST_F(RuntimeGlobalVariableTest, AccessGlobalStringVariable) {
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
     SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    module->moduleInit = createFunctionObject(0, code, 2, 254, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error      = 0;
     ErrorId result = semiVMRunMainModule(vm, module);
@@ -153,7 +121,7 @@ TEST_F(RuntimeGlobalVariableTest, AccessMultipleGlobalVariables) {
     code[3] = INSTRUCTION_TRAP(0, 0, false, false);
 
     SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    module->moduleInit = createFunctionObject(0, code, 4, 254, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 4, 254, 0, 0);
 
     vm->error      = 0;
     ErrorId result = semiVMRunMainModule(vm, module);
@@ -184,7 +152,7 @@ TEST_F(RuntimeGlobalVariableTest, AccessGlobalNativeFunctionVariable) {
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
     SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    module->moduleInit = createFunctionObject(0, code, 2, 254, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error      = 0;
     ErrorId result = semiVMRunMainModule(vm, module);

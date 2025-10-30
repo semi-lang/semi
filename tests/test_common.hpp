@@ -280,7 +280,12 @@ class VMTest : public ::testing::Test {
         }
     }
 
-    FunctionTemplate* createFunctionObject(uint8_t arity,
+    void AddGlobalVariable(const char* name, Value value) {
+        ErrorId result = semiVMAddGlobalVariable(vm, name, strlen(name), value);
+        ASSERT_EQ(result, 0) << "Adding global variable '" << name << "' should succeed";
+    }
+
+    FunctionTemplate* CreateFunctionObject(uint8_t arity,
                                            Instruction* code,
                                            uint32_t codeSize,
                                            uint8_t maxStackSize,
@@ -289,6 +294,7 @@ class VMTest : public ::testing::Test {
         FunctionTemplate* func = semiFunctionTemplateCreate(&vm->gc, upvalueCount);
         Instruction* codeCopy  = (Instruction*)semiMalloc(&vm->gc, sizeof(Instruction) * codeSize);
         memcpy(codeCopy, code, sizeof(Instruction) * codeSize);
+        func->moduleId       = SEMI_REPL_MODULE_ID;
         func->arity          = arity;
         func->coarity        = coarity;
         func->chunk.data     = codeCopy;

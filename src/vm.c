@@ -924,6 +924,7 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                                           growVMStackSize(vm, stackOffset + a + 1 + fnTemplate->maxStackSize),
                                           "Failed to grow VM stack for function call");
                             stack = vm->values + stackOffset;
+                            args  = &stack[a + 1];
                         }
                         if (vm->frameCount >= vm->frameCapacity) {
                             TRAP_ON_ERROR(vm,

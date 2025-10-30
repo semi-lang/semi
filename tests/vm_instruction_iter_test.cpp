@@ -10,49 +10,7 @@ extern "C" {
 
 #include "test_common.hpp"
 
-class VMInstructionIterTest : public ::testing::Test {
-   protected:
-    SemiVM* vm;
-
-    void SetUp() override {
-        vm = semiCreateVM(NULL);
-        ASSERT_NE(vm, nullptr) << "Failed to create VM";
-    }
-
-    void TearDown() override {
-        if (vm) {
-            semiDestroyVM(vm);
-            vm = nullptr;
-        }
-    }
-
-    FunctionTemplate* createFunctionObject(Instruction* code, size_t codeSize) {
-        FunctionTemplate* func = semiFunctionTemplateCreate(&vm->gc, 0);
-        Instruction* codeCopy  = (Instruction*)semiMalloc(&vm->gc, sizeof(Instruction) * codeSize);
-        memcpy(codeCopy, code, sizeof(Instruction) * codeSize);
-        func->arity          = 0;
-        func->chunk.data     = codeCopy;
-        func->chunk.size     = codeSize;
-        func->chunk.capacity = codeSize;
-        func->maxStackSize   = 0;
-
-        return func;
-    }
-
-    FunctionTemplate* createFunctionObject(
-        uint8_t arity, Instruction* code, uint32_t codeSize, uint8_t maxStackSize, uint8_t upvalueCount) {
-        FunctionTemplate* func = semiFunctionTemplateCreate(&vm->gc, upvalueCount);
-        Instruction* codeCopy  = (Instruction*)semiMalloc(&vm->gc, sizeof(Instruction) * codeSize);
-        memcpy(codeCopy, code, sizeof(Instruction) * codeSize);
-        func->arity          = arity;
-        func->chunk.data     = codeCopy;
-        func->chunk.size     = codeSize;
-        func->chunk.capacity = codeSize;
-        func->maxStackSize   = maxStackSize;
-
-        return func;
-    }
-};
+class VMInstructionIterTest : public VMTest {};
 
 // Test data structures for different scenarios
 struct IntegerRangeTestCase {
@@ -104,7 +62,7 @@ TEST_F(VMInstructionIterTest, OpMakeRangeBasicInteger) {
         vm->error = 0;
 
         SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = createFunctionObject(code, 2);
+        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit     = func;
 
         int result = semiVMRunMainModule(vm, module);
@@ -162,7 +120,7 @@ TEST_F(VMInstructionIterTest, OpMakeRangeFloatValues) {
         vm->error = 0;
 
         SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = createFunctionObject(code, 2);
+        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit     = func;
 
         int result = semiVMRunMainModule(vm, module);
@@ -212,7 +170,7 @@ TEST_F(VMInstructionIterTest, OpMakeRangeMixedTypes) {
         vm->error = 0;
 
         SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = createFunctionObject(code, 2);
+        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit     = func;
 
         int result = semiVMRunMainModule(vm, module);
@@ -245,7 +203,7 @@ TEST_F(VMInstructionIterTest, OpMakeRangeWithConstants) {
     vm->error = 0;
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(code, 2);
+    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit     = func;
 
     int result = semiVMRunMainModule(vm, module);
@@ -279,7 +237,7 @@ TEST_F(VMInstructionIterTest, OpMakeRangeTypeErrors) {
         vm->error = 0;
 
         SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = createFunctionObject(code, 2);
+        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit     = func;
 
         int result = semiVMRunMainModule(vm, module);
@@ -334,7 +292,7 @@ TEST_F(VMInstructionIterTest, OpIterNextInlineRange) {
 
         while (iterations < 10) {  // Safety limit
             SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-            FunctionTemplate* func = createFunctionObject(code, 4);
+            FunctionTemplate* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
             module->moduleInit     = func;
 
             result = semiVMRunMainModule(vm, module);
@@ -384,7 +342,7 @@ TEST_F(VMInstructionIterTest, OpIterNextObjectRange) {
     vm->error = 0;
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(create_range, 2);
+    FunctionTemplate* func = CreateFunctionObject(0, create_range, 2, 8, 0, 0);
     module->moduleInit     = func;
 
     int result = semiVMRunMainModule(vm, module);
@@ -409,7 +367,7 @@ TEST_F(VMInstructionIterTest, OpIterNextObjectRange) {
         vm->error = 0;
 
         SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = createFunctionObject(code, 4);
+        FunctionTemplate* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
         module->moduleInit     = func;
 
         result = semiVMRunMainModule(vm, module);
@@ -454,7 +412,7 @@ TEST_F(VMInstructionIterTest, OpIterNextFloatRange) {
     vm->error = 0;
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(create_range, 2);
+    FunctionTemplate* func = CreateFunctionObject(0, create_range, 2, 8, 0, 0);
     module->moduleInit     = func;
 
     int result = semiVMRunMainModule(vm, module);
@@ -479,7 +437,7 @@ TEST_F(VMInstructionIterTest, OpIterNextFloatRange) {
         vm->error = 0;
 
         SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = createFunctionObject(code, 4);
+        FunctionTemplate* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
         module->moduleInit     = func;
 
         result = semiVMRunMainModule(vm, module);

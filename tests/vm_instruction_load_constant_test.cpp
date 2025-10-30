@@ -12,36 +12,9 @@ extern "C" {
 #include "semi/error.h"
 }
 
-class VMInstructionLoadConstantTest : public ::testing::Test {
-   protected:
-    SemiVM* vm;
+#include "test_common.hpp"
 
-    void SetUp() override {
-        vm = semiCreateVM(NULL);
-        ASSERT_NE(vm, nullptr) << "Failed to create VM";
-    }
-
-    void TearDown() override {
-        if (vm) {
-            semiDestroyVM(vm);
-            vm = nullptr;
-        }
-    }
-
-    FunctionTemplate* createFunctionObject(
-        uint8_t arity, Instruction* code, uint32_t codeSize, uint8_t maxStackSize, uint8_t upvalueCount) {
-        FunctionTemplate* func = semiFunctionTemplateCreate(&vm->gc, upvalueCount);
-        Instruction* codeCopy  = (Instruction*)semiMalloc(&vm->gc, sizeof(Instruction) * codeSize);
-        memcpy(codeCopy, code, sizeof(Instruction) * codeSize);
-        func->arity          = arity;
-        func->chunk.data     = codeCopy;
-        func->chunk.size     = codeSize;
-        func->chunk.capacity = codeSize;
-        func->maxStackSize   = maxStackSize;
-
-        return func;
-    }
-};
+class VMInstructionLoadConstantTest : public VMTest {};
 
 // OP_LOAD_BOOL Tests
 TEST_F(VMInstructionLoadConstantTest, OpLoadBoolInlineTrue) {
@@ -51,7 +24,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadBoolInlineTrue) {
     code[0] = INSTRUCTION_LOAD_BOOL(0, 0, true, false);
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-    module->moduleInit = createFunctionObject(0, code, 2, 254, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error = 0;
 
@@ -69,7 +42,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadBoolInlineFalse) {
     code[0] = INSTRUCTION_LOAD_BOOL(1, 0, false, false);
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-    module->moduleInit = createFunctionObject(0, code, 2, 254, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error = 0;
 
@@ -88,7 +61,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadIntegerInline) {
     code[0] = INSTRUCTION_LOAD_INLINE_INTEGER(0, 42, true, true);  // s=true means positive
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-    module->moduleInit = createFunctionObject(0, code, 2, 254, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error = 0;
 
@@ -106,7 +79,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadIntegerInlineZero) {
     code[0] = INSTRUCTION_LOAD_INLINE_INTEGER(1, 0, true, true);
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-    module->moduleInit = createFunctionObject(0, code, 2, 254, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error = 0;
 
@@ -124,7 +97,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadIntegerInlineMaxValue) {
     code[0] = INSTRUCTION_LOAD_INLINE_INTEGER(2, 65535, true, true);
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-    module->moduleInit = createFunctionObject(0, code, 2, 254, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error = 0;
 
@@ -142,7 +115,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadIntegerInlineNegative) {
     code[0] = INSTRUCTION_LOAD_INLINE_INTEGER(0, 42, true, false);
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-    module->moduleInit = createFunctionObject(0, code, 2, 254, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error = 0;
 
@@ -164,7 +137,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadIntegerFromConstantTable) {
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, idx, false, false);
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-    module->moduleInit = createFunctionObject(0, code, 2, 254, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error = 0;
 
@@ -185,7 +158,7 @@ TEST_F(VMInstructionLoadConstantTest, LoadFloatFromConstantTable) {
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, idx, false, false);
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-    module->moduleInit = createFunctionObject(0, code, 2, 254, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error = 0;
 
@@ -206,7 +179,7 @@ TEST_F(VMInstructionLoadConstantTest, LoadFloatNegativeValue) {
     code[0] = INSTRUCTION_LOAD_CONSTANT(1, idx, false, false);
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-    module->moduleInit = createFunctionObject(0, code, 2, 254, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error = 0;
 
@@ -227,7 +200,7 @@ TEST_F(VMInstructionLoadConstantTest, LoadFloatZero) {
     code[0] = INSTRUCTION_LOAD_CONSTANT(2, idx, false, false);
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-    module->moduleInit = createFunctionObject(0, code, 2, 254, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error = 0;
 
@@ -249,7 +222,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadStringFromConstantTable) {
     code[0] = INSTRUCTION_LOAD_CONSTANT(1, idx, false, false);
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-    module->moduleInit = createFunctionObject(0, code, 2, 254, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error = 0;
 
@@ -270,7 +243,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadStringInlineEmpty) {
     code[0] = INSTRUCTION_LOAD_INLINE_STRING(0, 0, true, false);
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-    module->moduleInit = createFunctionObject(0, code, 2, 254, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error = 0;
 
@@ -290,7 +263,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadStringInlineOneChar) {
     code[0] = INSTRUCTION_LOAD_INLINE_STRING(0, 65, true, false);  // 'A' = 65
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-    module->moduleInit = createFunctionObject(0, code, 2, 254, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error = 0;
 
@@ -311,7 +284,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadStringInlineTwoChars) {
     code[0] = INSTRUCTION_LOAD_INLINE_STRING(0, k, true, false);
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-    module->moduleInit = createFunctionObject(0, code, 2, 254, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error = 0;
 
@@ -335,7 +308,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadStringEmptyFromConstantTable) {
     code[0] = INSTRUCTION_LOAD_INLINE_STRING(1, idx, false, false);
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-    module->moduleInit = createFunctionObject(0, code, 2, 254, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error = 0;
 
@@ -366,7 +339,7 @@ TEST_F(VMInstructionLoadConstantTest, LoadConstantsInDifferentRegisters) {
     code[3] = INSTRUCTION_LOAD_CONSTANT(3, strIdx, false, false);
     code[4] = INSTRUCTION_TRAP(0, 0, false, false);
 
-    module->moduleInit = createFunctionObject(0, code, 5, 254, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 5, 254, 0, 0);
 
     vm->error = 0;
 
@@ -395,7 +368,7 @@ TEST_F(VMInstructionLoadConstantTest, LoadIntoHighRegisters) {
     code[0] = INSTRUCTION_LOAD_INLINE_INTEGER(254, 42, true, true);  // Max register index, s=true
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-    module->moduleInit = createFunctionObject(0, code, 2, 255, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 2, 255, 0, 0);
 
     vm->error = 0;
 

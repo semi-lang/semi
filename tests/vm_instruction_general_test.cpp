@@ -8,35 +8,9 @@ extern "C" {
 #include "semi/error.h"
 }
 
-class VMInstructionGeneralTest : public ::testing::Test {
-   protected:
-    SemiVM* vm;
+#include "test_common.hpp"
 
-    void SetUp() override {
-        vm = semiCreateVM(NULL);
-        ASSERT_NE(vm, nullptr) << "Failed to create VM";
-    }
-
-    void TearDown() override {
-        if (vm) {
-            semiDestroyVM(vm);
-            vm = nullptr;
-        }
-    }
-
-    FunctionTemplate* createFunctionObject(Instruction* code, size_t codeSize) {
-        FunctionTemplate* func = semiFunctionTemplateCreate(&vm->gc, 0);
-        Instruction* codeCopy  = (Instruction*)semiMalloc(&vm->gc, sizeof(Instruction) * codeSize);
-        memcpy(codeCopy, code, sizeof(Instruction) * codeSize);
-        func->arity          = 0;
-        func->chunk.data     = codeCopy;
-        func->chunk.size     = codeSize;
-        func->chunk.capacity = codeSize;
-        func->maxStackSize   = 0;
-
-        return func;
-    }
-};
+class VMInstructionGeneralTest : public VMTest {};
 
 TEST_F(VMInstructionGeneralTest, OpTrapWithZeroCode) {
     Instruction code[1];
@@ -45,7 +19,7 @@ TEST_F(VMInstructionGeneralTest, OpTrapWithZeroCode) {
     vm->error = 0;
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(code, 1);
+    FunctionTemplate* func = CreateFunctionObject(0, code, 1, 8, 0, 0);
     module->moduleInit     = func;
 
     int result = semiVMRunMainModule(vm, module);
@@ -61,7 +35,7 @@ TEST_F(VMInstructionGeneralTest, OpTrapWithNonZeroCode) {
     vm->error = 0;
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(code, 1);
+    FunctionTemplate* func = CreateFunctionObject(0, code, 1, 8, 0, 0);
     module->moduleInit     = func;
 
     int result = semiVMRunMainModule(vm, module);
@@ -80,7 +54,7 @@ TEST_F(VMInstructionGeneralTest, OpJumpPositiveOffset) {
     vm->error = 0;
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(code, 4);
+    FunctionTemplate* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
     module->moduleInit     = func;
 
     int result = semiVMRunMainModule(vm, module);
@@ -97,7 +71,7 @@ TEST_F(VMInstructionGeneralTest, OpJumpNegativeOffset) {
     vm->error = 0;
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(code, 3);
+    FunctionTemplate* func = CreateFunctionObject(0, code, 3, 8, 0, 0);
     module->moduleInit     = func;
 
     int result = semiVMRunMainModule(vm, module);
@@ -113,7 +87,7 @@ TEST_F(VMInstructionGeneralTest, OpJumpZeroOffsetNoop) {
     vm->error = 0;
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(code, 2);
+    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit     = func;
 
     int result = semiVMRunMainModule(vm, module);
@@ -129,7 +103,7 @@ TEST_F(VMInstructionGeneralTest, InvalidPCAfterJump) {
     vm->error = 0;
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(code, 2);
+    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit     = func;
 
     int result = semiVMRunMainModule(vm, module);
@@ -151,7 +125,7 @@ TEST_F(VMInstructionGeneralTest, OpCJumpLargerPositiveOffset) {
     vm->values[1].as.b   = true;
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(code, 6);
+    FunctionTemplate* func = CreateFunctionObject(0, code, 6, 8, 0, 0);
     module->moduleInit     = func;
 
     int result = semiVMRunMainModule(vm, module);
@@ -168,7 +142,7 @@ TEST_F(VMInstructionGeneralTest, OpCJumpZeroOffset) {
     vm->values[0].as.b   = true;
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(code, 2);
+    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit     = func;
 
     int result = semiVMRunMainModule(vm, module);
@@ -187,7 +161,7 @@ TEST_F(VMInstructionGeneralTest, OpCJumpNegativeOffset) {
     vm->values[0].as.b   = true;
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(code, 3);
+    FunctionTemplate* func = CreateFunctionObject(0, code, 3, 8, 0, 0);
     module->moduleInit     = func;
 
     int result = semiVMRunMainModule(vm, module);
@@ -257,7 +231,7 @@ TEST_F(VMInstructionGeneralTest, OpCJumpTruthyValues) {
         }
 
         SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = createFunctionObject(code, 4);
+        FunctionTemplate* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
         module->moduleInit     = func;
 
         int result = semiVMRunMainModule(vm, module);
@@ -290,7 +264,7 @@ TEST_F(VMInstructionGeneralTest, OpCJumpMixedTruthyAndFalsy) {
     vm->values[1].as.i   = 0;
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(code, 6);
+    FunctionTemplate* func = CreateFunctionObject(0, code, 6, 8, 0, 0);
     module->moduleInit     = func;
 
     int result = semiVMRunMainModule(vm, module);
@@ -306,7 +280,7 @@ TEST_F(VMInstructionGeneralTest, OpNoopBasic) {
     vm->error = 0;
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(code, 2);
+    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit     = func;
 
     int result = semiVMRunMainModule(vm, module);
@@ -326,7 +300,7 @@ TEST_F(VMInstructionGeneralTest, OpMoveBasicRegisterCopy) {
     vm->values[1].as.b   = false;
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(code, 2);
+    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit     = func;
 
     int result = semiVMRunMainModule(vm, module);
@@ -347,7 +321,7 @@ TEST_F(VMInstructionGeneralTest, OpMovePositiveJumpWithConstant) {
     vm->values[0].as.i   = 456;
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(code, 4);
+    FunctionTemplate* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
     module->moduleInit     = func;
 
     int result = semiVMRunMainModule(vm, module);
@@ -368,7 +342,7 @@ TEST_F(VMInstructionGeneralTest, OpMoveNegativeJumpWithConstant) {
     vm->values[0].as.i   = 321;
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(code, 4);
+    FunctionTemplate* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
     module->moduleInit     = func;
 
     int result = semiVMRunMainModule(vm, module);
@@ -389,7 +363,7 @@ TEST_F(VMInstructionGeneralTest, OpMovePositiveJumpWithRegister) {
     vm->values[0].as.i   = 789;
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(code, 4);
+    FunctionTemplate* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
     module->moduleInit     = func;
 
     int result = semiVMRunMainModule(vm, module);
@@ -410,7 +384,7 @@ TEST_F(VMInstructionGeneralTest, OpMoveNegativeJumpWithRegister) {
     vm->values[0].as.i   = 555;
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(code, 4);
+    FunctionTemplate* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
     module->moduleInit     = func;
 
     int result = semiVMRunMainModule(vm, module);
@@ -434,7 +408,7 @@ TEST_F(VMInstructionGeneralTest, OpMoveLargerJump) {
     vm->values[0].as.i   = 999;
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(code, 7);
+    FunctionTemplate* func = CreateFunctionObject(0, code, 7, 8, 0, 0);
     module->moduleInit     = func;
 
     int result = semiVMRunMainModule(vm, module);
@@ -455,7 +429,7 @@ TEST_F(VMInstructionGeneralTest, OpMoveSequentialWithoutJumps) {
     vm->values[1].as.i   = 111;
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(code, 4);
+    FunctionTemplate* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
     module->moduleInit     = func;
 
     int result = semiVMRunMainModule(vm, module);

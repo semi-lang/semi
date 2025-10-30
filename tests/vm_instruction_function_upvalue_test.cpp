@@ -21,7 +21,7 @@ TEST_F(VMInstructionFunctionUpvalueTest, BasicUpvalueCreation) {
     fnCode[1] = INSTRUCTION_RETURN(0, 0, 0, false, false);       // Function returns
 
     // Create a function that captures one local variable as an upvalue
-    FunctionTemplate* func    = createFunctionObject(0, fnCode, 2, 2, 1, 0);  // 1 upvalue
+    FunctionTemplate* func    = CreateFunctionObject(0, fnCode, 2, 2, 1, 0);  // 1 upvalue
     func->upvalues[0].index   = 1;                                            // Capture local at index 1
     func->upvalues[0].isLocal = true;
 
@@ -34,7 +34,7 @@ TEST_F(VMInstructionFunctionUpvalueTest, BasicUpvalueCreation) {
     code[3] = INSTRUCTION_TRAP(0, 0, false, false);                // Exit
     code[4] = INSTRUCTION_TRAP(0, 1, false, false);                // Should not reach
 
-    module->moduleInit = createFunctionObject(0, code, 5, 3, 0, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 5, 3, 0, 0);
 
     ErrorId result = semiVMRunMainModule(vm, module);
 
@@ -56,7 +56,7 @@ TEST_F(VMInstructionFunctionUpvalueTest, MultipleUpvalueCreation) {
     fnCode[5] = INSTRUCTION_RETURN(0, 0, 0, false, false);       // Function returns
 
     // Step 2: Create function object and store in constant table
-    FunctionTemplate* func    = createFunctionObject(0, fnCode, 6, 3, 3, 0);  // 3 upvalues
+    FunctionTemplate* func    = CreateFunctionObject(0, fnCode, 6, 3, 3, 0);  // 3 upvalues
     func->upvalues[0].index   = 0;
     func->upvalues[0].isLocal = true;
     func->upvalues[1].index   = 1;
@@ -76,7 +76,7 @@ TEST_F(VMInstructionFunctionUpvalueTest, MultipleUpvalueCreation) {
     code[5] = INSTRUCTION_TRAP(0, 0, false, false);                   // Exit
     code[6] = INSTRUCTION_TRAP(0, 1, false, false);                   // Should not reach
 
-    module->moduleInit = createFunctionObject(0, code, 7, 5, 0, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 7, 5, 0, 0);
 
     ErrorId result = semiVMRunMainModule(vm, module);
 
@@ -110,7 +110,7 @@ TEST_F(VMInstructionFunctionUpvalueTest, NestedFunctionsWithUpvalues) {
     innerCode[1] = INSTRUCTION_ADD(0, 0, 3 + 128, false, true);     // R[0] += 3
     innerCode[2] = INSTRUCTION_RETURN(0, 0, 0, false, false);       // Inner function returns R[0]
 
-    FunctionTemplate* innerFunc    = createFunctionObject(0, innerCode, 3, 2, 1, 0);  // 1 upvalue
+    FunctionTemplate* innerFunc    = CreateFunctionObject(0, innerCode, 3, 2, 1, 0);  // 1 upvalue
     innerFunc->upvalues[0].index   = 0;
     innerFunc->upvalues[0].isLocal = false;
 
@@ -124,7 +124,7 @@ TEST_F(VMInstructionFunctionUpvalueTest, NestedFunctionsWithUpvalues) {
     middleCode[3] = INSTRUCTION_SET_UPVALUE(0, 1, 0, false, false);          // Upvalue[0] := R[1]
     middleCode[4] = INSTRUCTION_RETURN(0, 0, 0, false, false);               // Middle function returns R[0]
 
-    FunctionTemplate* middleFunc    = createFunctionObject(0, middleCode, 5, 2, 1, 0);  // 1 upvalue
+    FunctionTemplate* middleFunc    = CreateFunctionObject(0, middleCode, 5, 2, 1, 0);  // 1 upvalue
     middleFunc->upvalues[0].index   = 0;
     middleFunc->upvalues[0].isLocal = true;
 
@@ -136,7 +136,7 @@ TEST_F(VMInstructionFunctionUpvalueTest, NestedFunctionsWithUpvalues) {
     outerCode[1] = INSTRUCTION_LOAD_CONSTANT(1, middleIndex, false, false);  // R[1] := middle function
     outerCode[2] = INSTRUCTION_RETURN(1, 0, 0, false, false);                // Outer function returns R[1]
 
-    FunctionTemplate* outerFunc = createFunctionObject(0, outerCode, 3, 2, 0, 0);  // 0 upvalue
+    FunctionTemplate* outerFunc = CreateFunctionObject(0, outerCode, 3, 2, 0, 0);  // 0 upvalue
 
     ConstantIndex outerIndex = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(outerFunc));
 
@@ -149,7 +149,7 @@ TEST_F(VMInstructionFunctionUpvalueTest, NestedFunctionsWithUpvalues) {
     code[4] = INSTRUCTION_TRAP(0, 0, false, false);                    // Exit
     code[5] = INSTRUCTION_TRAP(0, 1, false, false);                    // Should not reach
 
-    module->moduleInit = createFunctionObject(0, code, 6, 2, 0, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 6, 2, 0, 0);
 
     ErrorId result = semiVMRunMainModule(vm, module);
 
@@ -187,7 +187,7 @@ TEST_F(VMInstructionFunctionUpvalueTest, UpvalueReuse) {
     firstCode[2] = INSTRUCTION_SET_UPVALUE(0, 0, 0, false, false);  // Upvalue[0] := R[0]
     firstCode[3] = INSTRUCTION_RETURN(255, 0, 0, false, false);     // First function returns
 
-    FunctionTemplate* first    = createFunctionObject(0, firstCode, 4, 3, 1, 0);  // 1 upvalue
+    FunctionTemplate* first    = CreateFunctionObject(0, firstCode, 4, 3, 1, 0);  // 1 upvalue
     first->upvalues[0].index   = 0;
     first->upvalues[0].isLocal = true;
 
@@ -199,7 +199,7 @@ TEST_F(VMInstructionFunctionUpvalueTest, UpvalueReuse) {
     secondCode[1] = INSTRUCTION_ADD(0, 0, 4 + 128, false, true);     // R[0] += 4
     secondCode[2] = INSTRUCTION_RETURN(0, 0, 0, false, false);       // Second function returns R[0]
 
-    FunctionTemplate* second    = createFunctionObject(0, secondCode, 3, 2, 1, 0);  // 1 upvalue
+    FunctionTemplate* second    = CreateFunctionObject(0, secondCode, 3, 2, 1, 0);  // 1 upvalue
     second->upvalues[0].index   = 0;
     second->upvalues[0].isLocal = true;
 
@@ -214,7 +214,7 @@ TEST_F(VMInstructionFunctionUpvalueTest, UpvalueReuse) {
     outerCode[4] = INSTRUCTION_CALL(3, 0, 0, false, false);                  // Call function first
     outerCode[5] = INSTRUCTION_RETURN(2, 0, 0, false, false);                // Outer function returns R[2]
 
-    FunctionTemplate* outerFunc = createFunctionObject(0, outerCode, 6, 4, 0, 0);  // 0 upvalue
+    FunctionTemplate* outerFunc = CreateFunctionObject(0, outerCode, 6, 4, 0, 0);  // 0 upvalue
 
     ConstantIndex outerIndex = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(outerFunc));
 
@@ -226,7 +226,7 @@ TEST_F(VMInstructionFunctionUpvalueTest, UpvalueReuse) {
     code[3] = INSTRUCTION_TRAP(0, 0, false, false);                    // Exit
     code[4] = INSTRUCTION_TRAP(0, 1, false, false);                    // Should not reach
 
-    module->moduleInit = createFunctionObject(0, code, 5, 2, 0, 0);
+    module->moduleInit = CreateFunctionObject(0, code, 5, 2, 0, 0);
 
     ErrorId result = semiVMRunMainModule(vm, module);
 

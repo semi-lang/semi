@@ -13,35 +13,7 @@ extern "C" {
 
 #include "test_common.hpp"
 
-class VMInstructionCollectionTest : public ::testing::Test {
-   protected:
-    SemiVM* vm;
-
-    void SetUp() override {
-        vm = semiCreateVM(NULL);
-        ASSERT_NE(vm, nullptr) << "Failed to create VM";
-    }
-
-    void TearDown() override {
-        if (vm) {
-            semiDestroyVM(vm);
-            vm = nullptr;
-        }
-    }
-
-    FunctionTemplate* createFunctionObject(Instruction* code, size_t codeSize) {
-        FunctionTemplate* func = semiFunctionTemplateCreate(&vm->gc, 0);
-        Instruction* codeCopy  = (Instruction*)semiMalloc(&vm->gc, sizeof(Instruction) * codeSize);
-        memcpy(codeCopy, code, sizeof(Instruction) * codeSize);
-        func->arity          = 0;
-        func->chunk.data     = codeCopy;
-        func->chunk.size     = codeSize;
-        func->chunk.capacity = codeSize;
-        func->maxStackSize   = 0;
-
-        return func;
-    }
-};
+class VMInstructionCollectionTest : public VMTest {};
 
 // Test cases for OP_GET_ITEM string indexing
 struct GetItemStringTestCase {
@@ -94,7 +66,7 @@ TEST_F(VMInstructionCollectionTest, OpGetItemStringIndexing) {
         code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
         SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = createFunctionObject(code, 2);
+        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit     = func;
 
         ErrorId result = semiVMRunMainModule(vm, module);
@@ -135,7 +107,7 @@ TEST_F(VMInstructionCollectionTest, OpGetItemUnsupportedTypes) {
         code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
         SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = createFunctionObject(code, 2);
+        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit     = func;
 
         ErrorId result = semiVMRunMainModule(vm, module);
@@ -166,7 +138,7 @@ TEST_F(VMInstructionCollectionTest, OpSetItemDict) {
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(code, 2);
+    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit     = func;
 
     ErrorId result = semiVMRunMainModule(vm, module);
@@ -215,7 +187,7 @@ TEST_F(VMInstructionCollectionTest, OpSetItemList) {
         code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
         SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = createFunctionObject(code, 2);
+        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit     = func;
 
         ErrorId result = semiVMRunMainModule(vm, module);
@@ -263,7 +235,7 @@ TEST_F(VMInstructionCollectionTest, OpSetItemListErrors) {
         code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
         SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = createFunctionObject(code, 2);
+        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit     = func;
 
         ErrorId result = semiVMRunMainModule(vm, module);
@@ -296,7 +268,7 @@ TEST_F(VMInstructionCollectionTest, OpSetItemUnsupportedTypes) {
         code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
         SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = createFunctionObject(code, 2);
+        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit     = func;
 
         ErrorId result = semiVMRunMainModule(vm, module);
@@ -340,7 +312,7 @@ TEST_F(VMInstructionCollectionTest, OpContainDict) {
         code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
         SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = createFunctionObject(code, 2);
+        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit     = func;
 
         ErrorId result = semiVMRunMainModule(vm, module);
@@ -387,7 +359,7 @@ TEST_F(VMInstructionCollectionTest, OpContainList) {
         code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
         SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = createFunctionObject(code, 2);
+        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit     = func;
 
         ErrorId result = semiVMRunMainModule(vm, module);
@@ -436,7 +408,7 @@ TEST_F(VMInstructionCollectionTest, OpContainString) {
         code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
         SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = createFunctionObject(code, 2);
+        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit     = func;
 
         ErrorId result = semiVMRunMainModule(vm, module);
@@ -475,7 +447,7 @@ TEST_F(VMInstructionCollectionTest, OpContainStringMultiChar) {
         code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
         SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = createFunctionObject(code, 2);
+        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit     = func;
 
         ErrorId result = semiVMRunMainModule(vm, module);
@@ -509,7 +481,7 @@ TEST_F(VMInstructionCollectionTest, OpContainUnsupportedTypes) {
         code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
         SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = createFunctionObject(code, 2);
+        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit     = func;
 
         ErrorId result = semiVMRunMainModule(vm, module);
@@ -530,7 +502,7 @@ TEST_F(VMInstructionCollectionTest, OpCollectionInstructionsWithConstants) {
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
     SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = createFunctionObject(code, 2);
+    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit     = func;
 
     ErrorId result = semiVMRunMainModule(vm, module);
