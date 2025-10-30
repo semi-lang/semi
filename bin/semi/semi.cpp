@@ -349,7 +349,11 @@ int executeSource(const char* source, bool isRepl, bool disassemble) {
 
     ErrorId errId = compileAndRun(vm, source, strlen(source), isRepl, disassemble);
     if (errId != 0) {
+#ifdef SEMI_DEBUG_MSG
+        printError(errId, vm->errorMessage);
+#else
         printError(errId, "An error occurred during execution.");
+#endif  // SEMI_DEBUG_MSG
         return 1;
     } else if (vm->returnedValue != NULL && !IS_INVALID(vm->returnedValue)) {
         std::cout << "=> ";
