@@ -2915,7 +2915,7 @@ parsed_arguments:
     // values here. The VM will check the coarity with the current frame when it reaches this instruction.
     emitCode(compiler, INSTRUCTION_RETURN(UINT8_MAX, 0, 0, false, false));
 
-    FunctionTemplate* fn = semiFunctionTemplateCreate(compiler->gc, compiler->currentFunction->upvalues.size);
+    FunctionProto* fn = semiFunctionProtoCreate(compiler->gc, compiler->currentFunction->upvalues.size);
     if (fn == NULL) {
         SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_MEMORY_ALLOCATION_FAILURE, "Failed to allocate function object");
     }
@@ -2932,10 +2932,10 @@ parsed_arguments:
     ChunkInit(&compiler->currentFunction->chunk);
     leaveFunctionScope(compiler);
 
-    Value fnValue         = semiValueNewFunctionTemplate(fn);
+    Value fnValue         = semiValueNewFunctionProto(fn);
     ConstantIndex fnIndex = semiConstantTableInsert(&compiler->artifactModule->constantTable, fnValue);
 
-    // Load the function template from the constant table. This makes the register a function.
+    // Load the function proto from the constant table. This makes the register a function.
     if (fnIndex > MAX_OPERAND_K) {
         // TODO: Spill with OP_EXTRA_ARG
         SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_TOO_MANY_CONSTANTS, "Too many constants in a module");
@@ -3084,7 +3084,7 @@ static void parseDefer(Compiler* compiler) {
 
     emitCode(compiler, INSTRUCTION_RETURN(UINT8_MAX, 0, 0, false, false));
 
-    FunctionTemplate* fn = semiFunctionTemplateCreate(compiler->gc, compiler->currentFunction->upvalues.size);
+    FunctionProto* fn = semiFunctionProtoCreate(compiler->gc, compiler->currentFunction->upvalues.size);
     if (fn == NULL) {
         SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_MEMORY_ALLOCATION_FAILURE, "Failed to allocate function object");
     }
@@ -3101,10 +3101,10 @@ static void parseDefer(Compiler* compiler) {
     ChunkInit(&compiler->currentFunction->chunk);
     leaveFunctionScope(compiler);
 
-    Value fnValue         = semiValueNewFunctionTemplate(fn);
+    Value fnValue         = semiValueNewFunctionProto(fn);
     ConstantIndex fnIndex = semiConstantTableInsert(&compiler->artifactModule->constantTable, fnValue);
 
-    // Load the function template from the constant table. This makes the register a function.
+    // Load the function proto from the constant table. This makes the register a function.
     if (fnIndex > MAX_OPERAND_K) {
         // TODO: Spill with OP_EXTRA_ARG
         SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_TOO_MANY_CONSTANTS, "Too many constants in a module");
@@ -3199,7 +3199,7 @@ static void parseScopedStatements(Compiler* compiler) {
 static SemiModule* finalizeCompiler(struct Compiler* compiler) {
     emitCode(compiler, INSTRUCTION_RETURN(255, 0, 0, false, false));
 
-    FunctionTemplate* fn = semiFunctionTemplateCreate(compiler->gc, 0);
+    FunctionProto* fn = semiFunctionProtoCreate(compiler->gc, 0);
     if (fn == NULL) {
         SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_MEMORY_ALLOCATION_FAILURE, "Failed to allocate function object");
     }

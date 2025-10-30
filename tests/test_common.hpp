@@ -252,9 +252,9 @@ static inline Value createInlineRangeValue(IntValue start, IntValue end) {
 #define INLINE_RANGE_VALUE(start, end) (createInlineRangeValue(start, end))
 
 #undef FUNCTION_VALUE
-static inline Value createFunctionValue(FunctionTemplate* func) {
+static inline Value createFunctionValue(FunctionProto* func) {
     Value val;
-    val.header = VALUE_TYPE_FUNCTION_TEMPLATE;
+    val.header = VALUE_TYPE_FUNCTION_PROTO;
     val.as.ptr = func;
     return val;
 }
@@ -285,14 +285,14 @@ class VMTest : public ::testing::Test {
         ASSERT_EQ(result, 0) << "Adding global variable '" << name << "' should succeed";
     }
 
-    FunctionTemplate* CreateFunctionObject(uint8_t arity,
-                                           Instruction* code,
-                                           uint32_t codeSize,
-                                           uint8_t maxStackSize,
-                                           uint8_t upvalueCount,
-                                           uint8_t coarity) {
-        FunctionTemplate* func = semiFunctionTemplateCreate(&vm->gc, upvalueCount);
-        Instruction* codeCopy  = (Instruction*)semiMalloc(&vm->gc, sizeof(Instruction) * codeSize);
+    FunctionProto* CreateFunctionObject(uint8_t arity,
+                                        Instruction* code,
+                                        uint32_t codeSize,
+                                        uint8_t maxStackSize,
+                                        uint8_t upvalueCount,
+                                        uint8_t coarity) {
+        FunctionProto* func   = semiFunctionProtoCreate(&vm->gc, upvalueCount);
+        Instruction* codeCopy = (Instruction*)semiMalloc(&vm->gc, sizeof(Instruction) * codeSize);
         memcpy(codeCopy, code, sizeof(Instruction) * codeSize);
         func->moduleId       = SEMI_REPL_MODULE_ID;
         func->arity          = arity;

@@ -19,9 +19,9 @@ void semiConstantTableCleanup(ConstantTable* table) {
     for (uint32_t i = 0; i < semiDictLen(table->constantMap); i++) {
         Value key = table->constantMap->keys[i].key;
         switch (VALUE_TYPE(&key)) {
-            case VALUE_TYPE_FUNCTION_TEMPLATE: {
-                FunctionTemplate* fnTemplate = (FunctionTemplate*)AS_PTR(&key, FunctionTemplate);
-                semiFunctionTemplateDestroy(table->gc, fnTemplate);
+            case VALUE_TYPE_FUNCTION_PROTO: {
+                FunctionProto* fnProto = (FunctionProto*)AS_PTR(&key, FunctionProto);
+                semiFunctionProtoDestroy(table->gc, fnProto);
                 break;
             }
 

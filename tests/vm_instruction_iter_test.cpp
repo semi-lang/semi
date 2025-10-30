@@ -61,9 +61,9 @@ TEST_F(VMInstructionIterTest, OpMakeRangeBasicInteger) {
 
         vm->error = 0;
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+        module->moduleInit  = func;
 
         int result = semiVMRunMainModule(vm, module);
 
@@ -119,9 +119,9 @@ TEST_F(VMInstructionIterTest, OpMakeRangeFloatValues) {
 
         vm->error = 0;
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+        module->moduleInit  = func;
 
         int result = semiVMRunMainModule(vm, module);
 
@@ -169,9 +169,9 @@ TEST_F(VMInstructionIterTest, OpMakeRangeMixedTypes) {
 
         vm->error = 0;
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+        module->moduleInit  = func;
 
         int result = semiVMRunMainModule(vm, module);
 
@@ -202,9 +202,9 @@ TEST_F(VMInstructionIterTest, OpMakeRangeWithConstants) {
 
     vm->error = 0;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -236,9 +236,9 @@ TEST_F(VMInstructionIterTest, OpMakeRangeTypeErrors) {
 
         vm->error = 0;
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+        module->moduleInit  = func;
 
         int result = semiVMRunMainModule(vm, module);
 
@@ -291,9 +291,9 @@ TEST_F(VMInstructionIterTest, OpIterNextInlineRange) {
         int result;
 
         while (iterations < 10) {  // Safety limit
-            SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-            FunctionTemplate* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
-            module->moduleInit     = func;
+            SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+            FunctionProto* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
+            module->moduleInit  = func;
 
             result = semiVMRunMainModule(vm, module);
 
@@ -341,9 +341,9 @@ TEST_F(VMInstructionIterTest, OpIterNextObjectRange) {
 
     vm->error = 0;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, create_range, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, create_range, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
     ASSERT_EQ(result, 0) << "Should create ObjectRange successfully";
@@ -366,9 +366,9 @@ TEST_F(VMInstructionIterTest, OpIterNextObjectRange) {
     while (iterations < 10) {  // Safety limit
         vm->error = 0;
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
+        module->moduleInit  = func;
 
         result = semiVMRunMainModule(vm, module);
 
@@ -411,9 +411,9 @@ TEST_F(VMInstructionIterTest, OpIterNextFloatRange) {
 
     vm->error = 0;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, create_range, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, create_range, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
     ASSERT_EQ(result, 0) << "Should create float ObjectRange successfully";
@@ -436,9 +436,9 @@ TEST_F(VMInstructionIterTest, OpIterNextFloatRange) {
     while (iterations < 10) {
         vm->error = 0;
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
+        module->moduleInit  = func;
 
         result = semiVMRunMainModule(vm, module);
 

@@ -1493,8 +1493,8 @@ ValueHash semiBuiltInHash(const Value value) {
         case VALUE_TYPE_OBJECT_STRING:
             return AS_OBJECT_STRING(&value)->hash;
 
-        case VALUE_TYPE_FUNCTION_TEMPLATE:
-            return semiHash64Bits((uint64_t)(uintptr_t)AS_FUNCTION_TEMPLATE(&value));
+        case VALUE_TYPE_FUNCTION_PROTO:
+            return semiHash64Bits((uint64_t)(uintptr_t)AS_FUNCTION_PROTO(&value));
 
         default:
             return SEMI_ERROR_UNEXPECTED_TYPE;
@@ -1633,15 +1633,15 @@ void semiPrimitivesFinalizeMagicMethodsTable(MagicMethodsTable* table) {
 
 void semiPrimitivesIntializeBuiltInPrimitives(GC* gc, ClassTable* classes) {
     static const MagicMethodsTable builtInClasses[] = {
-        [BASE_VALUE_TYPE_INVALID]           = invalidMagicMethodsTable,
-        [BASE_VALUE_TYPE_BOOL]              = boolMagicMethodsTable,
-        [BASE_VALUE_TYPE_NUMBER]            = numberMagicMethodsTable,
-        [BASE_VALUE_TYPE_STRING]            = stringMagicMethodsTable,
-        [BASE_VALUE_TYPE_RANGE]             = rangeMagicMethodsTable,
-        [BASE_VALUE_TYPE_LIST]              = listMagicMethodsTable,
-        [BASE_VALUE_TYPE_DICT]              = dictMagicMethodsTable,
-        [BASE_VALUE_TYPE_FUNCTION_TEMPLATE] = invalidMagicMethodsTable,
-        [BASE_VALUE_TYPE_CLASS]             = invalidMagicMethodsTable,
+        [BASE_VALUE_TYPE_INVALID]        = invalidMagicMethodsTable,
+        [BASE_VALUE_TYPE_BOOL]           = boolMagicMethodsTable,
+        [BASE_VALUE_TYPE_NUMBER]         = numberMagicMethodsTable,
+        [BASE_VALUE_TYPE_STRING]         = stringMagicMethodsTable,
+        [BASE_VALUE_TYPE_RANGE]          = rangeMagicMethodsTable,
+        [BASE_VALUE_TYPE_LIST]           = listMagicMethodsTable,
+        [BASE_VALUE_TYPE_DICT]           = dictMagicMethodsTable,
+        [BASE_VALUE_TYPE_FUNCTION_PROTO] = invalidMagicMethodsTable,
+        [BASE_VALUE_TYPE_CLASS]          = invalidMagicMethodsTable,
     };
 
     uint16_t newCapacity               = (uint16_t)(sizeof(builtInClasses) / sizeof(MagicMethodsTable));

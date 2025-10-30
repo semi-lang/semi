@@ -61,9 +61,9 @@ TEST_F(VMInstructionArithmeticTest, OpAdd) {
             vm->values[2] = semiValueNewInt(test_case.rhs_int);
         }
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
+        module->moduleInit  = func;
 
         int result = semiVMRunMainModule(vm, module);
 
@@ -119,9 +119,9 @@ TEST_F(VMInstructionArithmeticTest, OpSubtract) {
             vm->values[2].as.i   = test_case.rhs_int;
         }
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
+        module->moduleInit  = func;
 
         int result = semiVMRunMainModule(vm, module);
 
@@ -177,9 +177,9 @@ TEST_F(VMInstructionArithmeticTest, OpMultiply) {
             vm->values[2].as.i   = test_case.rhs_int;
         }
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
+        module->moduleInit  = func;
 
         int result = semiVMRunMainModule(vm, module);
 
@@ -234,9 +234,9 @@ TEST_F(VMInstructionArithmeticTest, OpDivide) {
             vm->values[2].as.i   = test_case.rhs_int;
         }
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
+        module->moduleInit  = func;
 
         int result = semiVMRunMainModule(vm, module);
 
@@ -269,9 +269,9 @@ TEST_F(VMInstructionArithmeticTest, OpDivideByZero) {
     vm->values[2].header = VALUE_TYPE_INT;
     vm->values[2].as.i   = 0;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -312,9 +312,9 @@ TEST_F(VMInstructionArithmeticTest, OpFloorDivide) {
             vm->values[2].as.i   = test_case.rhs_int;
         }
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
+        module->moduleInit  = func;
 
         int result = semiVMRunMainModule(vm, module);
 
@@ -353,9 +353,9 @@ TEST_F(VMInstructionArithmeticTest, OpModulo) {
         vm->values[2].header = VALUE_TYPE_INT;
         vm->values[2].as.i   = test_case.rhs_int;
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
+        module->moduleInit  = func;
 
         int result = semiVMRunMainModule(vm, module);
 
@@ -401,9 +401,9 @@ TEST_F(VMInstructionArithmeticTest, OpPower) {
             vm->values[2].as.i   = test_case.rhs_int;
         }
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
+        module->moduleInit  = func;
 
         int result = semiVMRunMainModule(vm, module);
 
@@ -429,9 +429,9 @@ TEST_F(VMInstructionArithmeticTest, OpNegate) {
     vm->values[1].header = VALUE_TYPE_INT;
     vm->values[1].as.i   = 42;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -451,9 +451,9 @@ TEST_F(VMInstructionArithmeticTest, OpNegateFloat) {
     vm->values[1].header = VALUE_TYPE_FLOAT;
     vm->values[1].as.f   = 3.14f;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -491,9 +491,9 @@ TEST_F(VMInstructionArithmeticTest, OpBitwiseAnd) {
         vm->values[2].header = VALUE_TYPE_INT;
         vm->values[2].as.i   = test_case.rhs;
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
+        module->moduleInit  = func;
 
         int result = semiVMRunMainModule(vm, module);
 
@@ -525,9 +525,9 @@ TEST_F(VMInstructionArithmeticTest, OpBitwiseOr) {
         vm->values[2].header = VALUE_TYPE_INT;
         vm->values[2].as.i   = test_case.rhs;
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
+        module->moduleInit  = func;
 
         int result = semiVMRunMainModule(vm, module);
 
@@ -559,9 +559,9 @@ TEST_F(VMInstructionArithmeticTest, OpBitwiseXor) {
         vm->values[2].header = VALUE_TYPE_INT;
         vm->values[2].as.i   = test_case.rhs;
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
+        module->moduleInit  = func;
 
         int result = semiVMRunMainModule(vm, module);
 
@@ -592,9 +592,9 @@ TEST_F(VMInstructionArithmeticTest, OpBitwiseShift) {
         vm->values[2].header = VALUE_TYPE_INT;
         vm->values[2].as.i   = test_case.rhs;
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
+        module->moduleInit  = func;
 
         int result = semiVMRunMainModule(vm, module);
 
@@ -615,9 +615,9 @@ TEST_F(VMInstructionArithmeticTest, OpBitwiseInvert) {
     vm->values[1].header = VALUE_TYPE_INT;
     vm->values[1].as.i   = 0b1010;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -637,9 +637,9 @@ TEST_F(VMInstructionArithmeticTest, OpArithmeticWithConstants) {
     vm->values[1].header = VALUE_TYPE_INT;
     vm->values[1].as.i   = 10;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -661,9 +661,9 @@ TEST_F(VMInstructionArithmeticTest, OpArithmeticTypeError) {
     vm->values[2].header = VALUE_TYPE_BOOL;
     vm->values[2].as.b   = true;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 

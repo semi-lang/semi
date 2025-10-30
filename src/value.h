@@ -81,7 +81,7 @@ typedef enum {
     BASE_VALUE_TYPE_DICT,
     BASE_VALUE_TYPE_UPVALUE,
     BASE_VALUE_TYPE_FUNCTION,
-    BASE_VALUE_TYPE_FUNCTION_TEMPLATE,
+    BASE_VALUE_TYPE_FUNCTION_PROTO,
     BASE_VALUE_TYPE_CLASS,
 } BaseValueType;
 
@@ -130,8 +130,8 @@ typedef enum {
     VALUE_TYPE_COMPILED_FUNCTION = BASE_VALUE_TYPE_FUNCTION | VALUE_HEADER_OBJECT_MASK,
     VALUE_TYPE_NATIVE_FUNCTION   = BASE_VALUE_TYPE_FUNCTION | (1 << VALUE_HEADER_VARIANT_SHIFT),
 
-    // Function template
-    VALUE_TYPE_FUNCTION_TEMPLATE = BASE_VALUE_TYPE_FUNCTION_TEMPLATE,
+    // Function proto
+    VALUE_TYPE_FUNCTION_PROTO = BASE_VALUE_TYPE_FUNCTION_PROTO,
 
     // Class
     VALUE_TYPE_CLASS = BASE_VALUE_TYPE_CLASS | VALUE_HEADER_OBJECT_MASK,
@@ -151,7 +151,7 @@ typedef enum {
 #define IS_INLINE_RANGE(v)      (VALUE_TYPE(v) == VALUE_TYPE_INLINE_RANGE)
 #define IS_LIST(v)              (VALUE_TYPE(v) == VALUE_TYPE_LIST)
 #define IS_DICT(v)              (VALUE_TYPE(v) == VALUE_TYPE_DICT)
-#define IS_FUNCTION_TEMPLATE(v) (VALUE_TYPE(v) == VALUE_TYPE_FUNCTION_TEMPLATE)
+#define IS_FUNCTION_PROTO(v)    (VALUE_TYPE(v) == VALUE_TYPE_FUNCTION_PROTO)
 #define IS_COMPILED_FUNCTION(v) (VALUE_TYPE(v) == VALUE_TYPE_COMPILED_FUNCTION)
 #define IS_NATIVE_FUNCTION(v)   (VALUE_TYPE(v) == VALUE_TYPE_NATIVE_FUNCTION)
 #define IS_CLASS(v)             (VALUE_TYPE(v) == VALUE_TYPE_CLASS)
@@ -174,7 +174,7 @@ typedef enum {
 #define AS_OBJECT_RANGE(v)      ((ObjectRange*)((v)->as.obj))
 #define AS_LIST(v)              ((ObjectList*)((v)->as.obj))
 #define AS_DICT(v)              ((ObjectDict*)((v)->as.obj))
-#define AS_FUNCTION_TEMPLATE(v) (AS_PTR((v), FunctionTemplate))
+#define AS_FUNCTION_PROTO(v)    (AS_PTR((v), FunctionProto))
 #define AS_COMPILED_FUNCTION(v) ((ObjectFunction*)((v)->as.obj))
 #define AS_NATIVE_FUNCTION(v)   (AS_PTR((v), NativeFunction))
 #define AS_CLASS(v)             ((ObjectClass*)((v)->as.obj))
@@ -453,7 +453,7 @@ typedef ErrorId(NativeFunction)(GC* gc, uint8_t argCount, Value* args, Value* re
 Value semiValueNewNativeFunction(NativeFunction* function);
 
 /*
- │ Function Template
+ │ Function Proto
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
 
 typedef struct UpvalueDescription {
@@ -461,7 +461,7 @@ typedef struct UpvalueDescription {
     bool isLocal;
 } UpvalueDescription;
 
-typedef struct FunctionTemplate {
+typedef struct FunctionProto {
     Chunk chunk;
     ModuleId moduleId;
     uint8_t arity;
@@ -470,11 +470,11 @@ typedef struct FunctionTemplate {
     uint8_t upvalueCount;
 
     UpvalueDescription upvalues[];
-} FunctionTemplate;
+} FunctionProto;
 
-FunctionTemplate* semiFunctionTemplateCreate(GC* gc, uint8_t upvalueCount);
-void semiFunctionTemplateDestroy(GC* gc, FunctionTemplate* function);
-Value semiValueNewFunctionTemplate(FunctionTemplate* function);
+FunctionProto* semiFunctionProtoCreate(GC* gc, uint8_t upvalueCount);
+void semiFunctionProtoDestroy(GC* gc, FunctionProto* function);
+Value semiValueNewFunctionProto(FunctionProto* function);
 
 /*
  │ Object Upvalue
@@ -508,8 +508,8 @@ static inline void semiObjectUpvalueDestroy(GC* gc, ObjectUpvalue* upvalue) {
 typedef struct ObjectFunction {
     Object obj;
 
-    // The function template that this function is bound to.
-    FunctionTemplate* fnTemplate;
+    // The function proto that this function is bound to.
+    FunctionProto* proto;
 
     // This points to the previous deferred function in the chain. Set by the VM when a defer statement is executed.
     // NULL if there is no previous deferred function.
@@ -521,11 +521,11 @@ typedef struct ObjectFunction {
     ObjectUpvalue* upvalues[];
 } ObjectFunction;
 
-ObjectFunction* semiObjectFunctionCreate(GC* gc, FunctionTemplate* function);
+ObjectFunction* semiObjectFunctionCreate(GC* gc, FunctionProto* function);
 static inline void semiObjectFunctionDestroy(GC* gc, ObjectFunction* function) {
     semiFree(gc, function, sizeof(ObjectFunction) + sizeof(ObjectUpvalue*) * function->upvalueCount);
 }
-static inline Value semiValueFunctionCreate(GC* gc, FunctionTemplate* function) {
+static inline Value semiValueFunctionCreate(GC* gc, FunctionProto* function) {
     ObjectFunction* o = semiObjectFunctionCreate(gc, function);
     return o ? (Value){.header = VALUE_TYPE_COMPILED_FUNCTION, .as = {.obj = (Object*)o}} : INVALID_VALUE;
 }

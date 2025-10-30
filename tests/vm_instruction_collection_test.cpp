@@ -65,9 +65,9 @@ TEST_F(VMInstructionCollectionTest, OpGetItemStringIndexing) {
         code[0] = INSTRUCTION_GET_ITEM(0, 1, 2, false, false);
         code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+        module->moduleInit  = func;
 
         ErrorId result = semiVMRunMainModule(vm, module);
 
@@ -106,9 +106,9 @@ TEST_F(VMInstructionCollectionTest, OpGetItemUnsupportedTypes) {
         code[0] = INSTRUCTION_GET_ITEM(0, 1, 2, false, false);
         code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+        module->moduleInit  = func;
 
         ErrorId result = semiVMRunMainModule(vm, module);
         EXPECT_EQ(result, test_case.expected_error);
@@ -137,9 +137,9 @@ TEST_F(VMInstructionCollectionTest, OpSetItemDict) {
     code[0] = INSTRUCTION_SET_ITEM(1, 2, 3, false, false);  // R[1][R[2]] = R[3]
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     ErrorId result = semiVMRunMainModule(vm, module);
     EXPECT_EQ(result, 0) << "SET_ITEM on dict should succeed";
@@ -186,9 +186,9 @@ TEST_F(VMInstructionCollectionTest, OpSetItemList) {
         code[0] = INSTRUCTION_SET_ITEM(1, 2, 3, false, false);
         code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+        module->moduleInit  = func;
 
         ErrorId result = semiVMRunMainModule(vm, module);
 
@@ -234,9 +234,9 @@ TEST_F(VMInstructionCollectionTest, OpSetItemListErrors) {
         code[0] = INSTRUCTION_SET_ITEM(1, 2, 3, false, false);
         code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+        module->moduleInit  = func;
 
         ErrorId result = semiVMRunMainModule(vm, module);
         EXPECT_EQ(result, error_case.expected_error);
@@ -267,9 +267,9 @@ TEST_F(VMInstructionCollectionTest, OpSetItemUnsupportedTypes) {
         code[0] = INSTRUCTION_SET_ITEM(1, 2, 3, false, false);
         code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+        module->moduleInit  = func;
 
         ErrorId result = semiVMRunMainModule(vm, module);
         EXPECT_EQ(result, test_case.expected_error);
@@ -311,9 +311,9 @@ TEST_F(VMInstructionCollectionTest, OpContainDict) {
         code[0] = INSTRUCTION_CONTAIN(0, 1, 2, false, false);  // R[0] = R[1] in R[2]
         code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+        module->moduleInit  = func;
 
         ErrorId result = semiVMRunMainModule(vm, module);
         EXPECT_EQ(result, 0) << "CONTAIN should succeed";
@@ -358,9 +358,9 @@ TEST_F(VMInstructionCollectionTest, OpContainList) {
         code[0] = INSTRUCTION_CONTAIN(0, 1, 2, false, false);  // R[0] = R[1] in R[2]
         code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+        module->moduleInit  = func;
 
         ErrorId result = semiVMRunMainModule(vm, module);
         EXPECT_EQ(result, 0) << "CONTAIN should succeed";
@@ -407,9 +407,9 @@ TEST_F(VMInstructionCollectionTest, OpContainString) {
         code[0] = INSTRUCTION_CONTAIN(0, 1, 2, false, false);  // R[0] = R[1] in R[2]
         code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+        module->moduleInit  = func;
 
         ErrorId result = semiVMRunMainModule(vm, module);
         EXPECT_EQ(result, 0) << "CONTAIN should succeed";
@@ -446,9 +446,9 @@ TEST_F(VMInstructionCollectionTest, OpContainStringMultiChar) {
         code[0] = INSTRUCTION_CONTAIN(0, 1, 2, false, false);
         code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+        module->moduleInit  = func;
 
         ErrorId result = semiVMRunMainModule(vm, module);
         EXPECT_EQ(result, 0) << "CONTAIN should succeed for multi-character search";
@@ -480,9 +480,9 @@ TEST_F(VMInstructionCollectionTest, OpContainUnsupportedTypes) {
         code[0] = INSTRUCTION_CONTAIN(0, 1, 2, false, false);
         code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-        SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit     = func;
+        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+        module->moduleInit  = func;
 
         ErrorId result = semiVMRunMainModule(vm, module);
         EXPECT_EQ(result, test_case.expected_error);
@@ -501,9 +501,9 @@ TEST_F(VMInstructionCollectionTest, OpCollectionInstructionsWithConstants) {
     code[0] = INSTRUCTION_GET_ITEM(0, 1, 1 - INT8_MIN, false, true);  // kc=true for constant index
     code[1] = INSTRUCTION_TRAP(0, 0, false, false);
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     ErrorId result = semiVMRunMainModule(vm, module);
     EXPECT_EQ(result, 0) << "GET_ITEM with constant should succeed";

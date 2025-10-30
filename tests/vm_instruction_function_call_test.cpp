@@ -19,8 +19,8 @@ TEST_F(VMInstructionFunctionCallTest, CallZeroArgumentFunction) {
     Instruction fnCode[1];
     fnCode[0] = INSTRUCTION_RETURN(255, 0, 0, false, false);  // Function body: just return
 
-    FunctionTemplate* func = CreateFunctionObject(0, fnCode, 1, 1, 0, 0);  // no args, stack size 1
-    ConstantIndex index    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
+    FunctionProto* func = CreateFunctionObject(0, fnCode, 1, 1, 0, 0);  // no args, stack size 1
+    ConstantIndex index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Create function from K[0]
@@ -42,8 +42,8 @@ TEST_F(VMInstructionFunctionCallTest, CallFunctionWithArguments) {
     Instruction fnCode[1];
     fnCode[0] = INSTRUCTION_RETURN(255, 0, 0, false, false);  // Function body: just return
 
-    FunctionTemplate* func = CreateFunctionObject(2, fnCode, 1, 3, 0, 0);  // 2 args, stack size 3
-    ConstantIndex index    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
+    FunctionProto* func = CreateFunctionObject(2, fnCode, 1, 3, 0, 0);  // 2 args, stack size 3
+    ConstantIndex index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Create function from K[0]
@@ -69,8 +69,8 @@ TEST_F(VMInstructionFunctionCallTest, NestedFunctionCalls) {
     Instruction innerCode[1];
     innerCode[0] = INSTRUCTION_RETURN(255, 0, 0, false, false);  // Inner function returns
 
-    FunctionTemplate* innerFunc = CreateFunctionObject(0, innerCode, 1, 1, 0, 0);
-    ConstantIndex innerIndex    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(innerFunc));
+    FunctionProto* innerFunc = CreateFunctionObject(0, innerCode, 1, 1, 0, 0);
+    ConstantIndex innerIndex = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(innerFunc));
 
     // Create outer function
     Instruction outerCode[3];
@@ -78,8 +78,8 @@ TEST_F(VMInstructionFunctionCallTest, NestedFunctionCalls) {
     outerCode[1] = INSTRUCTION_CALL(1, 0, 0, false, false);                 // Outer function calls inner
     outerCode[2] = INSTRUCTION_RETURN(255, 0, 0, false, false);             // Outer function returns
 
-    FunctionTemplate* outerFunc = CreateFunctionObject(0, outerCode, 3, 2, 0, 0);
-    ConstantIndex outerIndex    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(outerFunc));
+    FunctionProto* outerFunc = CreateFunctionObject(0, outerCode, 3, 2, 0, 0);
+    ConstantIndex outerIndex = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(outerFunc));
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, outerIndex, false, false);  // Load outer function
@@ -137,8 +137,8 @@ TEST_F(VMInstructionFunctionCallTest, CallArityMismatch) {
     Instruction fnCode[1];
     fnCode[0] = INSTRUCTION_RETURN(255, 0, 0, false, false);
 
-    FunctionTemplate* func = CreateFunctionObject(1, fnCode, 1, 2, 0, 0);  // Function expects 1 arg, not 2
-    ConstantIndex index    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
+    FunctionProto* func = CreateFunctionObject(1, fnCode, 1, 2, 0, 0);  // Function expects 1 arg, not 2
+    ConstantIndex index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Create function from K[0]
@@ -160,37 +160,37 @@ TEST_F(VMInstructionFunctionCallTest, CallStackGrowth) {
 
     // Create functions with large stack requirements
     Instruction fnCode4[1];
-    fnCode4[0]              = INSTRUCTION_RETURN(255, 0, 0, false, false);
-    FunctionTemplate* func4 = CreateFunctionObject(0, fnCode4, 1, 254, 0, 0);  // Large stack requirement
-    ConstantIndex index4    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func4));
+    fnCode4[0]           = INSTRUCTION_RETURN(255, 0, 0, false, false);
+    FunctionProto* func4 = CreateFunctionObject(0, fnCode4, 1, 254, 0, 0);  // Large stack requirement
+    ConstantIndex index4 = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func4));
 
     Instruction fnCode3[3];
-    fnCode3[0]              = INSTRUCTION_LOAD_CONSTANT(0, index4, false, false);
-    fnCode3[1]              = INSTRUCTION_CALL(0, 0, 0, false, false);
-    fnCode3[2]              = INSTRUCTION_RETURN(255, 0, 0, false, false);
-    FunctionTemplate* func3 = CreateFunctionObject(0, fnCode3, 3, 254, 0, 0);  // Large stack requirement
-    ConstantIndex index3    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func3));
+    fnCode3[0]           = INSTRUCTION_LOAD_CONSTANT(0, index4, false, false);
+    fnCode3[1]           = INSTRUCTION_CALL(0, 0, 0, false, false);
+    fnCode3[2]           = INSTRUCTION_RETURN(255, 0, 0, false, false);
+    FunctionProto* func3 = CreateFunctionObject(0, fnCode3, 3, 254, 0, 0);  // Large stack requirement
+    ConstantIndex index3 = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func3));
 
     Instruction fnCode2[3];
-    fnCode2[0]              = INSTRUCTION_LOAD_CONSTANT(0, index3, false, false);
-    fnCode2[1]              = INSTRUCTION_CALL(0, 0, 0, false, false);
-    fnCode2[2]              = INSTRUCTION_RETURN(255, 0, 0, false, false);
-    FunctionTemplate* func2 = CreateFunctionObject(0, fnCode2, 3, 254, 0, 0);  // Large stack requirement
-    ConstantIndex index2    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func2));
+    fnCode2[0]           = INSTRUCTION_LOAD_CONSTANT(0, index3, false, false);
+    fnCode2[1]           = INSTRUCTION_CALL(0, 0, 0, false, false);
+    fnCode2[2]           = INSTRUCTION_RETURN(255, 0, 0, false, false);
+    FunctionProto* func2 = CreateFunctionObject(0, fnCode2, 3, 254, 0, 0);  // Large stack requirement
+    ConstantIndex index2 = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func2));
 
     Instruction fnCode1[3];
-    fnCode1[0]              = INSTRUCTION_LOAD_CONSTANT(0, index2, false, false);
-    fnCode1[1]              = INSTRUCTION_CALL(0, 0, 0, false, false);
-    fnCode1[2]              = INSTRUCTION_RETURN(255, 0, 0, false, false);
-    FunctionTemplate* func1 = CreateFunctionObject(0, fnCode1, 3, 254, 0, 0);  // Large stack requirement
-    ConstantIndex index1    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func1));
+    fnCode1[0]           = INSTRUCTION_LOAD_CONSTANT(0, index2, false, false);
+    fnCode1[1]           = INSTRUCTION_CALL(0, 0, 0, false, false);
+    fnCode1[2]           = INSTRUCTION_RETURN(255, 0, 0, false, false);
+    FunctionProto* func1 = CreateFunctionObject(0, fnCode1, 3, 254, 0, 0);  // Large stack requirement
+    ConstantIndex index1 = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func1));
 
     Instruction fnCode0[3];
-    fnCode0[0]              = INSTRUCTION_LOAD_CONSTANT(0, index1, false, false);
-    fnCode0[1]              = INSTRUCTION_CALL(0, 0, 0, false, false);
-    fnCode0[2]              = INSTRUCTION_RETURN(255, 0, 0, false, false);
-    FunctionTemplate* func0 = CreateFunctionObject(0, fnCode0, 3, 254, 0, 0);  // Large stack requirement
-    ConstantIndex index0    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func0));
+    fnCode0[0]           = INSTRUCTION_LOAD_CONSTANT(0, index1, false, false);
+    fnCode0[1]           = INSTRUCTION_CALL(0, 0, 0, false, false);
+    fnCode0[2]           = INSTRUCTION_RETURN(255, 0, 0, false, false);
+    FunctionProto* func0 = CreateFunctionObject(0, fnCode0, 3, 254, 0, 0);  // Large stack requirement
+    ConstantIndex index0 = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func0));
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, index0, false, false);
@@ -220,8 +220,8 @@ TEST_F(VMInstructionFunctionCallTest, ArgumentPositioning) {
     fnCode[0] = INSTRUCTION_MOVE(0, 1, 0, false, false);  // Move arg2 to result
     fnCode[1] = INSTRUCTION_RETURN(0, 0, 0, false, false);
 
-    FunctionTemplate* func = CreateFunctionObject(3, fnCode, 2, 4, 0, 0);  // 3 args, stack size 4
-    ConstantIndex index    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
+    FunctionProto* func = CreateFunctionObject(3, fnCode, 2, 4, 0, 0);  // 3 args, stack size 4
+    ConstantIndex index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
 
     Instruction code[5];
     code[0] = INSTRUCTION_LOAD_CONSTANT(5, index, false, false);  // Load function into R[5]
@@ -252,8 +252,8 @@ TEST_F(VMInstructionFunctionCallTest, PCCorrectlyRestored) {
         INSTRUCTION_MOVE(0, 1, 0, false, false);  // Function body: move from R[1] to R[0] (stack[5] to stack[4])
     fnCode[1] = INSTRUCTION_RETURN(255, 0, 0, false, false);  // Return
 
-    FunctionTemplate* func = CreateFunctionObject(0, fnCode, 2, 2, 0, 0);  // Function starts at PC=4
-    ConstantIndex index    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
+    FunctionProto* func = CreateFunctionObject(0, fnCode, 2, 2, 0, 0);  // Function starts at PC=4
+    ConstantIndex index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
 
     Instruction code[4];
     code[0] = INSTRUCTION_LOAD_CONSTANT(3, index, false, false);  // Load function
@@ -282,8 +282,8 @@ TEST_F(VMInstructionFunctionCallTest, FunctionWithMaxArity) {
     Instruction fnCode[1];
     fnCode[0] = INSTRUCTION_RETURN(255, 0, 0, false, false);
 
-    FunctionTemplate* func = CreateFunctionObject(253, fnCode, 1, 253, 0, 0);
-    ConstantIndex index    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
+    FunctionProto* func = CreateFunctionObject(253, fnCode, 1, 253, 0, 0);
+    ConstantIndex index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
 
     Instruction code[4];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Load function
@@ -309,8 +309,8 @@ TEST_F(VMInstructionFunctionCallTest, ImmediateReturn) {
     Instruction fnCode[1];
     fnCode[0] = INSTRUCTION_RETURN(255, 0, 0, false, false);  // Function immediately returns
 
-    FunctionTemplate* func = CreateFunctionObject(0, fnCode, 1, 1, 0, 0);
-    ConstantIndex index    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
+    FunctionProto* func = CreateFunctionObject(0, fnCode, 1, 1, 0, 0);
+    ConstantIndex index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Load function
@@ -516,8 +516,8 @@ TEST_F(VMInstructionFunctionCallTest, FunctionReachesEndWithMatchingCoarity) {
     Instruction fnCode[1];
     fnCode[0] = INSTRUCTION_RETURN(UINT8_MAX, 0, 0, false, false);  // Implicit return added by compiler
 
-    FunctionTemplate* func = CreateFunctionObject(0, fnCode, 1, 1, 0, 0);  // coarity=0
-    ConstantIndex index    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
+    FunctionProto* func = CreateFunctionObject(0, fnCode, 1, 1, 0, 0);  // coarity=0
+    ConstantIndex index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Load function
@@ -541,8 +541,8 @@ TEST_F(VMInstructionFunctionCallTest, FunctionReachesEndWithMismatchedCoarity) {
     Instruction fnCode[1];
     fnCode[0] = INSTRUCTION_RETURN(UINT8_MAX, 0, 0, false, false);  // Implicit return added by compiler
 
-    FunctionTemplate* func = CreateFunctionObject(0, fnCode, 1, 1, 0, 1);  // coarity=1
-    ConstantIndex index    = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
+    FunctionProto* func = CreateFunctionObject(0, fnCode, 1, 1, 0, 1);  // coarity=1
+    ConstantIndex index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
 
     Instruction code[3];
     code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Load function

@@ -51,7 +51,7 @@ void semiVMModuleDestroy(GC* gc, SemiModule* module) {
     semiObjectStackDictCleanup(gc, &module->globals);
     semiConstantTableCleanup(&module->constantTable);
     if (module->moduleInit != NULL) {
-        semiFunctionTemplateDestroy(gc, module->moduleInit);
+        semiFunctionProtoDestroy(gc, module->moduleInit);
     }
 
     semiFree(gc, module, sizeof(SemiModule));
@@ -113,8 +113,8 @@ DEFINE_DARRAY(ModuleList, SemiModule*, uint16_t, UINT16_MAX)
 DEFINE_DARRAY(GlobalIdentifierList, IdentifierId, ModuleVariableId, UINT16_MAX)
 
 static ErrorId captureUpvalues(SemiVM* vm, Value* currentBase, ObjectFunction* function) {
-    FunctionTemplate* fnTemplate = function->fnTemplate;
-    if (fnTemplate->upvalueCount == 0) {
+    FunctionProto* fnProto = function->proto;
+    if (fnProto->upvalueCount == 0) {
         return 0;  // No upvalues to capture
     } else if (vm->frameCount == 0) {
         return SEMI_ERROR_INTERNAL_ERROR;  // No current frame to capture upvalues from
@@ -122,8 +122,8 @@ static ErrorId captureUpvalues(SemiVM* vm, Value* currentBase, ObjectFunction* f
 
     ObjectUpvalue** currentUpvalues = vm->frames[vm->frameCount - 1].function->upvalues;
     for (uint8_t i = 0; i < function->upvalueCount; i++) {
-        uint8_t index = fnTemplate->upvalues[i].index;
-        bool isLocal  = fnTemplate->upvalues[i].isLocal;
+        uint8_t index = fnProto->upvalues[i].index;
+        bool isLocal  = fnProto->upvalues[i].isLocal;
         if (!isLocal) {
             function->upvalues[i] = currentUpvalues[index];
             continue;
@@ -424,7 +424,7 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
     vm->error                      = 0;
     vm->returnedValue              = NULL;
     vm->rootFunction->obj.header   = VALUE_TYPE_COMPILED_FUNCTION;
-    vm->rootFunction->fnTemplate   = module->moduleInit;
+    vm->rootFunction->proto      = module->moduleInit;
     vm->rootFunction->upvalueCount = 0;
     vm->frames[0]                  = (Frame){.callerStack       = {.base = vm->values},
                                              .returnValueOffset = 0,
@@ -438,7 +438,7 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
         vm->modules.size    = 1;
         vm->modules.data[0] = module;
     } else {
-        semiFunctionTemplateDestroy(&vm->gc, vm->modules.data[0]->moduleInit);
+        semiFunctionProtoDestroy(&vm->gc, vm->modules.data[0]->moduleInit);
         semiFree(&vm->gc, vm->modules.data[0], sizeof(SemiModule));
         vm->modules.data[0] = module;
     }
@@ -534,8 +534,8 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                     v = semiConstantTableGet(&mod->constantTable, k);
                 }
 
-                if (IS_FUNCTION_TEMPLATE(&v)) {
-                    stack[a]                 = semiValueFunctionCreate(&vm->gc, AS_FUNCTION_TEMPLATE(&v));
+                if (IS_FUNCTION_PROTO(&v)) {
+                    stack[a]                 = semiValueFunctionCreate(&vm->gc, AS_FUNCTION_PROTO(&v));
                     ObjectFunction* function = AS_COMPILED_FUNCTION(&stack[a]);
                     TRAP_ON_ERROR(vm, captureUpvalues(vm, stack, function), "Failed to capture upvalues for function");
                 } else if (IS_OBJECT_RANGE(&v)) {
@@ -635,12 +635,12 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                 SemiModule* mod     = vm->modules.data[moduleId];
 
                 Value v = semiConstantTableGet(&mod->constantTable, k);
-                if (!IS_FUNCTION_TEMPLATE(&v)) {
+                if (!IS_FUNCTION_PROTO(&v)) {
                     vm->error = SEMI_ERROR_INVALID_INSTRUCTION;
                     return vm->error;
                 }
 
-                ObjectFunction* deferFn = semiObjectFunctionCreate(&vm->gc, AS_FUNCTION_TEMPLATE(&v));
+                ObjectFunction* deferFn = semiObjectFunctionCreate(&vm->gc, AS_FUNCTION_PROTO(&v));
                 TRAP_ON_ERROR(
                     vm, captureUpvalues(vm, stack, deferFn), "Failed to capture upvalues for deferred function");
 
@@ -909,19 +909,19 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                         break;
                     }
                     case VALUE_TYPE_COMPILED_FUNCTION: {
-                        ObjectFunction* func         = AS_COMPILED_FUNCTION(&stack[a]);
-                        FunctionTemplate* fnTemplate = func->fnTemplate;
-                        if (fnTemplate->arity != b) {
+                        ObjectFunction* func   = AS_COMPILED_FUNCTION(&stack[a]);
+                        FunctionProto* fnProto = func->proto;
+                        if (fnProto->arity != b) {
                             TRAP_ON_ERROR(vm, SEMI_ERROR_ARGS_COUNT_MISMATCH, "Function arguments mismatch");
                         }
 
                         uint32_t stackOffset = (uint32_t)(stack - vm->values);
-                        if (stackOffset > SEMI_MAX_STACK_SIZE - (a + 1 + fnTemplate->maxStackSize)) {
+                        if (stackOffset > SEMI_MAX_STACK_SIZE - (a + 1 + fnProto->maxStackSize)) {
                             TRAP_ON_ERROR(vm, SEMI_ERROR_STACK_OVERFLOW, "Stack overflow on function call");
                         }
-                        if ((vm->values + vm->valueCapacity) - args < fnTemplate->maxStackSize) {
+                        if ((vm->values + vm->valueCapacity) - args < fnProto->maxStackSize) {
                             TRAP_ON_ERROR(vm,
-                                          growVMStackSize(vm, stackOffset + a + 1 + fnTemplate->maxStackSize),
+                                          growVMStackSize(vm, stackOffset + a + 1 + fnProto->maxStackSize),
                                           "Failed to grow VM stack for function call");
                             stack = vm->values + stackOffset;
                             args  = &stack[a + 1];
@@ -942,13 +942,13 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                             .callerPC          = nextPC,
                             .function          = func,
                             .deferredFn        = NULL,
-                            .moduleId          = fnTemplate->moduleId,
-                            .coarity           = fnTemplate->coarity,
+                            .moduleId          = fnProto->moduleId,
+                            .coarity           = fnProto->coarity,
                         };
                         vm->frameCount++;
 
-                        code     = fnTemplate->chunk.data;
-                        codeSize = fnTemplate->chunk.size;
+                        code     = fnProto->chunk.data;
+                        codeSize = fnProto->chunk.size;
                         pc       = 0;
                         stack    = args;
 
@@ -978,7 +978,7 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                 if (a != INVALID_LOCAL_REGISTER_ID && frame->returnValueOffset != UINT32_MAX) {
                     Value* caller = vm->values + frame->returnValueOffset;
                     *caller       = stack[a];
-                } else if (frame->function->fnTemplate->coarity > 0) {
+                } else if (frame->function->proto->coarity > 0) {
                     // If the function has coarity, we need to return a value.
                     // This only happens when the last statement of the function doesn't
                     // have return statement.
@@ -988,8 +988,8 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                 closeUpvalues(vm, stack);
                 pc       = frame->callerPC;
                 stack    = frame->callerStack.base;
-                code     = previousFrame->function->fnTemplate->chunk.data;
-                codeSize = previousFrame->function->fnTemplate->chunk.size;
+                code     = previousFrame->function->proto->chunk.data;
+                codeSize = previousFrame->function->proto->chunk.size;
                 vm->frameCount--;
 
                 goto start_of_vm_loop;

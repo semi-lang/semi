@@ -195,9 +195,9 @@ void printValue(Value v) {
             std::cout << ")";
             break;
         }
-        case VALUE_TYPE_FUNCTION_TEMPLATE: {
-            FunctionTemplate* func = AS_FUNCTION_TEMPLATE(value);
-            std::cout << "<fnTemplate at " << func << ">";
+        case VALUE_TYPE_FUNCTION_PROTO: {
+            FunctionProto* func = AS_FUNCTION_PROTO(value);
+            std::cout << "<fnProto at " << func << ">";
             break;
         }
         default:
@@ -297,7 +297,7 @@ ErrorId compileAndRun(SemiVM* vm, const char* source, size_t length, bool isRepl
         printConstantsInfo(&module->constantTable);
 
         std::cout << "Instructions:" << std::endl;
-        FunctionTemplate* func = module->moduleInit;
+        FunctionProto* func = module->moduleInit;
         disassembleCode(func->chunk.data, func->chunk.size);
 
         std::cout << "=== EXECUTION ===" << std::endl;

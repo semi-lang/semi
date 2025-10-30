@@ -21,8 +21,8 @@ typedef struct SemiModule {
     ObjectDict globals;
     ConstantTable constantTable;
 
-    // The function template used to initialize this module. For main module, this is the main function.
-    FunctionTemplate* moduleInit;
+    // The function proto used to initialize this module. For main module, this is the main function.
+    FunctionProto* moduleInit;
 } SemiModule;
 
 SemiModule* semiVMModuleCreate(GC* gc, ModuleId moduleId);

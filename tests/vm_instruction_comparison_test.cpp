@@ -23,9 +23,9 @@ TEST_F(VMInstructionComparisonTest, OpGtIntegerRegistersTrue) {
     vm->values[2].header = VALUE_TYPE_INT;
     vm->values[2].as.i   = 5;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -44,9 +44,9 @@ TEST_F(VMInstructionComparisonTest, OpGtIntegerRegistersFalse) {
     vm->values[2].header = VALUE_TYPE_INT;
     vm->values[2].as.i   = 8;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -65,9 +65,9 @@ TEST_F(VMInstructionComparisonTest, OpGtFloatRegistersTrue) {
     vm->values[2].header = VALUE_TYPE_FLOAT;
     vm->values[2].as.f   = 3.2;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -86,9 +86,9 @@ TEST_F(VMInstructionComparisonTest, OpGtMixedNumberTypes) {
     vm->values[2].header = VALUE_TYPE_FLOAT;
     vm->values[2].as.f   = 5.5;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -105,9 +105,9 @@ TEST_F(VMInstructionComparisonTest, OpGtWithConstantLeft) {
     vm->values[1].header = VALUE_TYPE_INT;
     vm->values[1].as.i   = -120;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -124,9 +124,9 @@ TEST_F(VMInstructionComparisonTest, OpGtWithConstantRight) {
     vm->values[1].header = VALUE_TYPE_INT;
     vm->values[1].as.i   = 100;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -147,9 +147,9 @@ TEST_F(VMInstructionComparisonTest, OpGeIntegerRegistersTrue) {
     vm->values[2].header = VALUE_TYPE_INT;
     vm->values[2].as.i   = 10;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -168,9 +168,9 @@ TEST_F(VMInstructionComparisonTest, OpGeIntegerRegistersGreater) {
     vm->values[2].header = VALUE_TYPE_INT;
     vm->values[2].as.i   = 10;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -189,9 +189,9 @@ TEST_F(VMInstructionComparisonTest, OpGeIntegerRegistersFalse) {
     vm->values[2].header = VALUE_TYPE_INT;
     vm->values[2].as.i   = 10;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -210,9 +210,9 @@ TEST_F(VMInstructionComparisonTest, OpGeFloatRegisters) {
     vm->values[2].header = VALUE_TYPE_FLOAT;
     vm->values[2].as.f   = 3.14;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -233,9 +233,9 @@ TEST_F(VMInstructionComparisonTest, OpEqIntegerRegistersTrue) {
     vm->values[2].header = VALUE_TYPE_INT;
     vm->values[2].as.i   = 42;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -254,9 +254,9 @@ TEST_F(VMInstructionComparisonTest, OpEqIntegerRegistersFalse) {
     vm->values[2].header = VALUE_TYPE_INT;
     vm->values[2].as.i   = 13;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -275,9 +275,9 @@ TEST_F(VMInstructionComparisonTest, OpEqBooleanRegistersTrue) {
     vm->values[2].header = VALUE_TYPE_BOOL;
     vm->values[2].as.b   = true;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -296,9 +296,9 @@ TEST_F(VMInstructionComparisonTest, OpEqBooleanRegistersFalse) {
     vm->values[2].header = VALUE_TYPE_BOOL;
     vm->values[2].as.b   = false;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -317,9 +317,9 @@ TEST_F(VMInstructionComparisonTest, OpEqFloatRegisters) {
     vm->values[2].header = VALUE_TYPE_FLOAT;
     vm->values[2].as.f   = 2.5;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -338,9 +338,9 @@ TEST_F(VMInstructionComparisonTest, OpEqMixedNumberTypes) {
     vm->values[2].header = VALUE_TYPE_FLOAT;
     vm->values[2].as.f   = 5.0;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -361,9 +361,9 @@ TEST_F(VMInstructionComparisonTest, OpNeqIntegerRegistersTrue) {
     vm->values[2].header = VALUE_TYPE_INT;
     vm->values[2].as.i   = 13;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -382,9 +382,9 @@ TEST_F(VMInstructionComparisonTest, OpNeqIntegerRegistersFalse) {
     vm->values[2].header = VALUE_TYPE_INT;
     vm->values[2].as.i   = 42;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -403,9 +403,9 @@ TEST_F(VMInstructionComparisonTest, OpNeqBooleanRegisters) {
     vm->values[2].header = VALUE_TYPE_BOOL;
     vm->values[2].as.b   = false;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 
@@ -424,9 +424,9 @@ TEST_F(VMInstructionComparisonTest, OpNeqFloatRegisters) {
     vm->values[2].header = VALUE_TYPE_FLOAT;
     vm->values[2].as.f   = 3.7;
 
-    SemiModule* module     = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionTemplate* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit     = func;
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
+    module->moduleInit  = func;
 
     int result = semiVMRunMainModule(vm, module);
 

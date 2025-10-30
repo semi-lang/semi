@@ -135,12 +135,12 @@ int main(int argc, char* argv[]) {
 
     for (ConstantIndex i = 0; i < semiConstantTableSize(&module->constantTable); i++) {
         Value v = semiConstantTableGet(&module->constantTable, i);
-        if (!IS_FUNCTION_TEMPLATE(&v)) {
+        if (!IS_FUNCTION_PROTO(&v)) {
             continue;
         }
-        FunctionTemplate* func = AS_FUNCTION_TEMPLATE(&v);
+        FunctionProto* func = AS_FUNCTION_PROTO(&v);
 
-        std::cout << "<fnTemplate at " << func << ">" << std::endl;
+        std::cout << "<fnProto at " << func << ">" << std::endl;
         disassembleCode(func->chunk.data, func->chunk.size);
     }
 

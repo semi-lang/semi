@@ -538,13 +538,13 @@ Value semiValueNewNativeFunction(NativeFunction* function) {
 #pragma endregion
 
 /*
- │ Function Template
+ │ Function Proto
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
 #pragma region
 
-FunctionTemplate* semiFunctionTemplateCreate(GC* gc, uint8_t upvalueCount) {
-    FunctionTemplate* o =
-        (FunctionTemplate*)semiMalloc(gc, sizeof(FunctionTemplate) + sizeof(UpvalueDescription) * upvalueCount);
+FunctionProto* semiFunctionProtoCreate(GC* gc, uint8_t upvalueCount) {
+    FunctionProto* o =
+        (FunctionProto*)semiMalloc(gc, sizeof(FunctionProto) + sizeof(UpvalueDescription) * upvalueCount);
     if (!o) {
         return NULL;  // Allocation failed
     }
@@ -558,13 +558,13 @@ FunctionTemplate* semiFunctionTemplateCreate(GC* gc, uint8_t upvalueCount) {
 }
 #pragma endregion
 
-void semiFunctionTemplateDestroy(GC* gc, FunctionTemplate* function) {
+void semiFunctionProtoDestroy(GC* gc, FunctionProto* function) {
     ChunkCleanup(gc, &function->chunk);
-    semiFree(gc, function, sizeof(FunctionTemplate) + sizeof(UpvalueDescription) * function->upvalueCount);
+    semiFree(gc, function, sizeof(FunctionProto) + sizeof(UpvalueDescription) * function->upvalueCount);
 }
 
-Value semiValueNewFunctionTemplate(FunctionTemplate* function) {
-    return semiValueNewPtr(function, VALUE_TYPE_FUNCTION_TEMPLATE);
+Value semiValueNewFunctionProto(FunctionProto* function) {
+    return semiValueNewPtr(function, VALUE_TYPE_FUNCTION_PROTO);
 }
 
 /*
@@ -589,16 +589,16 @@ ObjectUpvalue* semiObjectUpvalueCreate(GC* gc, Value* value) {
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
 #pragma region
 
-ObjectFunction* semiObjectFunctionCreate(GC* gc, FunctionTemplate* fnTemplate) {
+ObjectFunction* semiObjectFunctionCreate(GC* gc, FunctionProto* proto) {
     ObjectFunction* o = (ObjectFunction*)newObject(
-        gc, OBJECT_TYPE_FUNCTION, sizeof(ObjectFunction) + sizeof(ObjectUpvalue*) * fnTemplate->upvalueCount);
+        gc, OBJECT_TYPE_FUNCTION, sizeof(ObjectFunction) + sizeof(ObjectUpvalue*) * proto->upvalueCount);
     if (!o) {
         return NULL;  // Allocation failed
     }
 
-    o->fnTemplate     = fnTemplate;
+    o->proto        = proto;
     o->prevDeferredFn = NULL;
-    o->upvalueCount   = fnTemplate->upvalueCount;
+    o->upvalueCount   = proto->upvalueCount;
     return o;
 }
 
