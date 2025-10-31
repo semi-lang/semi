@@ -215,15 +215,6 @@ SEMI_EXPORT SemiVM* semiCreateVM(SemiVMConfig* inputConfig) {
     vm->frameCapacity = SEMI_MIN_FRAME_SIZE;
 
     vm->openUpvalues = NULL;
-
-    ObjectFunction* rootFunction;
-    if ((rootFunction = config.reallocateFn(NULL, sizeof(ObjectFunction), config.reallocateUserData)) == NULL) {
-        config.reallocateFn(vm->frames, 0, config.reallocateUserData);
-        config.reallocateFn(vm->values, 0, config.reallocateUserData);
-        config.reallocateFn(vm, 0, config.reallocateUserData);
-        return NULL;
-    }
-    vm->rootFunction = rootFunction;
     vm->nextModuleId = 0;
 
     ModuleListInit(&vm->modules);
@@ -266,9 +257,6 @@ SEMI_EXPORT void semiDestroyVM(SemiVM* vm) {
     void* reallocateUserData      = vm->gc.reallocateUserData;
     semiGCCleanup(&vm->gc);
 
-    if (vm->rootFunction != NULL) {
-        reallocateFn(vm->rootFunction, 0, reallocateUserData);
-    }
     if (vm->values != NULL) {
         reallocateFn(vm->values, 0, reallocateUserData);
     }
@@ -406,7 +394,7 @@ static inline MagicMethodsTable* getMagicMethodsTable(SemiVM* vm, Value* value) 
         if (_errId != 0) {                  \
             _vm->error        = _errId;     \
             _vm->errorMessage = (message);  \
-            return _vm->error;              \
+            return;                         \
         }                                   \
     } while (0)
 #else
@@ -416,35 +404,13 @@ static inline MagicMethodsTable* getMagicMethodsTable(SemiVM* vm, Value* value) 
         ErrorId _errId = (errorId);         \
         if (_errId != 0) {                  \
             _vm->error = _errId;            \
-            return _vm->error;              \
+            return;                         \
         }                                   \
     } while (0)
 #endif
-ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
-    vm->error                      = 0;
-    vm->returnedValue              = NULL;
-    vm->rootFunction->obj.header   = VALUE_TYPE_COMPILED_FUNCTION;
-    vm->rootFunction->proto      = module->moduleInit;
-    vm->rootFunction->upvalueCount = 0;
-    vm->frames[0]                  = (Frame){.callerStack       = {.base = vm->values},
-                                             .returnValueOffset = 0,
-                                             .callerPC          = 0,
-                                             .function          = vm->rootFunction,
-                                             .moduleId          = 0};
-    vm->frameCount                 = 1;
-
-    ModuleListEnsureCapacity(&vm->gc, &vm->modules, 1);
-    if (vm->modules.size < 1) {
-        vm->modules.size    = 1;
-        vm->modules.data[0] = module;
-    } else {
-        semiFunctionProtoDestroy(&vm->gc, vm->modules.data[0]->moduleInit);
-        semiFree(&vm->gc, vm->modules.data[0], sizeof(SemiModule));
-        vm->modules.data[0] = module;
-    }
-
-    Instruction* code = module->moduleInit->chunk.data;
-    uint32_t codeSize = module->moduleInit->chunk.size;
+static void runMainLoop(SemiVM* vm, FunctionProto* fn) {
+    Instruction* code = fn->chunk.data;
+    uint32_t codeSize = fn->chunk.size;
     PCLocation pc     = 0;
     Value* stack      = vm->values;
 
@@ -487,7 +453,7 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
             case OP_TRAP: {
                 Instruction operand = OPERAND_K_K(instruction);
                 vm->error           = (ErrorId)operand;
-                return vm->error;
+                return;
             }
 
             case OP_C_JUMP: {
@@ -625,7 +591,7 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
             case OP_DEFER_CALL: {
                 // TODO: Implement defer functionality and remove early return.
                 vm->error = SEMI_ERROR_UNIMPLEMENTED_FEATURE;
-                return vm->error;
+                return;
 
                 uint16_t k = OPERAND_K_K(instruction);
                 bool s     = OPERAND_K_S(instruction);
@@ -637,7 +603,7 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                 Value v = semiConstantTableGet(&mod->constantTable, k);
                 if (!IS_FUNCTION_PROTO(&v)) {
                     vm->error = SEMI_ERROR_INVALID_INSTRUCTION;
-                    return vm->error;
+                    return;
                 }
 
                 ObjectFunction* deferFn = semiObjectFunctionCreate(&vm->gc, AS_FUNCTION_PROTO(&v));
@@ -968,7 +934,7 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
                         vm->returnedValue = stack + a;
                     }
                     vm->frameCount = 0;
-                    return 0;
+                    return;
                 }
                 Frame* frame         = &vm->frames[vm->frameCount - 1];
                 Frame* previousFrame = &vm->frames[vm->frameCount - 2];
@@ -1014,6 +980,40 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
         // label at end of compound statement is a C23 extension
         (void)0;
     }
+}
 
+ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
+    vm->error         = 0;
+    vm->returnedValue = NULL;
+
+    ModuleListEnsureCapacity(&vm->gc, &vm->modules, 1);
+    if (vm->modules.size < 1) {
+        vm->modules.size    = 1;
+        vm->modules.data[0] = module;
+    } else {
+        semiFunctionProtoDestroy(&vm->gc, vm->modules.data[0]->moduleInit);
+        semiFree(&vm->gc, vm->modules.data[0], sizeof(SemiModule));
+        vm->modules.data[0] = module;
+    }
+
+    ObjectFunction mainFunction = (ObjectFunction){
+        .obj          = ((Object){
+                     .header = VALUE_TYPE_COMPILED_FUNCTION,
+        }),
+        .proto        = module->moduleInit,
+        .upvalueCount = 0,
+    };
+    mainFunction.obj.header   = VALUE_TYPE_COMPILED_FUNCTION;
+    mainFunction.proto        = module->moduleInit;
+    mainFunction.upvalueCount = 0;
+
+    vm->frames[0] = (Frame){.callerStack       = {.base = vm->values},
+                            .returnValueOffset = 0,
+                            .callerPC          = 0,
+                            .function          = &mainFunction,
+                            .moduleId          = 0};
+
+    vm->frameCount = 1;
+    runMainLoop(vm, module->moduleInit);
     return vm->error;
 }

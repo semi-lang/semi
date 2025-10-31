@@ -90,7 +90,6 @@ typedef struct SemiVM {
     uint32_t frameCapacity;
 
     ObjectUpvalue* openUpvalues;
-    ObjectFunction* rootFunction;
 
     SymbolTable symbolTable;
 

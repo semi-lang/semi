@@ -513,6 +513,8 @@ typedef struct ObjectFunction {
 
     // This points to the previous deferred function in the chain. Set by the VM when a defer statement is executed.
     // NULL if there is no previous deferred function.
+    //
+    // TODO: consider moving this to Frame struct in vm.h
     struct ObjectFunction* prevDeferredFn;
 
     uint8_t upvalueCount;
