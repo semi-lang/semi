@@ -2,6 +2,8 @@
 
 A minimalist programming language designed for embedding within applications.
 
+> **NOTICE**: Semi is currently in very early development. The language and its APIs are subject to change without notice.
+
 
 ## Design Principles
 
@@ -14,6 +16,15 @@ A minimalist programming language designed for embedding within applications.
 ## Getting Started
 
 Semi does not have any dependencies beyond a C11 compiler. To build the Semi compiler and runtime, simply clone the repository and run `make`. Two binaries will be produced that assist quickly verifying code changes: `semi` (the ad-hoc CLI) and `dis` (the bytecode disassembler). It also generates a static library `libsemi.a` that can be linked into your own applications. The APIs are defined in `semi/semi.h`.
+
+To generate release builds, add `BUILD_MODE=release` to make arguments.
+
+```shell
+make BUILD_MODE=release
+make BUILD_MODE=release WASM=1 wasm # For WebAssembly target
+```
+
+This will enable optimizations and disable debug information.
 
 Currently there's not much to configure, but `include/semi/config.h` is the place where you can tweak compile-time options.
 
