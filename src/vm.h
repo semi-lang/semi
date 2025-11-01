@@ -51,20 +51,15 @@ void semiVMModuleDestroy(GC* gc, SemiModule* module);
 
 // Frame keeps track of the call stack of the VM.
 typedef struct Frame {
-    union {
-        Value* base;
-        uint32_t offset;
-    } callerStack;
-
+    // The next instruction to be executed in the caller function.
+    Instruction* returnIP;
+    // The function being executed in this frame.
     ObjectFunction* function;
     // The chain of deferred functions to be executed when this frame is exited.
     ObjectFunction* deferredFn;
-    // The register of the caller function as an offset to the VM's stack.
-    uint32_t returnValueOffset;
-    // The next instruction to be executed in the caller function.
-    PCLocation callerPC;
+    // The stack of the function as an offset to the VM's stack.
+    uint32_t stackOffset;
     ModuleId moduleId;
-    uint8_t coarity;
 } Frame;
 
 DECLARE_DARRAY(ModuleList, SemiModule*, uint16_t)

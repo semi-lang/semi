@@ -3235,8 +3235,6 @@ SemiModule* semiCompilerCompileModule(Compiler* compiler, SemiVM* vm, SemiModule
 
         initLexer(&compiler->lexer, compiler, moduleSource->source, moduleSource->length);
 
-        // TODO: Set module ID using the name of the module source.
-
         parseStatements(compiler);
         if (nextToken(&compiler->lexer) != TK_EOF) {
             SEMI_COMPILE_ABORT(

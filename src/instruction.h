@@ -38,7 +38,7 @@ typedef uint32_t Instruction;
 #define MAX_OPERAND_K ((Instruction)(UINT16_MAX))
 #define MAX_OPERAND_J ((Instruction)(1 << (24)) - 1)
 
-#define GET_OPCODE(instruction) (instruction & OPCODE_MASK)  // Bits 0-5
+#define GET_OPCODE(instruction) ((instruction) & OPCODE_MASK)  // Bits 0-5
 
 // T-type instructions
 #define MAKE_INSTRUCTION_T(name)                                                                      \
@@ -107,7 +107,7 @@ typedef enum {
     OP_DEFER_CALL,            // |   K   |  push Mod.constants[K] to the defer stack
                               //            Mod is the module of the current frame
 
-    OP_MOVE,                  // |   T   |  R[A] := R[B], if C != 0, pc += (kc ? C : -C)
+    OP_MOVE,                  // |   T   |  R[A] := R[B]
     OP_GET_UPVALUE,           // |   T   |  R[A] := Upvalue[B]
     OP_SET_UPVALUE,           // |   T   |  Upvalue[A] := R[B]
     OP_CLOSE_UPVALUES,        // |   T   |  close all upvalues >= R[A]

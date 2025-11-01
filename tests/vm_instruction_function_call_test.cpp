@@ -217,8 +217,8 @@ TEST_F(VMInstructionFunctionCallTest, ArgumentPositioning) {
     SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
 
     Instruction fnCode[2];
-    fnCode[0] = INSTRUCTION_MOVE(0, 1, 0, false, false);  // Move arg2 to result
-    fnCode[1] = INSTRUCTION_RETURN(0, 0, 0, false, false);
+    fnCode[0] = INSTRUCTION_MOVE(0, 1, 0, false, false);    // Move R[7] to R[6] (arg2 to arg1)
+    fnCode[1] = INSTRUCTION_RETURN(0, 0, 0, false, false);  // Return R[6] (which is arg1)
 
     FunctionProto* func = CreateFunctionObject(3, fnCode, 2, 4, 0, 0);  // 3 args, stack size 4
     ConstantIndex index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));

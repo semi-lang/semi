@@ -332,10 +332,6 @@ static ErrorId growVMStackSize(SemiVM* vm, uint32_t requiredSize) {
         return SEMI_ERROR_STACK_OVERFLOW;
     }
 
-    for (uint32_t i = 0; i < vm->frameCount; i++) {
-        vm->frames[i].callerStack.offset = (uint32_t)(vm->frames[i].callerStack.base - vm->values);
-    }
-
     uint32_t newCapacity;
     if (requiredSize < SEMI_MAX_STACK_SIZE / 2) {
         newCapacity = nextPowerOfTwoCapacity(requiredSize);
@@ -350,10 +346,6 @@ static ErrorId growVMStackSize(SemiVM* vm, uint32_t requiredSize) {
         vm->valueCapacity = newCapacity;
     } else {
         error = SEMI_ERROR_MEMORY_ALLOCATION_FAILURE;
-    }
-
-    for (uint32_t i = 0; i < vm->frameCount; i++) {
-        vm->frames[i].callerStack.base = vm->values + vm->frames[i].callerStack.offset;
     }
 
     return 0;
@@ -381,11 +373,6 @@ static ErrorId growVMFrameSize(SemiVM* vm, uint32_t requiredSize) {
     }
 }
 
-static inline MagicMethodsTable* getMagicMethodsTable(SemiVM* vm, Value* value) {
-    BaseValueType type = BASE_TYPE(value);
-    return type < vm->classes.classCount ? &vm->classes.classMethods[type] : &vm->classes.classMethods[0];
-}
-
 #ifdef SEMI_DEBUG_MSG
 #define TRAP_ON_ERROR(vm, errorId, message) \
     do {                                    \
@@ -408,18 +395,99 @@ static inline MagicMethodsTable* getMagicMethodsTable(SemiVM* vm, Value* value) 
         }                                   \
     } while (0)
 #endif
-static void runMainLoop(SemiVM* vm, FunctionProto* fn) {
-    Instruction* code = fn->chunk.data;
-    uint32_t codeSize = fn->chunk.size;
-    PCLocation pc     = 0;
-    Value* stack      = vm->values;
+static void appendFrame(SemiVM* vm, ObjectFunction* func, Value* newStack) {
+    FunctionProto* fnProto  = func->proto;
+    uint64_t newStackOffset = (uint64_t)(newStack - vm->values);
+    if (newStackOffset > SEMI_MAX_STACK_SIZE - fnProto->maxStackSize) {
+        TRAP_ON_ERROR(vm, SEMI_ERROR_STACK_OVERFLOW, "Stack overflow on function call");
+    }
 
+    // Since newStackOffset + fnProto->maxStackSize <= SEMI_MAX_STACK_SIZE <= UINT32_MAX,
+    // newStackOffset + fnProto->maxStackSize is guaranteed to fit in uint32_t
+    uint32_t newMaxStackNeeded = (uint32_t)(newStackOffset + fnProto->maxStackSize);
+    if (newMaxStackNeeded > vm->valueCapacity) {
+        TRAP_ON_ERROR(vm, growVMStackSize(vm, newMaxStackNeeded), "Failed to grow VM stack for function call");
+    }
+    if (vm->frameCount >= vm->frameCapacity) {
+        TRAP_ON_ERROR(vm, growVMFrameSize(vm, vm->frameCount + 1), "Failed to grow VM frame stack for function call");
+    }
+
+    // Set up the new frame
+    vm->frames[vm->frameCount++] = (Frame){
+        .stackOffset = (uint32_t)newStackOffset,
+        .returnIP    = fnProto->chunk.data,
+        .function    = func,
+        .deferredFn  = NULL,
+        .moduleId    = fnProto->moduleId,
+    };
+}
+
+static inline bool verifyChunk(Chunk* chunk) {
+    Instruction* chunkStart = chunk->data;
+    Instruction* chunkEnd   = chunkStart + chunk->size;
+    if (chunkStart == NULL || chunkEnd == NULL || chunkStart >= chunkEnd) {
+        return false;
+    }
+
+    if (GET_OPCODE(*(chunkEnd - 1)) != OP_TRAP && GET_OPCODE(*(chunkEnd - 1)) != OP_RETURN) {
+        return false;
+    }
+
+    return true;
+}
+
+static inline MagicMethodsTable* getMagicMethodsTable(SemiVM* vm, Value* value) {
+    BaseValueType type = BASE_TYPE(value);
+    return type < vm->classes.classCount ? &vm->classes.classMethods[type] : &vm->classes.classMethods[0];
+}
+
+static void runMainLoop(SemiVM* vm) {
+    Frame* frame;
+    Value* stack;
+    Instruction* ip;
+
+    Instruction* chunkStart;
+    Instruction* chunkEnd;
+    SemiModule* module;
+
+#define MOVE_FORWARD(steps)                                                            \
+    do {                                                                               \
+        uint32_t _steps = (steps);                                                     \
+        if ((uint32_t)(chunkEnd - ip) <= _steps) {                                     \
+            TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_PC, "Program counter out of bounds"); \
+            return;                                                                    \
+        }                                                                              \
+        ip += _steps;                                                                  \
+    } while (0)
+
+#define MOVE_BACKWARD(steps)                                                           \
+    do {                                                                               \
+        uint32_t _steps = (steps);                                                     \
+        if ((uint32_t)(ip - chunkStart) < _steps) {                                    \
+            TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_PC, "Program counter out of bounds"); \
+            return;                                                                    \
+        }                                                                              \
+        ip -= _steps;                                                                  \
+    } while (0)
+
+#define RECONCILE_STATE()                                             \
+    do {                                                              \
+        frame      = &vm->frames[vm->frameCount - 1];                 \
+        stack      = vm->values + frame->stackOffset;                 \
+        chunkStart = frame->function->proto->chunk.data;              \
+        chunkEnd   = chunkStart + frame->function->proto->chunk.size; \
+        ip         = frame->returnIP;                                 \
+        module     = vm->modules.data[frame->moduleId];               \
+    } while (0)
+
+    // The first frame is already set up before calling this function
+    verifyChunk(&vm->frames[vm->frameCount - 1].function->proto->chunk);
+    RECONCILE_STATE();
+
+    Instruction instruction;
     for (;;) {
-        if (pc >= codeSize) {
-            TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_PC, "Program counter out of bounds");
-        }
-        Instruction instruction = code[pc];
-
+    start_of_vm_loop:
+        instruction = *ip;
         switch (GET_OPCODE(instruction)) {
             /* Null Instructions --------------------------------------------------- */
             case OP_NOOP:
@@ -431,14 +499,11 @@ static void runMainLoop(SemiVM* vm, FunctionProto* fn) {
                 bool s     = OPERAND_J_S(instruction);
 
                 if (j != 0) {
-                    if (s && j <= UINT32_MAX - pc) {
-                        pc = pc + j;
-                    } else if (!s && j <= pc) {
-                        pc = pc - j;
+                    if (s) {
+                        MOVE_FORWARD(j);
                     } else {
-                        TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_PC, "Invalid program counter after jump");
+                        MOVE_BACKWARD(j);
                     }
-
                     goto start_of_vm_loop;
                 }
                 break;
@@ -469,14 +534,11 @@ static void runMainLoop(SemiVM* vm, FunctionProto* fn) {
                 TRAP_ON_ERROR(vm, errorId, "Failed to convert value to bool for conditional jump");
 
                 if (AS_BOOL(&boolValue) == i && k != 0) {
-                    if (s && k <= UINT32_MAX - pc) {
-                        pc = pc + k;
-                    } else if (!s && pc >= k) {
-                        pc = pc - k;
+                    if (s) {
+                        MOVE_FORWARD(k);
                     } else {
-                        TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_PC, "Invalid program counter after conditional jump");
+                        MOVE_BACKWARD(k);
                     }
-
                     goto start_of_vm_loop;
                 }
                 break;
@@ -487,17 +549,11 @@ static void runMainLoop(SemiVM* vm, FunctionProto* fn) {
                 uint16_t k = OPERAND_K_K(instruction);
                 bool s     = OPERAND_K_S(instruction);
 
-                ModuleId moduleId = vm->frames[vm->frameCount - 1].moduleId;
-                SemiModule* mod   = vm->modules.data[moduleId];
                 Value v;
                 if (s) {
-                    if (k >= vm->globalIdentifiers.size) {
-                        // TODO: This should be encoded in the module and checked before running it.
-                        TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_INSTRUCTION, "Invalid global constant index");
-                    }
                     v = vm->globalConstants[k];
                 } else {
-                    v = semiConstantTableGet(&mod->constantTable, k);
+                    v = semiConstantTableGet(&module->constantTable, k);
                 }
 
                 if (IS_FUNCTION_PROTO(&v)) {
@@ -558,12 +614,7 @@ static void runMainLoop(SemiVM* vm, FunctionProto* fn) {
                 uint16_t k = OPERAND_K_K(instruction);
                 bool s     = OPERAND_K_S(instruction);
 
-                ModuleId moduleId = vm->frames[vm->frameCount - 1].moduleId;
-                if (moduleId >= vm->modules.size) {
-                    TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_INSTRUCTION, "Invalid module ID");
-                }
-                SemiModule* mod        = vm->modules.data[moduleId];
-                ObjectDict* targetDict = s ? &mod->exports : &mod->globals;
+                ObjectDict* targetDict = s ? &module->exports : &module->globals;
                 if (k >= semiDictLen(targetDict)) {
                     TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_INSTRUCTION, "Invalid module variable index");
                 }
@@ -576,12 +627,7 @@ static void runMainLoop(SemiVM* vm, FunctionProto* fn) {
                 uint16_t k = OPERAND_K_K(instruction);
                 bool s     = OPERAND_K_S(instruction);
 
-                ModuleId moduleId = vm->frames[vm->frameCount - 1].moduleId;
-                if (moduleId >= vm->modules.size) {
-                    TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_INSTRUCTION, "Invalid module ID");
-                }
-                SemiModule* mod        = vm->modules.data[moduleId];
-                ObjectDict* targetDict = s ? &mod->exports : &mod->globals;
+                ObjectDict* targetDict = s ? &module->exports : &module->globals;
                 if (k >= semiDictLen(targetDict)) {
                     TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_INSTRUCTION, "Invalid module variable index");
                 }
@@ -596,11 +642,7 @@ static void runMainLoop(SemiVM* vm, FunctionProto* fn) {
                 uint16_t k = OPERAND_K_K(instruction);
                 bool s     = OPERAND_K_S(instruction);
 
-                Frame* currentFrame = &vm->frames[vm->frameCount - 1];
-                ModuleId moduleId   = currentFrame->moduleId;
-                SemiModule* mod     = vm->modules.data[moduleId];
-
-                Value v = semiConstantTableGet(&mod->constantTable, k);
+                Value v = semiConstantTableGet(&module->constantTable, k);
                 if (!IS_FUNCTION_PROTO(&v)) {
                     vm->error = SEMI_ERROR_INVALID_INSTRUCTION;
                     return;
@@ -610,8 +652,8 @@ static void runMainLoop(SemiVM* vm, FunctionProto* fn) {
                 TRAP_ON_ERROR(
                     vm, captureUpvalues(vm, stack, deferFn), "Failed to capture upvalues for deferred function");
 
-                deferFn->prevDeferredFn  = currentFrame->deferredFn;
-                currentFrame->deferredFn = deferFn;
+                deferFn->prevDeferredFn = frame->deferredFn;
+                frame->deferredFn       = deferFn;
                 break;
             }
 
@@ -619,37 +661,21 @@ static void runMainLoop(SemiVM* vm, FunctionProto* fn) {
             case OP_MOVE: {
                 uint8_t a = OPERAND_T_A(instruction);
                 uint8_t b = OPERAND_T_B(instruction);
-                uint8_t c = OPERAND_T_C(instruction);
-                bool kc   = OPERAND_T_KC(instruction);
-
-                stack[a] = stack[b];
-                if (c != 0) {
-                    if (c != 0) {
-                        if (kc && c <= UINT32_MAX - pc) {
-                            pc = pc + c;
-                        } else if (!kc && pc >= c) {
-                            pc = pc - c;
-                        } else {
-                            TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_PC, "Invalid program counter after move instruction");
-                        }
-
-                        goto start_of_vm_loop;
-                    }
-                }
+                stack[a]  = stack[b];
                 break;
             }
 
             case OP_GET_UPVALUE: {
                 uint8_t a = OPERAND_T_A(instruction);
                 uint8_t b = OPERAND_T_B(instruction);
-                stack[a]  = *vm->frames[vm->frameCount - 1].function->upvalues[b]->value;
+                stack[a]  = *frame->function->upvalues[b]->value;
                 break;
             }
 
             case OP_SET_UPVALUE: {
-                uint8_t a                                                    = OPERAND_T_A(instruction);
-                uint8_t b                                                    = OPERAND_T_B(instruction);
-                *vm->frames[vm->frameCount - 1].function->upvalues[a]->value = stack[b];
+                uint8_t a                            = OPERAND_T_A(instruction);
+                uint8_t b                            = OPERAND_T_B(instruction);
+                *frame->function->upvalues[a]->value = stack[b];
                 break;
             }
 
@@ -819,7 +845,7 @@ static void runMainLoop(SemiVM* vm, FunctionProto* fn) {
                         vm, table->numericMethods->add(&vm->gc, ra, ra, &one), "Failed to increment iterator index");
                 }
                 if (hasNext) {
-                    pc += 2;
+                    MOVE_FORWARD(2);
                     goto start_of_vm_loop;
                 }
                 break;
@@ -875,49 +901,26 @@ static void runMainLoop(SemiVM* vm, FunctionProto* fn) {
                         break;
                     }
                     case VALUE_TYPE_COMPILED_FUNCTION: {
+                        // We can safely set the PC to the next instruction because we ensure
+                        // every chunk ends with an OP_RETURN or OP_TRAP. Since this instruction
+                        // is OP_CALL, there must be at least one instruction after it.
+                        frame->returnIP = ip + 1;
+
                         ObjectFunction* func   = AS_COMPILED_FUNCTION(&stack[a]);
                         FunctionProto* fnProto = func->proto;
                         if (fnProto->arity != b) {
                             TRAP_ON_ERROR(vm, SEMI_ERROR_ARGS_COUNT_MISMATCH, "Function arguments mismatch");
                         }
-
-                        uint32_t stackOffset = (uint32_t)(stack - vm->values);
-                        if (stackOffset > SEMI_MAX_STACK_SIZE - (a + 1 + fnProto->maxStackSize)) {
-                            TRAP_ON_ERROR(vm, SEMI_ERROR_STACK_OVERFLOW, "Stack overflow on function call");
-                        }
-                        if ((vm->values + vm->valueCapacity) - args < fnProto->maxStackSize) {
-                            TRAP_ON_ERROR(vm,
-                                          growVMStackSize(vm, stackOffset + a + 1 + fnProto->maxStackSize),
-                                          "Failed to grow VM stack for function call");
-                            stack = vm->values + stackOffset;
-                            args  = &stack[a + 1];
-                        }
-                        if (vm->frameCount >= vm->frameCapacity) {
-                            TRAP_ON_ERROR(vm,
-                                          growVMFrameSize(vm, vm->frameCount + 1),
-                                          "Failed to grow VM frame stack for function call");
+                        if (!verifyChunk(&fnProto->chunk)) {
+                            TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_FUNCTION_PROTO, "Invalid function prototype");
                         }
 
-                        PCLocation nextPC = pc + 1;
-                        if (nextPC == UINT32_MAX) {
-                            TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_PC, "Invalid program counter after function call");
+                        appendFrame(vm, func, args);
+                        if (vm->error != 0) {
+                            return;
                         }
-                        vm->frames[vm->frameCount] = (Frame){
-                            .callerStack       = {.base = stack},
-                            .returnValueOffset = (uint32_t)(stackOffset + a),
-                            .callerPC          = nextPC,
-                            .function          = func,
-                            .deferredFn        = NULL,
-                            .moduleId          = fnProto->moduleId,
-                            .coarity           = fnProto->coarity,
-                        };
-                        vm->frameCount++;
 
-                        code     = fnProto->chunk.data;
-                        codeSize = fnProto->chunk.size;
-                        pc       = 0;
-                        stack    = args;
-
+                        RECONCILE_STATE();
                         goto start_of_vm_loop;
                     }
                     default:
@@ -936,14 +939,18 @@ static void runMainLoop(SemiVM* vm, FunctionProto* fn) {
                     vm->frameCount = 0;
                     return;
                 }
-                Frame* frame         = &vm->frames[vm->frameCount - 1];
-                Frame* previousFrame = &vm->frames[vm->frameCount - 2];
 
                 // TODO: Implement deferred functions execution here.
 
-                if (a != INVALID_LOCAL_REGISTER_ID && frame->returnValueOffset != UINT32_MAX) {
-                    Value* caller = vm->values + frame->returnValueOffset;
-                    *caller       = stack[a];
+                if (a != INVALID_LOCAL_REGISTER_ID) {
+                    // TODO: Make the stack of the main frame starts at vm->values[1] so that
+                    //       we can always do stack[-1] to get the caller's return value slot.
+                    if (stack > vm->values) {
+                        Value* caller = stack - 1;
+                        *caller       = stack[a];
+                    } else {
+                        TRAP_ON_ERROR(vm, SEMI_ERROR_INTERNAL_ERROR, "Stack underflow on function return");
+                    }
                 } else if (frame->function->proto->coarity > 0) {
                     // If the function has coarity, we need to return a value.
                     // This only happens when the last statement of the function doesn't
@@ -952,12 +959,9 @@ static void runMainLoop(SemiVM* vm, FunctionProto* fn) {
                 }
 
                 closeUpvalues(vm, stack);
-                pc       = frame->callerPC;
-                stack    = frame->callerStack.base;
-                code     = previousFrame->function->proto->chunk.data;
-                codeSize = previousFrame->function->proto->chunk.size;
                 vm->frameCount--;
 
+                RECONCILE_STATE();
                 goto start_of_vm_loop;
             }
             case OP_CHECK_TYPE: {
@@ -970,15 +974,7 @@ static void runMainLoop(SemiVM* vm, FunctionProto* fn) {
             }
         }
 
-        if (pc < UINT32_MAX) {
-            pc += 1;
-        } else {
-            TRAP_ON_ERROR(vm, SEMI_ERROR_INVALID_PC, "Invalid program counter after instruction execution");
-        }
-
-    start_of_vm_loop:
-        // label at end of compound statement is a C23 extension
-        (void)0;
+        ip++;
     }
 }
 
@@ -996,24 +992,15 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
         vm->modules.data[0] = module;
     }
 
-    ObjectFunction mainFunction = (ObjectFunction){
-        .obj          = ((Object){
-                     .header = VALUE_TYPE_COMPILED_FUNCTION,
-        }),
-        .proto        = module->moduleInit,
-        .upvalueCount = 0,
-    };
+    ObjectFunction mainFunction;
     mainFunction.obj.header   = VALUE_TYPE_COMPILED_FUNCTION;
     mainFunction.proto        = module->moduleInit;
     mainFunction.upvalueCount = 0;
 
-    vm->frames[0] = (Frame){.callerStack       = {.base = vm->values},
-                            .returnValueOffset = 0,
-                            .callerPC          = 0,
-                            .function          = &mainFunction,
-                            .moduleId          = 0};
-
-    vm->frameCount = 1;
-    runMainLoop(vm, module->moduleInit);
+    appendFrame(vm, &mainFunction, vm->values);
+    if (vm->error != 0) {
+        return vm->error;
+    }
+    runMainLoop(vm);
     return vm->error;
 }
