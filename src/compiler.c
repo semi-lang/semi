@@ -2992,8 +2992,6 @@ static void parseReturn(Compiler* compiler) {
     if (t == TK_CLOSE_BRACE || t == TK_SEPARATOR || t == TK_SEMICOLON) {
         // Return without value
         emitCode(compiler, INSTRUCTION_RETURN(255, 0, 0, false, false));
-        nextToken(&compiler->lexer);
-
         goto check_coarity;
     }
 

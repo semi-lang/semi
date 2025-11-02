@@ -635,10 +635,6 @@ static void runMainLoop(SemiVM* vm) {
                 break;
             }
             case OP_DEFER_CALL: {
-                // TODO: Implement defer functionality and remove early return.
-                vm->error = SEMI_ERROR_UNIMPLEMENTED_FEATURE;
-                return;
-
                 uint16_t k = OPERAND_K_K(instruction);
                 bool s     = OPERAND_K_S(instruction);
 
@@ -930,6 +926,27 @@ static void runMainLoop(SemiVM* vm) {
             }
             case OP_RETURN: {
                 uint8_t a = OPERAND_T_A(instruction);
+
+                // Execute deferred functions if any exist
+                if (frame->deferredFn != NULL) {
+                    ObjectFunction* deferFn = frame->deferredFn;
+                    frame->deferredFn       = deferFn->prevDeferredFn;
+
+                    // Set up the current frame to return to the same OP_RETURN instruction
+                    frame->returnIP = ip;
+
+                    // Push a new frame for deferred function execution starting from a+1
+                    Value* newStackStart = a != INVALID_LOCAL_REGISTER_ID ? stack + a + 1 : stack;
+                    closeUpvalues(vm, newStackStart);
+                    appendFrame(vm, deferFn, newStackStart);
+                    if (vm->error != 0) {
+                        return;
+                    }
+
+                    RECONCILE_STATE();
+                    goto start_of_vm_loop;
+                }
+
                 if (vm->frameCount <= 1) {
                     // This is only when the last statement of the module is an expression.
                     // We use this in REPL to print the result of the expression.
@@ -939,9 +956,6 @@ static void runMainLoop(SemiVM* vm) {
                     vm->frameCount = 0;
                     return;
                 }
-
-                // TODO: Implement deferred functions execution here.
-
                 if (a != INVALID_LOCAL_REGISTER_ID) {
                     // TODO: Make the stack of the main frame starts at vm->values[1] so that
                     //       we can always do stack[-1] to get the caller's return value slot.
