@@ -9,7 +9,7 @@ A minimalist programming language designed for embedding within applications.
 
 * Semi is **Predictable**: The syntax is designed to be concise and easy to understand. Variable shadowing is prohibited. Errors must be handled explicitly, not buried in exception blocks.
 * Semi is **Data Oriented**: Semi encourages a data-centric approach with first-class support for algebraic data types and structural typing. By favoring composition over inheritance, it helps you write code that is more flexible and resilient to change.
-* Semi is **Modular**: Semi keeps the builds lean by making the standard library optional. The entire runtime, including the compiler and virtual machine, is under 50KiB when compiled to WebAssembly and gzipped.
+* Semi is **Minimal**: Semi keeps the builds lean by making the standard library optional. The entire runtime, including the compiler and virtual machine, is under 50KiB when compiled to WebAssembly and gzipped.
 * Semi is **Portable**: Semi is C11-compliant and is designed to be compiled and run anywhere.
 
 
