@@ -442,13 +442,13 @@ static inline MagicMethodsTable* getMagicMethodsTable(SemiVM* vm, Value* value) 
 }
 
 static void runMainLoop(SemiVM* vm) {
-    Frame* frame;
-    Value* stack;
-    Instruction* ip;
+    register Frame* frame;
+    register Value* stack;
+    register Instruction* ip;
+    register SemiModule* module;
 
     Instruction* chunkStart;
     Instruction* chunkEnd;
-    SemiModule* module;
 
 #define MOVE_FORWARD(steps)                                                            \
     do {                                                                               \
@@ -474,10 +474,10 @@ static void runMainLoop(SemiVM* vm) {
     do {                                                              \
         frame      = &vm->frames[vm->frameCount - 1];                 \
         stack      = vm->values + frame->stackOffset;                 \
-        chunkStart = frame->function->proto->chunk.data;              \
-        chunkEnd   = chunkStart + frame->function->proto->chunk.size; \
         ip         = frame->returnIP;                                 \
         module     = vm->modules.data[frame->moduleId];               \
+        chunkStart = frame->function->proto->chunk.data;              \
+        chunkEnd   = chunkStart + frame->function->proto->chunk.size; \
     } while (0)
 
     // The first frame is already set up before calling this function
