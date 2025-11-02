@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include <iomanip>
 #include <iostream>
@@ -339,6 +340,21 @@ ErrorId printFunction(GC* gc, uint8_t argCount, Value* args, Value* ret) {
     return 0;
 }
 
+static const char* nowFunctionName = "now";
+
+ErrorId nowFunction(GC* gc, uint8_t argCount, Value* args, Value* ret) {
+    (void)gc;
+    (void)argCount;
+    (void)args;
+
+    struct timespec ts;
+    if (!timespec_get(&ts, TIME_UTC)) {
+        return 1;
+    }
+    *ret = semiValueNewInt((IntValue)ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+    return 0;
+}
+
 int executeSource(const char* source, bool isRepl, bool disassemble) {
     SemiVMConfig config;
     semiInitConfig(&config);
@@ -346,6 +362,8 @@ int executeSource(const char* source, bool isRepl, bool disassemble) {
 
     semiVMAddGlobalVariable(
         vm, printFunctionName, (IdentifierLength)strlen(printFunctionName), semiValueNewNativeFunction(printFunction));
+    semiVMAddGlobalVariable(
+        vm, nowFunctionName, (IdentifierLength)strlen(nowFunctionName), semiValueNewNativeFunction(nowFunction));
 
     ErrorId errId = compileAndRun(vm, source, strlen(source), isRepl, disassemble);
     if (errId != 0) {

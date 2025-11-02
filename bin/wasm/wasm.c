@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -16,6 +17,21 @@
 #include "../../src/primitives.h"
 #include "../../src/symbol_table.h"
 #include "../../src/vm.h"
+
+static const char* nowFunctionName = "now";
+
+ErrorId nowFunction(GC* gc, uint8_t argCount, Value* args, Value* ret) {
+    (void)gc;
+    (void)argCount;
+    (void)args;
+
+    struct timespec ts;
+    if (!timespec_get(&ts, TIME_UTC)) {
+        return 1;
+    }
+    *ret = semiValueNewInt((IntValue)ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+    return 0;
+}
 
 static const char* printFunctionName = "print";
 
@@ -128,6 +144,8 @@ int compileAndRun(const char* str) {
 
     semiVMAddGlobalVariable(
         vm, printFunctionName, (IdentifierLength)strlen(printFunctionName), semiValueNewNativeFunction(printFunction));
+    semiVMAddGlobalVariable(
+        vm, nowFunctionName, (IdentifierLength)strlen(nowFunctionName), semiValueNewNativeFunction(nowFunction));
 
     ErrorId errId = compileAndRunInternal(vm, str, strlen(str));
 
