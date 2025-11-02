@@ -636,7 +636,6 @@ static void runMainLoop(SemiVM* vm) {
             }
             case OP_DEFER_CALL: {
                 uint16_t k = OPERAND_K_K(instruction);
-                bool s     = OPERAND_K_S(instruction);
 
                 Value v = semiConstantTableGet(&module->constantTable, k);
                 if (!IS_FUNCTION_PROTO(&v)) {
