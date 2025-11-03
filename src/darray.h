@@ -1,6 +1,9 @@
 // Copyright (c) 2025 Ian Chen
 // SPDX-License-Identifier: MPL-2.0
 
+#ifndef SEMI_DARRAY_H
+#define SEMI_DARRAY_H
+
 #include "./gc.h"
 #include "semi/error.h"
 
@@ -88,3 +91,5 @@
         arr->data[arr->size++] = value;                                                                          \
         return 0;                                                                                                \
     }
+
+#endif /* SEMI_DARRAY_H */

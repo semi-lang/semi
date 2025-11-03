@@ -4,6 +4,7 @@
 #ifndef SEMI_COMMON_H
 #define SEMI_COMMON_H
 
+#include <limits.h>
 #include <stdint.h>
 
 #define SEMI_EXPORT __attribute__((visibility("default")))
@@ -63,5 +64,32 @@ static void semiDebugAssertionFailure(const char* file, int line, const char* ms
     ASSERT(true, "Reached unreachable code"); \
     abort()
 #endif  // __has_builtin(__builtin_unreachable)
+
+static inline uint32_t nextPowerOfTwoCapacity(uint32_t x) {
+    if (x <= 8) {
+        return 8;
+    }
+
+#if __has_builtin(__builtin_clzl)
+    // From https://gcc.gnu.org/onlinedocs/gcc/Bit-Operation-Builtins.html
+    //
+    //   * __builtin_clz:  Returns the number of leading 0-bits in x, starting at the most
+    //                     significant bit position. If x is 0, the result is undefined.
+    //   * __builtin_clzl: Similar to __builtin_clz, except the argument type is unsigned long.
+    return (uint32_t)1 << (sizeof(unsigned long) * CHAR_BIT - (size_t)__builtin_clzl(x));
+#else
+
+    // From https://graphics.stanford.edu/~seander/bithacks.html#RoundUpPowerOf2Float
+    --x;
+    x |= x >> 1;
+    x |= x >> 2;
+    x |= x >> 4;
+    x |= x >> 8;
+    x |= x >> 16;
+    x++;
+
+    return x;
+#endif
+}
 
 #endif /* SEMI_COMMON_H */

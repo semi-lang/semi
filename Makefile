@@ -72,6 +72,7 @@ SRC_DIR := src
 BUILD_DIR := build
 BIN_DIR := bin
 TEST_DIR := tests
+AMALGAMATE_DIR := amalgamated
 
 SRC := $(wildcard $(SRC_DIR)/*.c)
 OBJ := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRC))
@@ -187,10 +188,13 @@ $(BUILD_DIR):
 clean:
 	@rm -rf $(BUILD_DIR)
 
-.PHONY: all clean test dis semi wasm
+.PHONY: all clean test dis semi wasm amalgamate
 
 dis: $(DIS_EXECUTABLE)
 
 semi: $(REPL_EXECUTABLE)
 
 wasm: $(WASM_EXECUTABLE)
+
+amalgamate:
+	@python3 amalgamate.py

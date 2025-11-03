@@ -861,8 +861,6 @@ static inline PCLocation currentPCLocation(Compiler* compiler) {
     return compiler->currentFunction->chunk.size;
 }
 
-#include <stdio.h>
-
 static PCLocation emitCode(Compiler* compiler, Instruction instruction) {
     PCLocation pcLocation = compiler->currentFunction->chunk.size;
     ErrorId errId         = ChunkAppend(compiler->gc, &compiler->currentFunction->chunk, instruction);
@@ -1405,7 +1403,7 @@ static const TokenPrecedence tokenPrecedences[] = {
     ((token >= 0 && token < sizeof(tokenPrecedences) / sizeof(tokenPrecedences[0])) ? tokenPrecedences[token].ledFn \
                                                                                     : NULL)
 
-static MagicMethodsTable* getMagicMethodsTable(Compiler* compiler, Value* value) {
+static MagicMethodsTable* getCompileTimeMagicMethodsTable(Compiler* compiler, Value* value) {
     BaseValueType baseType = BASE_TYPE(value);
     if (baseType >= MIN_CUSTOM_BASE_VALUE_TYPE) {
         SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_INTERNAL_ERROR, "Invalid type for constant folding");
@@ -1419,7 +1417,7 @@ static bool isConstantExprTruthy(Compiler* compiler, PrattExpr* expr) {
         SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_INTERNAL_ERROR, "Invalid type for constant folding");
     }
 
-    MagicMethodsTable* table = getMagicMethodsTable(compiler, &expr->value.constant);
+    MagicMethodsTable* table = getCompileTimeMagicMethodsTable(compiler, &expr->value.constant);
 
     Value result;
     ErrorId errorId = table->conversionMethods->toBool(compiler->gc, &result, &expr->value.constant);
@@ -1527,7 +1525,7 @@ static void unaryNud(Compiler* compiler, const PrattState state, PrattExpr* rest
     LocalRegisterId srcReg;
     switch (expr->type) {
         case PRATT_EXPR_TYPE_CONSTANT: {
-            MagicMethodsTable* table = getMagicMethodsTable(compiler, &expr->value.constant);
+            MagicMethodsTable* table = getCompileTimeMagicMethodsTable(compiler, &expr->value.constant);
             ErrorId errorId;
             Value result;
 
@@ -1709,7 +1707,7 @@ static void constantFolding(Compiler* compiler, Value* left, Value* right, Value
             compiler, SEMI_ERROR_UNIMPLEMENTED_FEATURE, "Constant folding for strings is not implemented");
     }
 
-    MagicMethodsTable* table = getMagicMethodsTable(compiler, left);
+    MagicMethodsTable* table = getCompileTimeMagicMethodsTable(compiler, left);
 
     ErrorId errorId;
     if (token == TK_LTE) {

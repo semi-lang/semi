@@ -1,8 +1,8 @@
 // Copyright (c) 2025 Ian Chen
 // SPDX-License-Identifier: MPL-2.0
 
-#ifndef SEMI_symbolTable_H
-#define SEMI_symbolTable_H
+#ifndef SEMI_SYMBOL_TABLE_H
+#define SEMI_SYMBOL_TABLE_H
 
 #include <stddef.h>
 
@@ -56,4 +56,4 @@ IdentifierLength semiSymbolTableLength(const InternedChar* str);
 // Get the identifier ID of an interned string.
 IdentifierId semiSymbolTableGetId(const InternedChar* str);
 
-#endif /* SEMI_symbolTable_H */
+#endif /* SEMI_SYMBOL_TABLE_H */

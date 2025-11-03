@@ -32,6 +32,15 @@ Currently there's not much to configure, but `include/semi/config.h` is the plac
 
 We treat WebAssembly as a first-class target for Semi. To build the WebAssembly version of Semi, you need to have [Emscripten](https://emscripten.org/) installed. Once you have Emscripten set up, run `make WASM=1 wasm` in the root directory. This will produce `build/wasm.wasm` and `build/wasm.js`. They power the demo in our [homepage](https://semi-lang.dev).
 
+### Amalgamated Single-File Release
+
+To generate an amalgamated single-file version of Semi, make sure Python3 is available in the `$PATH`, and run:
+
+```shell
+make amalgamate
+```
+
+This will produce `amalgamated/semi.c` and `amalgamated/semi.h`. This is useful for embedding Semi into other projects without needing to manage multiple source files.
 
 ## License
 
