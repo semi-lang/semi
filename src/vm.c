@@ -989,3 +989,4 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
     runMainLoop(vm);
     return vm->error;
 }
+
