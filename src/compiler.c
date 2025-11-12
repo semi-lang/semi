@@ -60,13 +60,6 @@
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
 #pragma region Lexer
 
-typedef enum BracketType {
-    BRACKET_ROUND = 0,
-    BRACKET_SQUARE,
-    BRACKET_CURLY,
-    BRACKET_ANGLE,
-} BracketType;
-
 #define BRACKET_ROUND_MASK  ((uint32_t)(0x000000FF))
 #define BRACKET_SQUARE_MASK ((uint32_t)(0x0000FF00))
 #define BRACKET_CURLY_MASK  ((uint32_t)(0x00FF0000))
@@ -809,29 +802,46 @@ static Token peekToken(Lexer* lexer) {
         }                                                                   \
     } while (0)
 
-static void updateBracketCount(Compiler* compiler, BracketType bracketType, bool increment) {
+static void updateBracketCount(Compiler* compiler, Token token) {
     uint32_t mask;
     unsigned short shift;
-    switch (bracketType) {
-        case BRACKET_ROUND:
-            mask  = BRACKET_ROUND_MASK;
-            shift = 0;
+    bool increment;
+    switch (token) {
+        case TK_OPEN_PAREN:
+            mask      = BRACKET_ROUND_MASK;
+            shift     = 0;
+            increment = true;
             break;
-        case BRACKET_SQUARE:
-            mask  = BRACKET_SQUARE_MASK;
-            shift = 8;
+        case TK_CLOSE_PAREN:
+            mask      = BRACKET_ROUND_MASK;
+            shift     = 0;
+            increment = false;
             break;
-        case BRACKET_CURLY:
-            mask  = BRACKET_CURLY_MASK;
-            shift = 16;
+        case TK_OPEN_BRACKET:
+            mask      = BRACKET_SQUARE_MASK;
+            shift     = 8;
+            increment = true;
             break;
-        case BRACKET_ANGLE:
-            mask  = BRACKET_ANGLE_MASK;
-            shift = 24;
+        case TK_CLOSE_BRACKET:
+            mask      = BRACKET_SQUARE_MASK;
+            shift     = 8;
+            increment = false;
+            break;
+        case TK_OPEN_BRACE:
+            mask      = BRACKET_CURLY_MASK;
+            shift     = 16;
+            increment = true;
+            break;
+        case TK_CLOSE_BRACE:
+            mask      = BRACKET_CURLY_MASK;
+            shift     = 16;
+            increment = false;
             break;
         default:
-            SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_INTERNAL_ERROR, "Invalid bracket type");
+            SEMI_UNREACHABLE();
+            return;
     }
+
     uint32_t bracketCount = (compiler->newlineState & mask) >> shift;
     if (increment) {
         if (bracketCount >= MAX_BRACKET_COUNT) {
@@ -1493,11 +1503,20 @@ static void variableNud(Compiler* compiler, const PrattState state, PrattExpr* r
 }
 
 static void typeIdentifierNud(Compiler* compiler, const PrattState state, PrattExpr* expr) {
-    (void)compiler;
+    SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNIMPLEMENTED_FEATURE, "Type identifiers are not implemented yet");
+
     (void)state;
     (void)expr;
 
-    SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNIMPLEMENTED_FEATURE, "Type identifiers are not implemented yet");
+    InternedChar* identifier  = semiSymbolTableInsert(compiler->symbolTable,
+                                                     compiler->lexer.tokenValue.identifier.name,
+                                                     compiler->lexer.tokenValue.identifier.length);
+    IdentifierId identifierId = semiSymbolTableGetId(identifier);
+
+    Value baseTypeIndexValue = semiDictGet(&compiler->artifactModule->types, semiValueNewInt(identifierId));
+    if (IS_INVALID(&baseTypeIndexValue)) {
+        SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNDEFINED_TYPE, "Undefined type");
+    }
 }
 
 static IdentifierId newIdentifierNud(Compiler* compiler) {
@@ -1583,7 +1602,7 @@ static void unaryNud(Compiler* compiler, const PrattState state, PrattExpr* rest
 }
 
 static void parenthesisNud(Compiler* compiler, const PrattState state, PrattExpr* restrict expr) {
-    updateBracketCount(compiler, BRACKET_ROUND, true);
+    updateBracketCount(compiler, TK_OPEN_PAREN);
     nextToken(&compiler->lexer);  // Consume '('
 
     PrattState innerState = {
@@ -1596,7 +1615,7 @@ static void parenthesisNud(Compiler* compiler, const PrattState state, PrattExpr
         SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNEXPECTED_TOKEN, "Expected closing parenthesis");
     }
 
-    updateBracketCount(compiler, BRACKET_ROUND, false);
+    updateBracketCount(compiler, TK_CLOSE_PAREN);
 }
 
 static void ternaryLed(Compiler* compiler, const PrattState state, PrattExpr* condExpr, PrattExpr* restrict retExpr) {
@@ -1906,7 +1925,7 @@ static void accessLed(Compiler* compiler, const PrattState state, PrattExpr* lef
 }
 
 static void indexLed(Compiler* compiler, const PrattState state, PrattExpr* leftExpr, PrattExpr* restrict retExpr) {
-    updateBracketCount(compiler, BRACKET_SQUARE, true);
+    updateBracketCount(compiler, TK_OPEN_BRACKET);
     nextToken(&compiler->lexer);  // Consume [
 
     LocalRegisterId indexReg, targetReg;
@@ -1948,7 +1967,7 @@ static void indexLed(Compiler* compiler, const PrattState state, PrattExpr* left
         emitCode(compiler, INSTRUCTION_GET_ITEM(state.targetRegister, targetReg, indexReg, false, false));
     }
 
-    updateBracketCount(compiler, BRACKET_SQUARE, false);
+    updateBracketCount(compiler, TK_CLOSE_BRACKET);
     MATCH_NEXT_TOKEN_OR_ABORT(compiler, TK_CLOSE_BRACKET, "Expected closing bracket for index expression");
 
     restoreNextRegisterId(compiler, state.targetRegister + 1);
@@ -1967,7 +1986,7 @@ static void functionCallLed(Compiler* compiler,
     uint8_t argCount = 0;
 
     nextToken(&compiler->lexer);
-    updateBracketCount(compiler, BRACKET_ROUND, true);
+    updateBracketCount(compiler, TK_OPEN_PAREN);
 
     Token t = peekToken(&compiler->lexer);
     if (t == TK_CLOSE_PAREN) {
@@ -2012,7 +2031,7 @@ static void functionCallLed(Compiler* compiler,
 parsed_arguments:
     // Expected close parenthesis
     MATCH_NEXT_TOKEN_OR_ABORT(compiler, TK_CLOSE_PAREN, "Expected closing parenthesis for function call");
-    updateBracketCount(compiler, BRACKET_ROUND, false);
+    updateBracketCount(compiler, TK_CLOSE_PAREN);
 
     emitCode(compiler, INSTRUCTION_CALL(state.targetRegister, argCount, 0, false, false));
     *retExpr = PRATT_EXPR_REG(state.targetRegister);
@@ -2236,7 +2255,7 @@ static LocalRegisterId dereferenceLhsExpr(Compiler* compiler, LhsExpr* expr) {
 
 void lhsIndexLed(Compiler* compiler, LhsExpr* expr, LhsExpr* restrict retExpr) {
     nextToken(&compiler->lexer);  // Consume '['
-    updateBracketCount(compiler, BRACKET_SQUARE, true);
+    updateBracketCount(compiler, TK_OPEN_BRACKET);
 
     retExpr->type         = LHS_EXPR_TYPE_INDEX;
     retExpr->baseRegister = dereferenceLhsExpr(compiler, expr);
@@ -2262,7 +2281,7 @@ void lhsIndexLed(Compiler* compiler, LhsExpr* expr, LhsExpr* restrict retExpr) {
     }
 
     MATCH_NEXT_TOKEN_OR_ABORT(compiler, TK_CLOSE_BRACKET, "Expected closing bracket for index expression");
-    updateBracketCount(compiler, BRACKET_SQUARE, false);
+    updateBracketCount(compiler, TK_CLOSE_BRACKET);
 }
 
 void lhsFieldLed(Compiler* compiler, LhsExpr* expr, LhsExpr* restrict retExpr) {
@@ -2852,7 +2871,7 @@ static void parseFunction(Compiler* compiler, bool isModuleExport) {
         SEMI_COMPILE_ABORT(
             compiler, SEMI_ERROR_UNEXPECTED_TOKEN, "Expected opening parenthesis for function parameters");
     }
-    updateBracketCount(compiler, BRACKET_ROUND, true);
+    updateBracketCount(compiler, TK_OPEN_PAREN);
 
     // Add the symbol before parsing the body so that the function can be recursive.
     // This also avoid using the same name in the parameters.
@@ -2905,7 +2924,7 @@ static void parseFunction(Compiler* compiler, bool isModuleExport) {
 
 parsed_arguments:
     nextToken(&compiler->lexer);  // Consume ")"
-    updateBracketCount(compiler, BRACKET_ROUND, false);
+    updateBracketCount(compiler, TK_CLOSE_PAREN);
     parseScopedStatements(compiler);
 
     // The mandatory return marking the end of the function.
@@ -3223,6 +3242,7 @@ SemiModule* semiCompilerCompileModule(Compiler* compiler, SemiVM* vm, SemiModule
 
         if (compiler->artifactModule == NULL) {
             SemiModule* artifactModule = semiVMModuleCreate(compiler->gc, vm->nextModuleId);
+            semiPrimitivesInitBuiltInModuleTypes(compiler->gc, compiler->symbolTable, artifactModule);
             if (artifactModule == NULL) {
                 SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_MEMORY_ALLOCATION_FAILURE, "Failed to allocate module");
             }

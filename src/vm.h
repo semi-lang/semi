@@ -19,6 +19,7 @@ typedef struct SemiModule {
     ModuleId moduleId;
     ObjectDict exports;
     ObjectDict globals;
+    ObjectDict types;  // type identifierId -> base type index
     ConstantTable constantTable;
 
     // The function proto used to initialize this module. For main module, this is the main function.

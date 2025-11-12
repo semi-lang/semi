@@ -6,6 +6,7 @@
 #include <math.h>
 #include <string.h>
 
+#include "./symbol_table.h"
 #include "./value.h"
 #include "./vm.h"
 
@@ -1631,7 +1632,35 @@ void semiPrimitivesFinalizeMagicMethodsTable(MagicMethodsTable* table) {
     }
 }
 
-void semiPrimitivesIntializeBuiltInPrimitives(GC* gc, ClassTable* classes) {
+typedef struct {
+    const char* str;
+    BaseValueType type;
+} TypeIdentifierBaseValueTypePair;
+
+static const TypeIdentifierBaseValueTypePair typeIdentifierBaseValueTypePair[] = {
+    {  "Bool",   BASE_VALUE_TYPE_BOOL},
+    {   "Int", BASE_VALUE_TYPE_NUMBER},
+    {"String", BASE_VALUE_TYPE_STRING},
+    {  "List",   BASE_VALUE_TYPE_LIST},
+    {  "Dict",   BASE_VALUE_TYPE_DICT},
+};
+
+void semiPrimitivesInitBuiltInModuleTypes(GC* gc, SymbolTable* symbolTable, SemiModule* module) {
+    semiObjectStackDictInit(&module->types);
+    for (size_t i = 0; i < sizeof(typeIdentifierBaseValueTypePair) / sizeof(TypeIdentifierBaseValueTypePair); i++) {
+        TypeIdentifierBaseValueTypePair pair = typeIdentifierBaseValueTypePair[i];
+        InternedChar* typeIdentifier  = semiSymbolTableGet(symbolTable, pair.str, (IdentifierLength)strlen(pair.str));
+        IdentifierId typeIdentifierId = semiSymbolTableGetId(typeIdentifier);
+        semiDictSet(gc, &module->types, semiValueNewInt(typeIdentifierId), semiValueNewInt(pair.type));
+    }
+}
+
+void semiPrimitivesIntializeBuiltInPrimitives(GC* gc, ClassTable* classes, SymbolTable* symbolTable) {
+    for (size_t i = 0; i < sizeof(typeIdentifierBaseValueTypePair) / sizeof(TypeIdentifierBaseValueTypePair); i++) {
+        TypeIdentifierBaseValueTypePair pair = typeIdentifierBaseValueTypePair[i];
+        semiSymbolTableInsert(symbolTable, pair.str, (IdentifierLength)strlen(pair.str));
+    }
+
     static const MagicMethodsTable builtInClasses[] = {
         [BASE_VALUE_TYPE_INVALID]        = invalidMagicMethodsTable,
         [BASE_VALUE_TYPE_BOOL]           = boolMagicMethodsTable,

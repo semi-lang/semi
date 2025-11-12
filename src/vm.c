@@ -22,6 +22,7 @@ SemiModule* semiVMModuleCreate(GC* gc, ModuleId moduleId) {
     module->moduleId = moduleId;
     semiObjectStackDictInit(&module->exports);
     semiObjectStackDictInit(&module->globals);
+    semiObjectStackDictInit(&module->types);
     semiConstantTableInit(gc, &module->constantTable);
     module->moduleInit = NULL;
 
@@ -46,6 +47,7 @@ SemiModule* semiVMModuleCreateFrom(GC* gc, SemiModule* source) {
 }
 
 void semiVMModuleDestroy(GC* gc, SemiModule* module) {
+    semiObjectStackDictCleanup(gc, &module->types);
     semiObjectStackDictCleanup(gc, &module->exports);
     semiObjectStackDictCleanup(gc, &module->globals);
     semiConstantTableCleanup(&module->constantTable);
@@ -219,7 +221,7 @@ SEMI_EXPORT SemiVM* semiCreateVM(SemiVMConfig* inputConfig) {
     ModuleListInit(&vm->modules);
     semiGCInit(&vm->gc, config.reallocateFn, config.reallocateUserData);
     semiSymbolTableInit(&vm->gc, &vm->symbolTable);
-    semiPrimitivesIntializeBuiltInPrimitives(&vm->gc, &vm->classes);
+    semiPrimitivesIntializeBuiltInPrimitives(&vm->gc, &vm->classes, &vm->symbolTable);
 
     vm->globalConstants = NULL;
     GlobalIdentifierListInit(&vm->globalIdentifiers);
@@ -989,4 +991,3 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
     runMainLoop(vm);
     return vm->error;
 }
-

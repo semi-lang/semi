@@ -6,6 +6,7 @@
 
 #include "./gc.h"
 #include "./primitive_x_macro.h"
+#include "./symbol_table.h"
 #include "./value.h"
 #include "semi/error.h"
 
@@ -23,7 +24,8 @@ typedef struct ClassTable {
 } ClassTable;
 
 void semiPrimitivesFinalizeMagicMethodsTable(MagicMethodsTable* table);
-void semiPrimitivesIntializeBuiltInPrimitives(GC* gc, ClassTable* classes);
+void semiPrimitivesInitBuiltInModuleTypes(GC* gc, SymbolTable* symbolTable, SemiModule* module);
+void semiPrimitivesIntializeBuiltInPrimitives(GC* gc, ClassTable* classes, SymbolTable* symbolTable);
 void semiPrimitivesCleanupClassTable(GC* gc, ClassTable* classes);
 ErrorId semiPrimitivesDispatchHash(MagicMethodsTable* table, GC* gc, ValueHash* ret, Value* a);
 ErrorId semiPrimitivesDispatch1Operand(MagicMethodsTable* table, GC* gc, Opcode method, Value* ret, Value* a);
