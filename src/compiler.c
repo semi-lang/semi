@@ -1367,6 +1367,7 @@ static void accessLed(Compiler* compiler, const PrattState state, PrattExpr* lef
 static void binaryBooleanLed(Compiler* compiler, const PrattState state, PrattExpr* leftExpr, PrattExpr* retExpr);
 static void ternaryLed(Compiler* compiler, const PrattState state, PrattExpr* leftExpr, PrattExpr* retExpr);
 static void binaryLed(Compiler* compiler, const PrattState state, PrattExpr* leftExpr, PrattExpr* retExpr);
+static void typeCheckLed(Compiler* compiler, const PrattState state, PrattExpr* leftExpr, PrattExpr* retExpr);
 static void indexLed(Compiler* compiler, const PrattState state, PrattExpr* leftExpr, PrattExpr* retExpr);
 static void functionCallLed(Compiler* compiler, const PrattState state, PrattExpr* leftExpr, PrattExpr* retExpr);
 
@@ -1398,7 +1399,7 @@ static const TokenPrecedence tokenPrecedences[] = {
     [TK_OPEN_BRACKET]       = {  PRECEDENCE_ACCESS,         indexLed},
     [TK_AND]                = {     PRECEDENCE_AND, binaryBooleanLed},
     [TK_OR]                 = {      PRECEDENCE_OR, binaryBooleanLed},
-    [TK_IS]                 = {      PRECEDENCE_IS,        binaryLed},
+    [TK_IS]                 = {      PRECEDENCE_IS,     typeCheckLed},
     [TK_IN]                 = {      PRECEDENCE_IN,        binaryLed},
 };
 #define LEFT_PRECEDENCE(token)                                                                             \
@@ -1472,6 +1473,9 @@ static void variableNud(Compiler* compiler, const PrattState state, PrattExpr* r
     IdentifierId identifierId = semiSymbolTableGetId(identifier);
     nextToken(&compiler->lexer);  // Consume the identifier token
 
+    // TODO: Check if it is an imported module name. If yes, it needs to be handled differently.
+    //       The grammar is `<module_name>.<variable_name>`.
+
     bool isExport;
     ModuleVariableId moduleVarId;
     if ((moduleVarId = resolveGlobalVariable(compiler, identifierId)) != INVALID_MODULE_VARIABLE_ID) {
@@ -1502,21 +1506,21 @@ static void variableNud(Compiler* compiler, const PrattState state, PrattExpr* r
     SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNINITIALIZED_VARIABLE, "Uninitialized variable");
 }
 
-static void typeIdentifierNud(Compiler* compiler, const PrattState state, PrattExpr* expr) {
-    SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNIMPLEMENTED_FEATURE, "Type identifiers are not implemented yet");
-
+static void typeIdentifierNud(Compiler* compiler, const PrattState state, PrattExpr* retExpr) {
     (void)state;
-    (void)expr;
 
     InternedChar* identifier  = semiSymbolTableInsert(compiler->symbolTable,
                                                      compiler->lexer.tokenValue.identifier.name,
                                                      compiler->lexer.tokenValue.identifier.length);
     IdentifierId identifierId = semiSymbolTableGetId(identifier);
+    nextToken(&compiler->lexer);  // Consume the identifier token
 
     Value baseTypeIndexValue = semiDictGet(&compiler->artifactModule->types, semiValueNewInt(identifierId));
     if (IS_INVALID(&baseTypeIndexValue)) {
         SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNDEFINED_TYPE, "Undefined type");
     }
+
+    *retExpr = PRATT_EXPR_TYPE((TypeId)AS_INT(&baseTypeIndexValue));
 }
 
 static IdentifierId newIdentifierNud(Compiler* compiler) {
@@ -1915,6 +1919,54 @@ static void binaryLed(Compiler* compiler, const PrattState state, PrattExpr* lef
     restoreNextRegisterId(compiler, state.targetRegister + 1);
 }
 
+// Handle 'is' type check expressions. We can't use binaryLed because type identifiers are not regular expressions. We
+// want to make sure when we encouter a type identifier not after 'is', it must be followed by something that makes it a
+// valid expression, e.g., a class literal or a type cast.
+static void typeCheckLed(Compiler* compiler, const PrattState state, PrattExpr* leftExpr, PrattExpr* restrict retExpr) {
+    nextToken(&compiler->lexer);  // Consume 'is'
+
+    TypeId targetTypeId;
+
+    Token token = nextToken(&compiler->lexer);
+    if (token == TK_TYPE_IDENTIFIER) {
+        // Simple case: x is SomeType
+        PrattExpr typeIdentifierExpr;
+        typeIdentifierNud(compiler, state, &typeIdentifierExpr);
+        targetTypeId = typeIdentifierExpr.value.type;
+    } else if (token == TK_IDENTIFIER) {
+        // Module-qualified case: x is module.Type
+        SEMI_COMPILE_ABORT(
+            compiler, SEMI_ERROR_UNIMPLEMENTED_FEATURE, "Module-qualified type identifiers are not implemented yet");
+    } else {
+        SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNEXPECTED_TOKEN, "Expected type identifier or module path after 'is'");
+    }
+
+    LocalRegisterId regB;
+    switch (leftExpr->type) {
+        case PRATT_EXPR_TYPE_CONSTANT: {
+            TypeId constantTypeId = (TypeId)BASE_TYPE(&leftExpr->value.constant);
+            *retExpr              = PRATT_EXPR_CONSTANT(semiValueNewBool(constantTypeId == targetTypeId));
+            return;
+        }
+
+        case PRATT_EXPR_TYPE_VAR:
+        case PRATT_EXPR_TYPE_REG:
+            regB = leftExpr->value.reg;
+            break;
+
+        default:
+            SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_INTERNAL_ERROR, "Unexpected expression type in 'is' expression");
+    }
+
+    LocalRegisterId regC;
+    bool kc;
+    saveConstantExprToOperand(compiler, semiValueNewInt((int64_t)targetTypeId), &regC, &kc);
+
+    emitCode(compiler, INSTRUCTION_CHECK_TYPE(state.targetRegister, regB, regC, false, kc));
+    *retExpr = PRATT_EXPR_REG(state.targetRegister);
+    restoreNextRegisterId(compiler, state.targetRegister + 1);
+}
+
 static void accessLed(Compiler* compiler, const PrattState state, PrattExpr* leftExpr, PrattExpr* restrict retExpr) {
     (void)state;
     (void)leftExpr;
@@ -1926,7 +1978,7 @@ static void accessLed(Compiler* compiler, const PrattState state, PrattExpr* lef
 
 static void indexLed(Compiler* compiler, const PrattState state, PrattExpr* leftExpr, PrattExpr* restrict retExpr) {
     updateBracketCount(compiler, TK_OPEN_BRACKET);
-    nextToken(&compiler->lexer);  // Consume [
+    nextToken(&compiler->lexer);  // Consume "["
 
     LocalRegisterId indexReg, targetReg;
     switch (leftExpr->type) {
@@ -1982,7 +2034,11 @@ static void functionCallLed(Compiler* compiler,
                             PrattExpr* restrict retExpr) {
     // OPEN_PAREN ( EXPR ( COMMA EXPR )* COMMA )? CLOSE_PAREN
 
-    saveExprToRegister(compiler, leftExpr, state.targetRegister);
+    if (leftExpr->type == PRATT_EXPR_TYPE_TYPE) {
+        SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNIMPLEMENTED_FEATURE, "Type constructors are not implemented yet");
+    } else {
+        saveExprToRegister(compiler, leftExpr, state.targetRegister);
+    }
     uint8_t argCount = 0;
 
     nextToken(&compiler->lexer);

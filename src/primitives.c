@@ -39,6 +39,7 @@ static IntValue fastIntPower(IntValue base, IntValue exponent) {
 /*
  │ Invalid
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
+TYPE_INIT_X_MACRO(GENERATE_SIG_FOR_TYPE_MACRO, INVALID)
 HASH_X_MACRO(GENERATE_SIG_FOR_TYPE_MACRO, INVALID)
 NUMERIC_X_MACRO(GENERATE_SIG_FOR_TYPE_MACRO, INVALID)
 COMPARISON_X_MACRO(GENERATE_SIG_FOR_TYPE_MACRO, INVALID)
@@ -92,6 +93,22 @@ COLLECTION_X_MACRO(GENERATE_SIG_FOR_TYPE_MACRO, DICT)
  │ Invalid
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
 #pragma region
+
+static ErrorId MAGIC_METHOD_SIGNATURE_NAME(INVALID,
+                                           collectionInit)(GC* gc, Value* ret, Value* objectClass, Value* minCapacity) {
+    (void)gc;
+    (void)ret;
+    (void)objectClass;
+    (void)minCapacity;
+    return SEMI_ERROR_UNEXPECTED_TYPE;
+}
+
+static ErrorId MAGIC_METHOD_SIGNATURE_NAME(INVALID, structInit)(GC* gc, Value* ret, Value* objectClass) {
+    (void)gc;
+    (void)ret;
+    (void)objectClass;
+    return SEMI_ERROR_UNEXPECTED_TYPE;
+}
 
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(INVALID, hash)(GC* gc, ValueHash* ret, Value* operand) {
     (void)gc;
@@ -1243,6 +1260,14 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(RANGE, neq)(GC* gc, Value* ret, Value
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
 #pragma region
 
+static ErrorId MAGIC_METHOD_SIGNATURE_NAME(LIST,
+                                           collectionInit)(GC* gc, Value* ret, Value* objectClass, Value* minCapacity) {
+    (void)objectClass;
+
+    *ret = semiValueListCreate(gc, (uint32_t)AS_INT(minCapacity));
+    return 0;
+}
+
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(LIST, iter)(GC* gc, Value* ret, Value* iterable) {
     (void)gc;
     (void)ret;
@@ -1361,6 +1386,16 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(LIST, pop)(GC* gc, Value* ret, Value*
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
 #pragma region
 
+static ErrorId MAGIC_METHOD_SIGNATURE_NAME(DICT,
+                                           collectionInit)(GC* gc, Value* ret, Value* objectClass, Value* minCapacity) {
+    *ret = semiValueDictCreate(gc);
+    (void)objectClass;
+    (void)minCapacity;
+
+    // TODO: Use minCapacity
+    return 0;
+}
+
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(DICT, iter)(GC* gc, Value* ret, Value* iterable) {
     (void)gc;
     (void)ret;
@@ -1455,7 +1490,8 @@ bool semiBuiltInEquals(Value a, Value b) {
         case BASE_VALUE_TYPE_BOOL:
             return AS_BOOL(&a) == AS_BOOL(&b);
 
-        case BASE_VALUE_TYPE_NUMBER:
+        case BASE_VALUE_TYPE_INT:
+        case BASE_VALUE_TYPE_FLOAT:
             MAGIC_METHOD_SIGNATURE_NAME(NUMBER, eq)(NULL, &ret, &a, &b);
             return AS_BOOL(&ret);
 
@@ -1505,12 +1541,14 @@ ValueHash semiBuiltInHash(const Value value) {
 /*
  │ Built-in Primitives Setter
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
+static TypeInitMethods invalidTypeInitMethods     = {TYPE_INIT_X_MACRO(FIELD_INIT_MACRO, INVALID)};
 static NumericMethods invalidNumericMethods       = {NUMERIC_X_MACRO(FIELD_INIT_MACRO, INVALID)};
 static ComparisonMethods invalidComparisonMethods = {COMPARISON_X_MACRO(FIELD_INIT_MACRO, INVALID)};
 static ConversionMethods invalidConversionMethods = {CONVERSION_X_MACRO(FIELD_INIT_MACRO, INVALID)};
 static CollectionMethods invalidCollectionMethods = {COLLECTION_X_MACRO(FIELD_INIT_MACRO, INVALID)};
 
 static const MagicMethodsTable invalidMagicMethodsTable = {
+    .typeInitMethods   = &invalidTypeInitMethods,
     .hash              = MAGIC_METHOD_SIGNATURE_NAME(INVALID, hash),
     .numericMethods    = &invalidNumericMethods,
     .comparisonMethods = &invalidComparisonMethods,
@@ -1530,6 +1568,7 @@ static ComparisonMethods boolComparisonMethods = {
 static ConversionMethods boolConversionMethods = {CONVERSION_X_MACRO(FIELD_INIT_MACRO, BOOL)};
 
 static const MagicMethodsTable boolMagicMethodsTable = {
+    .typeInitMethods   = &invalidTypeInitMethods,
     .hash              = MAGIC_METHOD_SIGNATURE_NAME(BOOL, hash),
     .numericMethods    = &invalidNumericMethods,
     .comparisonMethods = &boolComparisonMethods,
@@ -1543,6 +1582,7 @@ static ComparisonMethods numberComparisonMethods = {COMPARISON_X_MACRO(FIELD_INI
 static ConversionMethods numberConversionMethods = {CONVERSION_X_MACRO(FIELD_INIT_MACRO, NUMBER)};
 
 static const MagicMethodsTable numberMagicMethodsTable = {
+    .typeInitMethods   = &invalidTypeInitMethods,
     .hash              = MAGIC_METHOD_SIGNATURE_NAME(NUMBER, hash),
     .numericMethods    = &numberNumericMethods,
     .comparisonMethods = &numberComparisonMethods,
@@ -1566,6 +1606,7 @@ static CollectionMethods stringCollectionMethods = {
 };
 
 static const MagicMethodsTable stringMagicMethodsTable = {
+    .typeInitMethods   = &invalidTypeInitMethods,
     .hash              = MAGIC_METHOD_SIGNATURE_NAME(STRING, hash),
     .numericMethods    = &invalidNumericMethods,
     .comparisonMethods = &stringComparisonMethods,
@@ -1584,6 +1625,7 @@ static ComparisonMethods rangeComparisonMethods = {
 };
 
 static const MagicMethodsTable rangeMagicMethodsTable = {
+    .typeInitMethods   = &invalidTypeInitMethods,
     .hash              = MAGIC_METHOD_SIGNATURE_NAME(INVALID, hash),
     .numericMethods    = &invalidNumericMethods,
     .comparisonMethods = &rangeComparisonMethods,
@@ -1592,9 +1634,15 @@ static const MagicMethodsTable rangeMagicMethodsTable = {
     .next              = MAGIC_METHOD_SIGNATURE_NAME(RANGE, next),
 };
 
+static TypeInitMethods listTypeInitMethods = {
+    .collectionInit = MAGIC_METHOD_SIGNATURE_NAME(LIST, collectionInit),
+    .structInit     = MAGIC_METHOD_SIGNATURE_NAME(INVALID, structInit),
+};
+
 static CollectionMethods listCollectionMethods = {COLLECTION_X_MACRO(FIELD_INIT_MACRO, LIST)};
 
 static const MagicMethodsTable listMagicMethodsTable = {
+    .typeInitMethods   = &listTypeInitMethods,
     .hash              = MAGIC_METHOD_SIGNATURE_NAME(INVALID, hash),
     .numericMethods    = &invalidNumericMethods,
     .comparisonMethods = &invalidComparisonMethods,
@@ -1603,9 +1651,15 @@ static const MagicMethodsTable listMagicMethodsTable = {
     .next              = MAGIC_METHOD_SIGNATURE_NAME(INVALID, next),
 };
 
+static TypeInitMethods dictTypeInitMethods = {
+    .collectionInit = MAGIC_METHOD_SIGNATURE_NAME(DICT, collectionInit),
+    .structInit     = MAGIC_METHOD_SIGNATURE_NAME(INVALID, structInit),
+};
+
 static CollectionMethods dictCollectionMethods = {COLLECTION_X_MACRO(FIELD_INIT_MACRO, DICT)};
 
 static const MagicMethodsTable dictMagicMethodsTable = {
+    .typeInitMethods   = &dictTypeInitMethods,
     .hash              = MAGIC_METHOD_SIGNATURE_NAME(INVALID, hash),
     .numericMethods    = &invalidNumericMethods,
     .comparisonMethods = &invalidComparisonMethods,
@@ -1615,6 +1669,9 @@ static const MagicMethodsTable dictMagicMethodsTable = {
 };
 
 void semiPrimitivesFinalizeMagicMethodsTable(MagicMethodsTable* table) {
+    if (table->typeInitMethods == NULL) {
+        table->typeInitMethods = &invalidTypeInitMethods;
+    }
     if (table->hash == NULL) {
         table->hash = MAGIC_METHOD_SIGNATURE_NAME(INVALID, hash);
     }
@@ -1639,7 +1696,8 @@ typedef struct {
 
 static const TypeIdentifierBaseValueTypePair typeIdentifierBaseValueTypePair[] = {
     {  "Bool",   BASE_VALUE_TYPE_BOOL},
-    {   "Int", BASE_VALUE_TYPE_NUMBER},
+    {   "Int",    BASE_VALUE_TYPE_INT},
+    { "Float",  BASE_VALUE_TYPE_FLOAT},
     {"String", BASE_VALUE_TYPE_STRING},
     {  "List",   BASE_VALUE_TYPE_LIST},
     {  "Dict",   BASE_VALUE_TYPE_DICT},
@@ -1651,7 +1709,7 @@ void semiPrimitivesInitBuiltInModuleTypes(GC* gc, SymbolTable* symbolTable, Semi
         TypeIdentifierBaseValueTypePair pair = typeIdentifierBaseValueTypePair[i];
         InternedChar* typeIdentifier  = semiSymbolTableGet(symbolTable, pair.str, (IdentifierLength)strlen(pair.str));
         IdentifierId typeIdentifierId = semiSymbolTableGetId(typeIdentifier);
-        semiDictSet(gc, &module->types, semiValueNewInt(typeIdentifierId), semiValueNewInt(pair.type));
+        semiDictSet(gc, &module->types, semiValueNewInt(typeIdentifierId), semiValueNewInt((TypeId)pair.type));
     }
 }
 
@@ -1664,7 +1722,8 @@ void semiPrimitivesIntializeBuiltInPrimitives(GC* gc, ClassTable* classes, Symbo
     static const MagicMethodsTable builtInClasses[] = {
         [BASE_VALUE_TYPE_INVALID]        = invalidMagicMethodsTable,
         [BASE_VALUE_TYPE_BOOL]           = boolMagicMethodsTable,
-        [BASE_VALUE_TYPE_NUMBER]         = numberMagicMethodsTable,
+        [BASE_VALUE_TYPE_INT]            = numberMagicMethodsTable,
+        [BASE_VALUE_TYPE_FLOAT]          = numberMagicMethodsTable,
         [BASE_VALUE_TYPE_STRING]         = stringMagicMethodsTable,
         [BASE_VALUE_TYPE_RANGE]          = rangeMagicMethodsTable,
         [BASE_VALUE_TYPE_LIST]           = listMagicMethodsTable,

@@ -236,31 +236,50 @@ typedef enum PrattExprType {
     PRATT_EXPR_TYPE_REG,
     // This expression type is used for variables that are previously used in the current scope.
     // While it also stores a register ID, it is different from PRATT_EXPR_TYPE_REG in that the register
-    // is marked retained.
+    // is not a temporary register.
     PRATT_EXPR_TYPE_VAR,
+    // This expression type is used for type. No register is allocated for it.
+    PRATT_EXPR_TYPE_TYPE,
 } PrattExprType;
 
-// clang-format off
-#define PRATT_EXPR_UNSET() (           \
-    (PrattExpr){                       \
+typedef union PrattExprValue {
+    Value constant;
+    TypeId type;
+    LocalRegisterId reg;
+} PrattExprValue;
+
+#define PRATT_EXPR_UNSET()             \
+    ((PrattExpr){                      \
         .type = PRATT_EXPR_TYPE_UNSET, \
     })
-#define PRATT_EXPR_CONSTANT(val)                    \
-    ((PrattExpr){                                   \
-        .type           = PRATT_EXPR_TYPE_CONSTANT, \
-        .value.constant = (val),                    \
+#define PRATT_EXPR_CONSTANT(val)           \
+    ((PrattExpr){                          \
+        .type  = PRATT_EXPR_TYPE_CONSTANT, \
+        .value = ((PrattExprValue){        \
+            .constant = (val),             \
+        }),                                \
     })
-#define PRATT_EXPR_REG(regId)             \
-    ((PrattExpr){                         \
-        .type      = PRATT_EXPR_TYPE_REG, \
-        .value.reg = (regId),             \
+#define PRATT_EXPR_REG(regId)         \
+    ((PrattExpr){                     \
+        .type  = PRATT_EXPR_TYPE_REG, \
+        .value = ((PrattExprValue){   \
+            .reg = (regId),           \
+        }),                           \
     })
-#define PRATT_EXPR_VAR(regId)             \
-    ((PrattExpr){                         \
-        .type      = PRATT_EXPR_TYPE_VAR, \
-        .value.reg = (regId),             \
+#define PRATT_EXPR_VAR(regId)         \
+    ((PrattExpr){                     \
+        .type  = PRATT_EXPR_TYPE_VAR, \
+        .value = ((PrattExprValue){   \
+            .reg = (regId),           \
+        }),                           \
     })
-// clang-format on
+#define PRATT_EXPR_TYPE(typeId)        \
+    ((PrattExpr){                      \
+        .type  = PRATT_EXPR_TYPE_TYPE, \
+        .value = ((PrattExprValue){    \
+            .type = (typeId),          \
+        }),                            \
+    })
 
 // PrattExpr is a tagged union storing the result of pratt parsing that would be later used by its
 // parent expression. Main ideas behind this design:
@@ -282,11 +301,7 @@ typedef enum PrattExprType {
 // actual value is only known at runtime.
 typedef struct PrattExpr {
     PrattExprType type;
-    union {
-        Value constant;
-        IdentifierId identifier;
-        LocalRegisterId reg;
-    } value;
+    PrattExprValue value;
 } PrattExpr;
 
 // PrattState is used to track the state of the Pratt compiler as we parse

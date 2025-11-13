@@ -341,10 +341,27 @@ TEST_F(ExprParserNudTest, UnexpectedEndOfFileError) {
     ASSERT_EQ(result, SEMI_ERROR_UNEXPECTED_END_OF_FILE) << "Should fail on empty input";
 }
 
-TEST_F(ExprParserNudTest, TypeIdentifierUnimplemented) {
-    PrattExpr expr;
-    ErrorId result = ParseExpression("Int", &expr);
-    ASSERT_EQ(result, SEMI_ERROR_UNIMPLEMENTED_FEATURE) << "Type identifiers should be unimplemented";
+TEST_F(ExprParserNudTest, TypeIdentifierNumber) {
+    struct {
+        const char* input;
+        BaseValueType expected_type;
+    } test_cases[] = {
+        {  "Bool",   BASE_VALUE_TYPE_BOOL},
+        {   "Int",    BASE_VALUE_TYPE_INT},
+        { "Float",  BASE_VALUE_TYPE_FLOAT},
+        {"String", BASE_VALUE_TYPE_STRING},
+        {  "List",   BASE_VALUE_TYPE_LIST},
+        {  "Dict",   BASE_VALUE_TYPE_DICT},
+    };
+
+    for (size_t i = 0; i < sizeof(test_cases) / sizeof(test_cases[0]); i++) {
+        PrattExpr expr;
+        ErrorId result = ParseExpression(test_cases[i].input, &expr);
+        ASSERT_EQ(result, 0) << "Parsing '" << test_cases[i].input << "' should succeed";
+        ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_TYPE) << "Should be type for '" << test_cases[i].input << "'";
+        ASSERT_EQ(expr.value.type, test_cases[i].expected_type) << "Type mismatch for '" << test_cases[i].input << "'";
+        ASSERT_EQ(GetCodeSize(), 0) << "Should generate no instructions for '" << test_cases[i].input << "'";
+    }
 }
 
 TEST_F(ExprParserNudTest, CodeGen_ConstantFolding_NoInstructionsGenerated) {

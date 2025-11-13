@@ -69,12 +69,15 @@ typedef uint32_t ValueHeader;
 
 typedef uint64_t ValueHash;
 
+typedef uint16_t TypeId;
+
 // BaseValueType represents the base type of the value. It is used to determine the vtable for operations like hashing
 // and equality checking.
 typedef enum {
     BASE_VALUE_TYPE_INVALID = 0,
     BASE_VALUE_TYPE_BOOL,
-    BASE_VALUE_TYPE_NUMBER,
+    BASE_VALUE_TYPE_INT,
+    BASE_VALUE_TYPE_FLOAT,
     BASE_VALUE_TYPE_STRING,
     BASE_VALUE_TYPE_RANGE,
     BASE_VALUE_TYPE_LIST,
@@ -108,9 +111,11 @@ typedef enum {
     // Boolean
     VALUE_TYPE_BOOL = BASE_VALUE_TYPE_BOOL,
 
-    // Number
-    VALUE_TYPE_INT   = BASE_VALUE_TYPE_NUMBER,
-    VALUE_TYPE_FLOAT = BASE_VALUE_TYPE_NUMBER | (1 << VALUE_HEADER_VARIANT_SHIFT),
+    // Int
+    VALUE_TYPE_INT = BASE_VALUE_TYPE_INT,
+
+    // Float
+    VALUE_TYPE_FLOAT = BASE_VALUE_TYPE_FLOAT,
 
     // String
     VALUE_TYPE_INLINE_STRING = BASE_VALUE_TYPE_STRING,
@@ -159,7 +164,7 @@ typedef enum {
 #define IS_VALID(v)   (VALUE_TYPE(v) != VALUE_TYPE_INVALID)
 #define IS_INVALID(v) (VALUE_TYPE(v) == VALUE_TYPE_INVALID)
 #define IS_OBJECT(v)  ((bool)((v)->header & VALUE_HEADER_OBJECT_MASK))
-#define IS_NUMBER(v)  (BASE_TYPE(v) == BASE_VALUE_TYPE_NUMBER)
+#define IS_NUMBER(v)  (BASE_TYPE(v) == BASE_VALUE_TYPE_INT || BASE_TYPE(v) == BASE_VALUE_TYPE_FLOAT)
 #define IS_STRING(v)  (BASE_TYPE(v) == BASE_VALUE_TYPE_STRING)
 #define IS_RANGE(v)   (BASE_TYPE(v) == BASE_VALUE_TYPE_RANGE)
 
@@ -230,6 +235,10 @@ ITERATION_X_MACRO(ITER_METHOD_MACRO, _)
 // that can be used as struct fields.
 #define STRIN_FIELD_MACRO(name, args, _) ErrorId(*name) args;
 
+typedef struct TypeInitMethods {
+    TYPE_INIT_X_MACRO(STRIN_FIELD_MACRO, _)
+} TypeInitMethods;
+
 typedef struct NumericMethods {
     NUMERIC_X_MACRO(STRIN_FIELD_MACRO, _)
 } NumericMethods;
@@ -249,6 +258,7 @@ typedef struct CollectionMethods {
 #undef HASH_METHOD_MACRO
 
 typedef struct MagicMethodsTable {
+    TypeInitMethods* typeInitMethods;
     SemiMagicMethodHash hash;
     NumericMethods* numericMethods;
     ComparisonMethods* comparisonMethods;

@@ -246,3 +246,48 @@ TEST_F(ExprParserLedConstantFoldingTest, ParenthesesPrecedence) {
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_CONSTANT) << "Should be integer constant";
     ASSERT_EQ(AS_INT(&expr.value.constant), 20) << "(2 + 3) * 4 should equal 20";
 }
+
+// Test type check operations constant folding
+TEST_F(ExprParserLedConstantFoldingTest, TypeCheckConstantFolding) {
+    struct TypeCheckTestCase {
+        const char* expression;
+        bool expected_result;
+        const char* description;
+    };
+
+    TypeCheckTestCase test_cases[] = {
+        // Integer type checks
+        {           "3 is Int",  true,        "Integer constant is Int"},
+        {         "3 is Float", false,  "Integer constant is not Float"},
+        {          "3 is Bool", false,   "Integer constant is not Bool"},
+        {        "3 is String", false, "Integer constant is not String"},
+
+        // Float type checks
+        {      "3.14 is Float",  true,        "Float constant is Float"},
+        {        "3.14 is Int", false,      "Float constant is not Int"},
+        {       "3.14 is Bool", false,     "Float constant is not Bool"},
+        {     "3.14 is String", false,   "Float constant is not String"},
+
+        // Bool type checks
+        {       "true is Bool",  true,   "Bool constant (true) is Bool"},
+        {      "false is Bool",  true,  "Bool constant (false) is Bool"},
+        {        "true is Int", false,       "Bool constant is not Int"},
+        {     "false is Float", false,     "Bool constant is not Float"},
+        {     "true is String", false,    "Bool constant is not String"},
+
+        // String type checks
+        {"\"hello\" is String",  true,      "String constant is String"},
+        {   "\"hello\" is Int", false,     "String constant is not Int"},
+        { "\"hello\" is Float", false,   "String constant is not Float"},
+        {  "\"hello\" is Bool", false,    "String constant is not Bool"},
+    };
+
+    for (const auto& test_case : test_cases) {
+        PrattExpr expr;
+        ErrorId result = ParseExpression(test_case.expression, &expr);
+        ASSERT_EQ(result, 0) << "Parsing '" << test_case.expression << "' should succeed";
+        ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_CONSTANT) << test_case.description << " - should be constant boolean";
+        ASSERT_EQ(AS_BOOL(&expr.value.constant), test_case.expected_result) << test_case.description;
+        ASSERT_EQ(GetCodeSize(), 0) << test_case.description << " - constant folding should generate no instructions";
+    }
+}

@@ -330,7 +330,8 @@ class CompilerTest : public ::testing::Test {
         VariableListEnsureCapacity(&vm->gc, &compiler.variables, 32);
 
         compiler.artifactModule = semiVMModuleCreate(compiler.gc, SEMI_REPL_MODULE_ID);
-        module                  = nullptr;
+        semiPrimitivesInitBuiltInModuleTypes(&vm->gc, &vm->symbolTable, compiler.artifactModule);
+        module = nullptr;
     }
 
     void TearDown() override {

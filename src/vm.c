@@ -39,6 +39,7 @@ SemiModule* semiVMModuleCreateFrom(GC* gc, SemiModule* source) {
         .moduleId      = source->moduleId,
         .exports       = source->exports,
         .globals       = source->globals,
+        .types         = source->types,
         .constantTable = source->constantTable,
         .moduleInit    = NULL,
     };
@@ -952,7 +953,12 @@ static void runMainLoop(SemiVM* vm) {
                 goto start_of_vm_loop;
             }
             case OP_CHECK_TYPE: {
-                TRAP_ON_ERROR(vm, SEMI_ERROR_UNIMPLEMENTED_FEATURE, "OP_CHECK_TYPE is not implemented yet");
+                Value *ra, *rb, *rc;
+                load_value_abc(vm, instruction, ra, rb, rc);
+
+                TypeId targetypeId    = (TypeId)BASE_TYPE(rb);
+                TypeId expectedTypeId = (TypeId)AS_INT(rc);
+                *ra                   = semiValueNewBool(targetypeId == expectedTypeId);
                 break;
             }
             default: {

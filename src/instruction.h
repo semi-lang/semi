@@ -139,14 +139,15 @@ typedef enum {
                               //            GET_ATTR(object, index, type_index_or_symbol_index)
     OP_SET_ATTR,              // |   T   |  SET_ATTR(R[A], uRK(B, kb), kc, R[C])
                               //            SET_ATTR(object, index, type_index_or_symbol_index, value)
+    OP_NEW_COLLECTION,        // |   T   |  R[A] := new collection of type RK(B, kb) with initial capacity C
     OP_GET_ITEM,              // |   T   |  R[A] := R[B][RK(C, kc)]
-    OP_SET_ITEM,              // |   T   |  R[A][uRK(B, kb)] = R[C]
-    OP_DEL_ITEM,              // |   T   |  R[A] = delete R[B][uRK(C, kc)]
+    OP_SET_ITEM,              // |   T   |  R[A][RK(B, kb)] = R[C]
+    OP_DEL_ITEM,              // |   T   |  R[A] = delete R[B][RK(C, kc)]
     OP_CONTAIN,               // |   T   |  R[A] := RK(B, kb)] in R[C]
     OP_CALL,                  // |   T   |  R[A](R[A+1], R[A+2], ..., R[A+B]), B is the number of arguments.
                               //            The return value is stored in R[A].
     OP_RETURN,                // |   T   |  return from function; if A != 255, copy R[A] to the caller register.
-    OP_CHECK_TYPE,            // |   T   |  TODO
+    OP_CHECK_TYPE,            // |   T   |  R[A] := R[B] is of type RK(C, kc)
     // clang-format on
 } Opcode;
 

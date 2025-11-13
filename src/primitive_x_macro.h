@@ -5,6 +5,16 @@
 #define SEMI_PRIMITIVE_X_MACRO_H
 
 /*
+ │ Initializer
+─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
+
+#define TYPE_INIT_X_MACRO(MACRO, ...)                                                                    \
+    /* ret = Type[]  */                                                                                  \
+    MACRO(collectionInit, (GC * gc, Value * ret, Value * objectClass, Value * minCapacity), __VA_ARGS__) \
+    /* ret = Type{} */                                                                                   \
+    MACRO(structInit, (GC * gc, Value * ret, Value * objectClass), __VA_ARGS__)
+
+/*
  │ Hash Method
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
 
