@@ -36,7 +36,7 @@ typedef struct SemiModuleSource {
     const char* name;
 
     // The length of the name.
-    unsigned int nameLength;
+    uint8_t nameLength;
 } SemiModuleSource;
 
 typedef struct SemiModule SemiModule;
@@ -107,13 +107,26 @@ SEMI_EXPORT SemiVM* semiCreateVM(SemiVMConfig* config);
 // Free all resources associated with the VM.
 SEMI_EXPORT void semiDestroyVM(SemiVM* vm);
 
-// TODO:
-//
+typedef struct SemiCompileErrorDetails {
+    unsigned int line;
+    size_t column;
+} SemiCompileErrorDetails;
+
+typedef struct SemiRuntimeErrorDetails {
+    // TODO: add more runtime error details
+    unsigned int dummy;
+} SemiRuntimeErrorDetails;
+
 // Compiles the source code of a module. On success, add the module to the VM's module
-// list. If `transitive` is `true`, modules transistively imported by this module will also be
+// list.
+//
+// TODO: If `transitive` is `true`, modules transistively imported by this module will also be
 // compiled and added to the VM's module list using a BFS approach.
-// ErrorId semiAddModuleToVM(SemiVM* vm, SemiModuleSource moduleSource, bool transitive);
-// ErrorId semiRunModule(SemiVM* vm, const char* mainModuleName, size_t mainModuleNameLength);
+SEMI_EXPORT ErrorId semiVMAddModule(SemiVM* vm, SemiModuleSource moduleSource, bool transitive);
+
+// Runs the module with the given name. The module must have been added to the VM using
+// `semiVMAddModule()`.
+SEMI_EXPORT ErrorId semiRunModule(SemiVM* vm, const char* moduleName, uint8_t moduleNameLength);
 
 /* TODO: Snapshot the VM state for quick resuming later.
 

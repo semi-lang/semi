@@ -65,7 +65,7 @@ TEST_F(VMInstructionArithmeticTest, OpAdd) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
         module->moduleInit  = func;
 
-        int result = semiVMRunMainModule(vm, module);
+        int result = RunModule(module);
 
         if (test_case.expect_error) {
             ASSERT_EQ(result, test_case.expected_error_code) << "Test case: " << test_case.name;
@@ -123,7 +123,7 @@ TEST_F(VMInstructionArithmeticTest, OpSubtract) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
         module->moduleInit  = func;
 
-        int result = semiVMRunMainModule(vm, module);
+        int result = RunModule(module);
 
         if (test_case.expect_error) {
             ASSERT_EQ(result, test_case.expected_error_code) << "Test case: " << test_case.name;
@@ -181,7 +181,7 @@ TEST_F(VMInstructionArithmeticTest, OpMultiply) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
         module->moduleInit  = func;
 
-        int result = semiVMRunMainModule(vm, module);
+        int result = RunModule(module);
 
         if (test_case.expect_error) {
             ASSERT_EQ(result, test_case.expected_error_code) << "Test case: " << test_case.name;
@@ -238,7 +238,7 @@ TEST_F(VMInstructionArithmeticTest, OpDivide) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
         module->moduleInit  = func;
 
-        int result = semiVMRunMainModule(vm, module);
+        int result = RunModule(module);
 
         if (test_case.expect_error) {
             ASSERT_EQ(result, test_case.expected_error_code) << "Test case: " << test_case.name;
@@ -273,7 +273,7 @@ TEST_F(VMInstructionArithmeticTest, OpDivideByZero) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, SEMI_ERROR_DIVIDE_BY_ZERO) << "Division by zero should return error";
     ASSERT_EQ(vm->error, SEMI_ERROR_DIVIDE_BY_ZERO) << "VM error should be DIVIDE_BY_ZERO";
@@ -316,7 +316,7 @@ TEST_F(VMInstructionArithmeticTest, OpFloorDivide) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
         module->moduleInit  = func;
 
-        int result = semiVMRunMainModule(vm, module);
+        int result = RunModule(module);
 
         ASSERT_EQ(result, 0) << "Test case: " << test_case.name;
 
@@ -357,7 +357,7 @@ TEST_F(VMInstructionArithmeticTest, OpModulo) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
         module->moduleInit  = func;
 
-        int result = semiVMRunMainModule(vm, module);
+        int result = RunModule(module);
 
         ASSERT_EQ(result, 0) << "Test case: " << test_case.name;
 
@@ -405,7 +405,7 @@ TEST_F(VMInstructionArithmeticTest, OpPower) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
         module->moduleInit  = func;
 
-        int result = semiVMRunMainModule(vm, module);
+        int result = RunModule(module);
 
         ASSERT_EQ(result, 0) << "Test case: " << test_case.name;
 
@@ -433,7 +433,7 @@ TEST_F(VMInstructionArithmeticTest, OpNegate) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
 
@@ -455,7 +455,7 @@ TEST_F(VMInstructionArithmeticTest, OpNegateFloat) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
 
@@ -495,7 +495,7 @@ TEST_F(VMInstructionArithmeticTest, OpBitwiseAnd) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
         module->moduleInit  = func;
 
-        int result = semiVMRunMainModule(vm, module);
+        int result = RunModule(module);
 
         ASSERT_EQ(result, 0) << "Test case: " << test_case.name;
 
@@ -529,7 +529,7 @@ TEST_F(VMInstructionArithmeticTest, OpBitwiseOr) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
         module->moduleInit  = func;
 
-        int result = semiVMRunMainModule(vm, module);
+        int result = RunModule(module);
 
         ASSERT_EQ(result, 0) << "Test case: " << test_case.name;
 
@@ -563,7 +563,7 @@ TEST_F(VMInstructionArithmeticTest, OpBitwiseXor) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
         module->moduleInit  = func;
 
-        int result = semiVMRunMainModule(vm, module);
+        int result = RunModule(module);
 
         ASSERT_EQ(result, 0) << "Test case: " << test_case.name;
 
@@ -596,7 +596,7 @@ TEST_F(VMInstructionArithmeticTest, OpBitwiseShift) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
         module->moduleInit  = func;
 
-        int result = semiVMRunMainModule(vm, module);
+        int result = RunModule(module);
 
         ASSERT_EQ(result, 0) << "Test case: " << test_case.name;
 
@@ -619,7 +619,7 @@ TEST_F(VMInstructionArithmeticTest, OpBitwiseInvert) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
 
@@ -641,7 +641,7 @@ TEST_F(VMInstructionArithmeticTest, OpArithmeticWithConstants) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
 
@@ -665,7 +665,7 @@ TEST_F(VMInstructionArithmeticTest, OpArithmeticTypeError) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 3, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, SEMI_ERROR_UNEXPECTED_TYPE) << "VM should return type error";
     ASSERT_EQ(vm->error, SEMI_ERROR_UNEXPECTED_TYPE) << "VM error should be UNEXPECTED_TYPE";

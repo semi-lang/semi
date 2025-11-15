@@ -1506,21 +1506,40 @@ static void variableNud(Compiler* compiler, const PrattState state, PrattExpr* r
     SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNINITIALIZED_VARIABLE, "Uninitialized variable");
 }
 
-static void typeIdentifierNud(Compiler* compiler, const PrattState state, PrattExpr* retExpr) {
-    (void)state;
+static TypeId typeNud(Compiler* compiler) {
+    if (peekToken(&compiler->lexer) == TK_IDENTIFIER) {
+        // <module_name>.<type_name>
+        nextToken(&compiler->lexer);  // Consume the identifier token
+        InternedChar* moduleName        = semiSymbolTableInsert(compiler->symbolTable,
+                                                         compiler->lexer.tokenValue.identifier.name,
+                                                         compiler->lexer.tokenValue.identifier.length);
+        IdentifierId moduleIdentifierId = semiSymbolTableGetId(moduleName);
+        nextToken(&compiler->lexer);  // Consume the identifier token
+        if (peekToken(&compiler->lexer) != TK_DOT) {
+            SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNEXPECTED_TOKEN, "Expected '.' in type name");
+        }
+        nextToken(&compiler->lexer);  // Consume the '.' token
+        if (peekToken(&compiler->lexer) != TK_TYPE_IDENTIFIER) {
+            SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNEXPECTED_TOKEN, "Expected type name after module name");
+        }
+        InternedChar* typeName = semiSymbolTableInsert(compiler->symbolTable,
+                                                       compiler->lexer.tokenValue.identifier.name,
+                                                       compiler->lexer.tokenValue.identifier.length);
+        nextToken(&compiler->lexer);  // Consume the identifier token
+    }
+
+    nextToken(&compiler->lexer);  // Consume the identifier token
 
     InternedChar* identifier  = semiSymbolTableInsert(compiler->symbolTable,
                                                      compiler->lexer.tokenValue.identifier.name,
                                                      compiler->lexer.tokenValue.identifier.length);
     IdentifierId identifierId = semiSymbolTableGetId(identifier);
-    nextToken(&compiler->lexer);  // Consume the identifier token
-
-    Value baseTypeIndexValue = semiDictGet(&compiler->artifactModule->types, semiValueNewInt(identifierId));
+    Value baseTypeIndexValue  = semiDictGet(&compiler->artifactModule->types, semiValueNewInt(identifierId));
     if (IS_INVALID(&baseTypeIndexValue)) {
         SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNDEFINED_TYPE, "Undefined type");
     }
 
-    *retExpr = PRATT_EXPR_TYPE((TypeId)AS_INT(&baseTypeIndexValue));
+    return (TypeId)AS_INT(&baseTypeIndexValue);
 }
 
 static IdentifierId newIdentifierNud(Compiler* compiler) {
@@ -1930,9 +1949,7 @@ static void typeCheckLed(Compiler* compiler, const PrattState state, PrattExpr* 
     Token token = nextToken(&compiler->lexer);
     if (token == TK_TYPE_IDENTIFIER) {
         // Simple case: x is SomeType
-        PrattExpr typeIdentifierExpr;
-        typeIdentifierNud(compiler, state, &typeIdentifierExpr);
-        targetTypeId = typeIdentifierExpr.value.type;
+        targetTypeId = typeNud(compiler);
     } else if (token == TK_IDENTIFIER) {
         // Module-qualified case: x is module.Type
         SEMI_COMPILE_ABORT(
@@ -2128,6 +2145,7 @@ void semiParseExpression(Compiler* compiler, const PrattState state, PrattExpr* 
         }
 
         case TK_IDENTIFIER:
+        case TK_TYPE_IDENTIFIER:
             nudFn = variableNud;
             break;
 
@@ -2139,10 +2157,6 @@ void semiParseExpression(Compiler* compiler, const PrattState state, PrattExpr* 
 
         case TK_OPEN_PAREN:
             nudFn = parenthesisNud;
-            break;
-
-        case TK_TYPE_IDENTIFIER:
-            nudFn = typeIdentifierNud;
             break;
 
         case TK_EOF:
@@ -2416,11 +2430,7 @@ void parseLhsNud(Compiler* compiler, LhsExpr* restrict lhsExpr) {
     *lhsExpr    = LHS_EXPR_UNINIT_VAR(identifierId);
     Token token = peekToken(&compiler->lexer);
     if (token != TK_BINDING) {
-        if (token == TK_ASSIGN) {
-            SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_BINDING_ERROR, "Expected ':=' for new variable binding");
-        } else {
-            SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNINITIALIZED_VARIABLE, "Uninitialized variable");
-        }
+        SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_BINDING_ERROR, "Expected ':=' for new variable binding");
     }
     return;
 
@@ -3267,7 +3277,7 @@ static void parseScopedStatements(Compiler* compiler) {
     return;
 }
 
-static SemiModule* finalizeCompiler(struct Compiler* compiler) {
+static void finalizeCompiler(struct Compiler* compiler) {
     emitCode(compiler, INSTRUCTION_RETURN(255, 0, 0, false, false));
 
     FunctionProto* fn = semiFunctionProtoCreate(compiler->gc, 0);
@@ -3283,68 +3293,25 @@ static SemiModule* finalizeCompiler(struct Compiler* compiler) {
 
     ChunkInit(&compiler->rootFunction.chunk);
 
-    SemiModule* module       = compiler->artifactModule;
-    module->moduleInit       = fn;
-    compiler->artifactModule = NULL;
-    return module;
+    SemiModule* module = compiler->artifactModule;
+    module->moduleInit = fn;
 }
 
-SemiModule* semiCompilerCompileModule(Compiler* compiler, SemiVM* vm, SemiModuleSource* moduleSource) {
-    if (setjmp(compiler->errorJmpBuf.env) == 0) {
-        compiler->gc                = &vm->gc;
-        compiler->symbolTable       = &vm->symbolTable;
-        compiler->classes           = &vm->classes;
-        compiler->globalIdentifiers = &vm->globalIdentifiers;
+void semiCompilerCompileModule(Compiler* compiler, SemiModuleSource* moduleSource, SemiModule* target) {
+    compiler->artifactModule = target;
+    initLexer(&compiler->lexer, compiler, moduleSource->source, moduleSource->length);
 
-        if (compiler->artifactModule == NULL) {
-            SemiModule* artifactModule = semiVMModuleCreate(compiler->gc, vm->nextModuleId);
-            semiPrimitivesInitBuiltInModuleTypes(compiler->gc, compiler->symbolTable, artifactModule);
-            if (artifactModule == NULL) {
-                SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_MEMORY_ALLOCATION_FAILURE, "Failed to allocate module");
-            }
-            compiler->artifactModule = artifactModule;
-        }
-
-        initLexer(&compiler->lexer, compiler, moduleSource->source, moduleSource->length);
-
-        parseStatements(compiler);
-        if (nextToken(&compiler->lexer) != TK_EOF) {
-            SEMI_COMPILE_ABORT(
-                compiler, SEMI_ERROR_UNEXPECTED_TOKEN, "Expected end of file after parsing all statements");
-        }
-
-        SemiModule* artifact = finalizeCompiler(compiler);
-
-        vm->nextModuleId++;
-        return artifact;
+    parseStatements(compiler);
+    if (nextToken(&compiler->lexer) != TK_EOF) {
+        SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNEXPECTED_TOKEN, "Expected end of file after parsing all statements");
     }
 
-    return NULL;
+    finalizeCompiler(compiler);
 }
 
-bool semiCompilerInheritMainModule(Compiler* compiler, SemiVM* vm) {
-    if (vm->modules.size == 0) {
-        compiler->errorJmpBuf.errorId = SEMI_ERROR_MODULE_NOT_FOUND;
-#ifdef SEMI_DEBUG_MSG
-        compiler->errorJmpBuf.message = "No main module found";
-#endif
-        return false;
-    }
-
-    compiler->artifactModule = semiVMModuleCreateFrom(compiler->gc, vm->modules.data[0]);
-    if (compiler->artifactModule == NULL) {
-        compiler->errorJmpBuf.errorId = SEMI_ERROR_MEMORY_ALLOCATION_FAILURE;
-#ifdef SEMI_DEBUG_MSG
-        compiler->errorJmpBuf.message = "Failed to allocate module";
-#endif
-        return false;
-    }
-    return true;
-}
-
-void semiCompilerInit(GC* gc, Compiler* compiler) {
+void semiCompilerInit(Compiler* compiler) {
     memset(compiler, 0, sizeof(Compiler));
-    compiler->gc             = gc;
+    compiler->gc             = NULL;
     compiler->artifactModule = NULL;
 
     FunctionScope* rootFunction                = &compiler->rootFunction;
@@ -3374,12 +3341,93 @@ void semiCompilerCleanup(struct Compiler* compiler) {
     }
     ChunkCleanup(compiler->gc, &compiler->rootFunction.chunk);
     UpvalueListCleanup(compiler->gc, &compiler->rootFunction.upvalues);
-
-    if (compiler->artifactModule != NULL) {
-        semiVMModuleDestroy(compiler->gc, compiler->artifactModule);
-    }
     VariableListCleanup(compiler->gc, &compiler->variables);
     ChunkCleanup(compiler->gc, &compiler->rootFunction.chunk);
+}
+
+SemiModule* semiVMCompileModule(SemiVM* vm, SemiModuleSource* moduleSource) {
+    InternedChar* moduleName = semiSymbolTableInsert(&vm->symbolTable, moduleSource->name, moduleSource->nameLength);
+    IdentifierId moduleNameIdentifierId = semiSymbolTableGetId(moduleName);
+    FunctionProto* oldModuleInit        = NULL;
+    SemiModule* artifactModule          = NULL;
+
+    Value moduleValue    = semiDictGet(&vm->modules, semiValueNewInt(moduleNameIdentifierId));
+    bool isModuleExisted = IS_VALID(&moduleValue);
+    if (isModuleExisted) {
+        artifactModule             = AS_PTR(&moduleValue, SemiModule);
+        oldModuleInit              = artifactModule->moduleInit;
+        artifactModule->moduleInit = NULL;
+    } else {
+        if (vm->modules.len >= SEMI_MAX_MODULE_COUNT) {
+            vm->error        = SEMI_ERROR_TOO_MANY_MODULES;
+            vm->errorMessage = "Exceeded maximum number of modules";
+            return NULL;
+        }
+
+        artifactModule = semiVMModuleCreate(&vm->gc, (ModuleId)vm->modules.len);
+        if (artifactModule == NULL) {
+            vm->error        = SEMI_ERROR_MEMORY_ALLOCATION_FAILURE;
+            vm->errorMessage = "Failed to allocate module";
+            return NULL;
+        }
+
+        semiPrimitivesInitBuiltInModuleTypes(&vm->gc, &vm->symbolTable, artifactModule);
+    }
+
+    Compiler compiler;
+    semiCompilerInit(&compiler);
+
+    compiler.gc                = &vm->gc;
+    compiler.symbolTable       = &vm->symbolTable;
+    compiler.classes           = &vm->classes;
+    compiler.globalIdentifiers = &vm->globalIdentifiers;
+
+    if (setjmp(compiler.errorJmpBuf.env) == 0) {
+        semiCompilerCompileModule(&compiler, moduleSource, artifactModule);
+    }
+
+    if (compiler.errorJmpBuf.errorId != 0) {
+        uint32_t line                 = compiler.lexer.line + 1;
+        size_t column                 = (size_t)(compiler.lexer.curr - compiler.lexer.lineStart) + 1;
+        vm->errorDetails.compileError = (SemiCompileErrorDetails){
+            .line   = line,
+            .column = (uint32_t)column,
+        };
+
+        vm->error = compiler.errorJmpBuf.errorId;
+#ifdef SEMI_DEBUG_MSG
+        vm->errorMessage = compiler.errorJmpBuf.message;
+#else
+        // vm->errorMessage stays NULL
+#endif
+
+        if (isModuleExisted) {
+            artifactModule->moduleInit = oldModuleInit;
+        } else {
+            semiVMModuleDestroy(&vm->gc, artifactModule);
+        }
+        return NULL;
+    }
+
+    if (!isModuleExisted) {
+        semiDictSet(&vm->gc,
+                    &vm->modules,
+                    semiValueNewInt(moduleNameIdentifierId),
+                    semiValueNewPtr(artifactModule, VALUE_TYPE_UNSET));
+    }
+    if (oldModuleInit != NULL) {
+        semiFunctionProtoDestroy(&vm->gc, oldModuleInit);
+    }
+
+    semiCompilerCleanup(&compiler);
+    return artifactModule;
+}
+
+ErrorId semiVMAddModule(SemiVM* vm, SemiModuleSource moduleSource, bool transitive) {
+    (void)transitive;  // Currently unused
+
+    semiVMCompileModule(vm, &moduleSource);
+    return vm->error;
 }
 
 #pragma endregion

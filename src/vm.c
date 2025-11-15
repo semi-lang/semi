@@ -29,24 +29,6 @@ SemiModule* semiVMModuleCreate(GC* gc, ModuleId moduleId) {
     return module;
 }
 
-SemiModule* semiVMModuleCreateFrom(GC* gc, SemiModule* source) {
-    SemiModule* module = semiMalloc(gc, sizeof(SemiModule));
-    if (module == NULL) {
-        return NULL;
-    }
-
-    *module = (SemiModule){
-        .moduleId      = source->moduleId,
-        .exports       = source->exports,
-        .globals       = source->globals,
-        .types         = source->types,
-        .constantTable = source->constantTable,
-        .moduleInit    = NULL,
-    };
-
-    return module;
-}
-
 void semiVMModuleDestroy(GC* gc, SemiModule* module) {
     semiObjectStackDictCleanup(gc, &module->types);
     semiObjectStackDictCleanup(gc, &module->exports);
@@ -111,7 +93,6 @@ static inline void* defaultReallocFn(void* ptr, size_t newSize, void* reallocDat
 
 #endif
 
-DEFINE_DARRAY(ModuleList, SemiModule*, uint16_t, UINT16_MAX)
 DEFINE_DARRAY(GlobalIdentifierList, IdentifierId, ModuleVariableId, UINT16_MAX)
 
 static ErrorId captureUpvalues(SemiVM* vm, Value* currentBase, ObjectFunction* function) {
@@ -217,9 +198,8 @@ SEMI_EXPORT SemiVM* semiCreateVM(SemiVMConfig* inputConfig) {
     vm->frameCapacity = SEMI_MIN_FRAME_SIZE;
 
     vm->openUpvalues = NULL;
-    vm->nextModuleId = 0;
 
-    ModuleListInit(&vm->modules);
+    semiObjectStackDictInit(&vm->modules);
     semiGCInit(&vm->gc, config.reallocateFn, config.reallocateUserData);
     semiSymbolTableInit(&vm->gc, &vm->symbolTable);
     semiPrimitivesIntializeBuiltInPrimitives(&vm->gc, &vm->classes, &vm->symbolTable);
@@ -243,11 +223,11 @@ SEMI_EXPORT void semiDestroyVM(SemiVM* vm) {
         }
     }
 
-    for (uint16_t i = 0; i < vm->modules.size; i++) {
-        SemiModule* module = vm->modules.data[i];
+    for (uint16_t i = 0; i < vm->modules.len; i++) {
+        SemiModule* module = AS_PTR(&vm->modules.values[i], SemiModule);
         semiVMModuleDestroy(&vm->gc, module);
     }
-    ModuleListCleanup(&vm->gc, &vm->modules);
+    semiObjectStackDictCleanup(&vm->gc, &vm->modules);
 
     for (uint16_t i = MIN_CUSTOM_BASE_VALUE_TYPE; i < vm->classes.classCount; i++) {
         semiFree(&vm->gc, &vm->classes.classMethods[i], sizeof(MagicMethodsTable));
@@ -445,14 +425,14 @@ static void runMainLoop(SemiVM* vm) {
         ip -= _steps;                                                                  \
     } while (0)
 
-#define RECONCILE_STATE()                                             \
-    do {                                                              \
-        frame      = &vm->frames[vm->frameCount - 1];                 \
-        stack      = vm->values + frame->stackOffset;                 \
-        ip         = frame->returnIP;                                 \
-        module     = vm->modules.data[frame->moduleId];               \
-        chunkStart = frame->function->proto->chunk.data;              \
-        chunkEnd   = chunkStart + frame->function->proto->chunk.size; \
+#define RECONCILE_STATE()                                                      \
+    do {                                                                       \
+        frame      = &vm->frames[vm->frameCount - 1];                          \
+        stack      = vm->values + frame->stackOffset;                          \
+        ip         = frame->returnIP;                                          \
+        module     = AS_PTR(&vm->modules.values[frame->moduleId], SemiModule); \
+        chunkStart = frame->function->proto->chunk.data;                       \
+        chunkEnd   = chunkStart + frame->function->proto->chunk.size;          \
     } while (0)
 
     // The first frame is already set up before calling this function
@@ -971,19 +951,15 @@ static void runMainLoop(SemiVM* vm) {
     }
 }
 
-ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
+ErrorId semiVMRunMainModule(SemiVM* vm, ModuleId moduleId) {
     vm->error         = 0;
     vm->returnedValue = NULL;
 
-    ModuleListEnsureCapacity(&vm->gc, &vm->modules, 1);
-    if (vm->modules.size < 1) {
-        vm->modules.size    = 1;
-        vm->modules.data[0] = module;
-    } else {
-        semiFunctionProtoDestroy(&vm->gc, vm->modules.data[0]->moduleInit);
-        semiFree(&vm->gc, vm->modules.data[0], sizeof(SemiModule));
-        vm->modules.data[0] = module;
+    if (moduleId >= vm->modules.len) {
+        return SEMI_ERROR_MODULE_NOT_FOUND;
     }
+
+    SemiModule* module = AS_PTR(&vm->modules.values[moduleId], SemiModule);
 
     ObjectFunction mainFunction;
     mainFunction.obj.header   = VALUE_TYPE_COMPILED_FUNCTION;
@@ -991,9 +967,35 @@ ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module) {
     mainFunction.upvalueCount = 0;
 
     appendFrame(vm, &mainFunction, vm->values);
-    if (vm->error != 0) {
-        return vm->error;
-    }
     runMainLoop(vm);
+    return vm->error;
+}
+
+ErrorId semiRunModule(SemiVM* vm, const char* moduleName, uint8_t moduleNameLength) {
+    InternedChar* internedModuleName = semiSymbolTableGet(&vm->symbolTable, moduleName, moduleNameLength);
+    if (internedModuleName == NULL) {
+        return SEMI_ERROR_MODULE_NOT_FOUND;
+    }
+    IdentifierId moduleNameIdentifierId = semiSymbolTableGetId(internedModuleName);
+    Value moduleValue                   = semiDictGet(&vm->modules, semiValueNewInt(moduleNameIdentifierId));
+    if (IS_INVALID(&moduleValue)) {
+        return SEMI_ERROR_MODULE_NOT_FOUND;
+    }
+
+    SemiModule* module = AS_PTR(&moduleValue, SemiModule);
+    ObjectFunction mainFunction;
+    mainFunction.obj.header   = VALUE_TYPE_COMPILED_FUNCTION;
+    mainFunction.proto        = module->moduleInit;
+    mainFunction.upvalueCount = 0;
+    appendFrame(vm, &mainFunction, vm->values);
+
+    vm->error         = 0;
+    vm->returnedValue = NULL;
+    runMainLoop(vm);
+
+    if (module->moduleInit != NULL) {
+        semiFunctionProtoDestroy(&vm->gc, module->moduleInit);
+    }
+    module->moduleInit = NULL;
     return vm->error;
 }

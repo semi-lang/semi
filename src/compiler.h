@@ -543,7 +543,7 @@ typedef struct Compiler {
     SymbolTable* symbolTable;
     GlobalIdentifierList* globalIdentifiers;
 
-    // The artifact module that is being compiled.
+    // The artifact module that is being compiled. This is not owned by the compiler.
     SemiModule* artifactModule;
 
     FunctionScope rootFunction;
@@ -558,12 +558,13 @@ typedef struct Compiler {
     ErrorJmpBuf errorJmpBuf;
 } Compiler;
 
-void semiCompilerInit(GC* gc, Compiler* compiler);
+void semiCompilerInit(Compiler* compiler);
 void semiCompilerCleanup(Compiler* compiler);
-bool semiCompilerInheritMainModule(Compiler* compiler, SemiVM* vm);
-SemiModule* semiCompilerCompileModule(Compiler* compiler, SemiVM* vm, SemiModuleSource* moduleSource);
 void semiParseExpression(Compiler* compiler, const PrattState state, PrattExpr* expr);
 void semiParseStatement(Compiler* compiler);
+void semiCompilerCompileModule(Compiler* compiler, SemiModuleSource* moduleSource, SemiModule* target);
+
+SemiModule* semiVMCompileModule(SemiVM* vm, SemiModuleSource* moduleSource);
 
 #ifdef SEMI_TEST
 

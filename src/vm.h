@@ -14,20 +14,22 @@
 #include "semi/error.h"
 #include "semi/semi.h"
 
+#define SEMI_MAX_MODULE_COUNT UINT16_MAX
+
 // A SemiModule represents a compiled self-contained executable unit.
 typedef struct SemiModule {
     ModuleId moduleId;
     ObjectDict exports;
     ObjectDict globals;
-    ObjectDict types;  // type identifierId -> base type index
+    ObjectDict types;  // type identifierId -> base type index (type id), negative if not exported.
     ConstantTable constantTable;
 
-    // The function proto used to initialize this module. For main module, this is the main function.
+    // The function proto used to initialize this module. Once the module is initialized, this field
+    // is freed and set to NULL.
     FunctionProto* moduleInit;
 } SemiModule;
 
 SemiModule* semiVMModuleCreate(GC* gc, ModuleId moduleId);
-SemiModule* semiVMModuleCreateFrom(GC* gc, SemiModule* source);
 void semiVMModuleDestroy(GC* gc, SemiModule* module);
 
 #define MAX_FRAME_DEPTH (1 << 16)
@@ -63,7 +65,6 @@ typedef struct Frame {
     ModuleId moduleId;
 } Frame;
 
-DECLARE_DARRAY(ModuleList, SemiModule*, uint16_t)
 DECLARE_DARRAY(GlobalIdentifierList, IdentifierId, ModuleVariableId)
 
 typedef struct SemiVM {
@@ -74,6 +75,11 @@ typedef struct SemiVM {
     // Error message associated with the error ID. Currently we only assign static strings to this field,
     // so there is no need to free it.
     const char* errorMessage;
+
+    union {
+        SemiCompileErrorDetails compileError;
+        SemiRuntimeErrorDetails runtimeError;
+    } errorDetails;
     // A weak reference to the result of the last expression statement (if there is one).
     Value* returnedValue;
 
@@ -90,9 +96,9 @@ typedef struct SemiVM {
     SymbolTable symbolTable;
 
     ClassTable classes;
-    ModuleId nextModuleId;
 
-    ModuleList modules;
+    // a map from Module name identifier id to SemiModule*
+    ObjectDict modules;
 
     // Global constants shared across all modules. The length of this array is the same as
     // `globalIdentifiers.capacity`.
@@ -102,7 +108,6 @@ typedef struct SemiVM {
     GlobalIdentifierList globalIdentifiers;
 } SemiVM;
 
-ErrorId semiVMRunMainModule(SemiVM* vm, SemiModule* module);
 ErrorId semiVMAddGlobalVariable(SemiVM* vm, const char* identifier, IdentifierLength identifierLength, Value value);
 
 #endif  // SEMI_VM_H

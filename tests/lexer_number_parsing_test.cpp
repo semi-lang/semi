@@ -13,7 +13,8 @@ class NumberParsingTest : public ::testing::Test {
     Compiler compiler;
     void SetUp() override {
         vm = semiCreateVM(NULL);
-        semiCompilerInit(&vm->gc, &compiler);
+        semiCompilerInit(&compiler);
+        compiler.gc = &vm->gc;
     }
 
     void TearDown() override {

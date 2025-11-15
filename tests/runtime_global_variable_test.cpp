@@ -30,7 +30,7 @@ TEST_F(RuntimeGlobalVariableTest, AccessGlobalIntegerVariable) {
     module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error      = 0;
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_INT) << "Register 0 should have int type";
@@ -51,7 +51,7 @@ TEST_F(RuntimeGlobalVariableTest, AccessGlobalFloatVariable) {
     module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error      = 0;
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[1].header, VALUE_TYPE_FLOAT) << "Register 1 should have float type";
@@ -72,7 +72,7 @@ TEST_F(RuntimeGlobalVariableTest, AccessGlobalBooleanVariable) {
     module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error      = 0;
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[2].header, VALUE_TYPE_BOOL) << "Register 2 should have bool type";
@@ -93,7 +93,7 @@ TEST_F(RuntimeGlobalVariableTest, AccessGlobalStringVariable) {
     module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error      = 0;
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[3].header, VALUE_TYPE_OBJECT_STRING) << "Register 3 should have object type";
@@ -124,7 +124,7 @@ TEST_F(RuntimeGlobalVariableTest, AccessMultipleGlobalVariables) {
     module->moduleInit = CreateFunctionObject(0, code, 4, 254, 0, 0);
 
     vm->error      = 0;
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
 
@@ -155,7 +155,7 @@ TEST_F(RuntimeGlobalVariableTest, AccessGlobalNativeFunctionVariable) {
     module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
     vm->error      = 0;
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_NATIVE_FUNCTION) << "Register 0 should have native function type";

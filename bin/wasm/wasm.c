@@ -82,48 +82,33 @@ ErrorId printFunction(GC* gc, uint8_t argCount, Value* args, Value* ret) {
     return 0;
 }
 
-ErrorId compileAndRunInternal(SemiVM* vm, const char* source, size_t length) {
-    const char* scriptMainModuleName  = "<script>";
-    size_t scriptMainModuleNameLength = strlen(scriptMainModuleName);
+ErrorId compileAndRunInternal(SemiVM* vm, const char* source, unsigned int length) {
+    const char* scriptMainModuleName   = "<script>";
+    uint8_t scriptMainModuleNameLength = (uint8_t)strlen(scriptMainModuleName);
 
     SemiModuleSource moduleSource = {
         .source     = source,
-        .length     = (unsigned int)length,
+        .length     = length,
         .name       = scriptMainModuleName,
-        .nameLength = (unsigned int)scriptMainModuleNameLength,
+        .nameLength = scriptMainModuleNameLength,
     };
 
-    Compiler compiler;
-    semiCompilerInit(&vm->gc, &compiler);
-
-    SemiModule* module = NULL;
-
-    if (vm->modules.size > 0) {
-        if (!semiCompilerInheritMainModule(&compiler, vm)) {
-            goto handle_error;
-        }
-    }
-
-    module = semiCompilerCompileModule(&compiler, vm, &moduleSource);
+    SemiModule* module = semiVMCompileModule(vm, &moduleSource);
     if (module == NULL) {
-        goto handle_error;
+        ErrorId errorId = vm->error;
+        uint32_t line   = vm->errorDetails.compileError.line;
+        size_t column   = vm->errorDetails.compileError.column;
+
+#if defined(SEMI_DEBUG_MSG)
+        const char* message = vm->errorMessage != NULL ? vm->errorMessage : "Unknown error";
+        fprintf(stderr, "Error %u at line %d, column %zu: %s\n", errorId, line, column, vm->errorMessage);
+#else
+        fprintf(stderr, "Error %u at line %d, column %zu\n", errorId, line, column);
+#endif  // defined(SEMI_DEBUG_MSG)
+        return errorId;
     }
 
-    semiCompilerCleanup(&compiler);
-    return semiVMRunMainModule(vm, module);
-
-handle_error: {
-    ErrorId errorId = compiler.errorJmpBuf.errorId;
-
-#ifdef SEMI_DEBUG_MSG
-    if (compiler.errorJmpBuf.message != NULL) {
-        fprintf(stderr, "Error %u: %s\n", errorId, compiler.errorJmpBuf.message);
-    }
-#endif  // SEMI_DEBUG_MSG
-
-    semiCompilerCleanup(&compiler);
-    return errorId;
-}
+    return semiRunModule(vm, scriptMainModuleName, scriptMainModuleNameLength);
 }
 
 #ifdef __EMSCRIPTEN__
@@ -147,7 +132,7 @@ int compileAndRun(const char* str) {
     semiVMAddGlobalVariable(
         vm, nowFunctionName, (IdentifierLength)strlen(nowFunctionName), semiValueNewNativeFunction(nowFunction));
 
-    ErrorId errId = compileAndRunInternal(vm, str, strlen(str));
+    ErrorId errId = compileAndRunInternal(vm, str, (unsigned int)strlen(str));
 
     semiDestroyVM(vm);
 

@@ -65,7 +65,7 @@ TEST_F(VMInstructionIterTest, OpMakeRangeBasicInteger) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit  = func;
 
-        int result = semiVMRunMainModule(vm, module);
+        int result = RunModule(module);
 
         if (test_case.expect_error) {
             ASSERT_EQ(result, test_case.expected_error_code) << "Test case: " << test_case.name;
@@ -123,7 +123,7 @@ TEST_F(VMInstructionIterTest, OpMakeRangeFloatValues) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit  = func;
 
-        int result = semiVMRunMainModule(vm, module);
+        int result = RunModule(module);
 
         if (test_case.expect_error) {
             ASSERT_EQ(result, test_case.expected_error_code) << "Test case: " << test_case.name;
@@ -173,7 +173,7 @@ TEST_F(VMInstructionIterTest, OpMakeRangeMixedTypes) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit  = func;
 
-        int result = semiVMRunMainModule(vm, module);
+        int result = RunModule(module);
 
         ASSERT_EQ(result, 0) << "Test case: " << test_case.name;
 
@@ -206,7 +206,7 @@ TEST_F(VMInstructionIterTest, OpMakeRangeWithConstants) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "Should handle inline constants";
 
@@ -240,7 +240,7 @@ TEST_F(VMInstructionIterTest, OpMakeRangeTypeErrors) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit  = func;
 
-        int result = semiVMRunMainModule(vm, module);
+        int result = RunModule(module);
 
         ASSERT_EQ(result, SEMI_ERROR_UNEXPECTED_TYPE) << "Should error for " << test_case.name;
         ASSERT_EQ(vm->error, SEMI_ERROR_UNEXPECTED_TYPE) << "VM error should be UNEXPECTED_TYPE for " << test_case.name;
@@ -295,7 +295,7 @@ TEST_F(VMInstructionIterTest, OpIterNextInlineRange) {
             FunctionProto* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
             module->moduleInit  = func;
 
-            result = semiVMRunMainModule(vm, module);
+            result = RunModule(module);
 
             if (result == 99) {
                 // Iteration ended
@@ -345,7 +345,7 @@ TEST_F(VMInstructionIterTest, OpIterNextObjectRange) {
     FunctionProto* func = CreateFunctionObject(0, create_range, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
     ASSERT_EQ(result, 0) << "Should create ObjectRange successfully";
 
     // Now test iteration
@@ -370,7 +370,7 @@ TEST_F(VMInstructionIterTest, OpIterNextObjectRange) {
         FunctionProto* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
         module->moduleInit  = func;
 
-        result = semiVMRunMainModule(vm, module);
+        result = RunModule(module);
 
         if (result == 99) {
             // Iteration ended
@@ -415,7 +415,7 @@ TEST_F(VMInstructionIterTest, OpIterNextFloatRange) {
     FunctionProto* func = CreateFunctionObject(0, create_range, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
     ASSERT_EQ(result, 0) << "Should create float ObjectRange successfully";
 
     // Test iteration
@@ -440,7 +440,7 @@ TEST_F(VMInstructionIterTest, OpIterNextFloatRange) {
         FunctionProto* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
         module->moduleInit  = func;
 
-        result = semiVMRunMainModule(vm, module);
+        result = RunModule(module);
 
         if (result == 99) {
             // Iteration ended

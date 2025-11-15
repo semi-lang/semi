@@ -27,7 +27,7 @@ TEST_F(VMInstructionComparisonTest, OpGtIntegerRegistersTrue) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -48,7 +48,7 @@ TEST_F(VMInstructionComparisonTest, OpGtIntegerRegistersFalse) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -69,7 +69,7 @@ TEST_F(VMInstructionComparisonTest, OpGtFloatRegistersTrue) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -90,7 +90,7 @@ TEST_F(VMInstructionComparisonTest, OpGtMixedNumberTypes) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -109,7 +109,7 @@ TEST_F(VMInstructionComparisonTest, OpGtWithConstantLeft) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -128,7 +128,7 @@ TEST_F(VMInstructionComparisonTest, OpGtWithConstantRight) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -151,7 +151,7 @@ TEST_F(VMInstructionComparisonTest, OpGeIntegerRegistersTrue) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -172,7 +172,7 @@ TEST_F(VMInstructionComparisonTest, OpGeIntegerRegistersGreater) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -193,7 +193,7 @@ TEST_F(VMInstructionComparisonTest, OpGeIntegerRegistersFalse) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -214,7 +214,7 @@ TEST_F(VMInstructionComparisonTest, OpGeFloatRegisters) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -237,7 +237,7 @@ TEST_F(VMInstructionComparisonTest, OpEqIntegerRegistersTrue) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -258,7 +258,7 @@ TEST_F(VMInstructionComparisonTest, OpEqIntegerRegistersFalse) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -279,7 +279,7 @@ TEST_F(VMInstructionComparisonTest, OpEqBooleanRegistersTrue) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -300,7 +300,7 @@ TEST_F(VMInstructionComparisonTest, OpEqBooleanRegistersFalse) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -321,7 +321,7 @@ TEST_F(VMInstructionComparisonTest, OpEqFloatRegisters) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -342,7 +342,7 @@ TEST_F(VMInstructionComparisonTest, OpEqMixedNumberTypes) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -365,7 +365,7 @@ TEST_F(VMInstructionComparisonTest, OpNeqIntegerRegistersTrue) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -386,7 +386,7 @@ TEST_F(VMInstructionComparisonTest, OpNeqIntegerRegistersFalse) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -407,7 +407,7 @@ TEST_F(VMInstructionComparisonTest, OpNeqBooleanRegisters) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -428,7 +428,7 @@ TEST_F(VMInstructionComparisonTest, OpNeqFloatRegisters) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";

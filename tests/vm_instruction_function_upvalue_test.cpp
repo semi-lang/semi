@@ -36,7 +36,7 @@ TEST_F(VMInstructionFunctionUpvalueTest, BasicUpvalueCreation) {
 
     module->moduleInit = CreateFunctionObject(0, code, 5, 3, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should execute successfully";
     ASSERT_NE(vm->openUpvalues, nullptr) << "Open upvalues should not be closed after function returns";
@@ -78,7 +78,7 @@ TEST_F(VMInstructionFunctionUpvalueTest, MultipleUpvalueCreation) {
 
     module->moduleInit = CreateFunctionObject(0, code, 7, 5, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should execute successfully";
     ASSERT_NE(vm->openUpvalues, nullptr) << "Open upvalues should not be closed after function returns";
@@ -151,7 +151,7 @@ TEST_F(VMInstructionFunctionUpvalueTest, NestedFunctionsWithUpvalues) {
 
     module->moduleInit = CreateFunctionObject(0, code, 6, 2, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should execute nested calls successfully";
     ASSERT_EQ(vm->openUpvalues, nullptr) << "All upvalues should be closed after nested functions return";
@@ -228,7 +228,7 @@ TEST_F(VMInstructionFunctionUpvalueTest, UpvalueReuse) {
 
     module->moduleInit = CreateFunctionObject(0, code, 5, 2, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should execute successfully";
     ASSERT_EQ(vm->openUpvalues, nullptr) << "All upvalues should be closed after functions return";

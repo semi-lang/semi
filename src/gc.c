@@ -118,8 +118,8 @@ static void semiGCMarkRoots(SemiVM* vm) {
         }
     }
 
-    for (uint16_t i = 0; i < vm->modules.size; i++) {
-        SemiModule* module = vm->modules.data[i];
+    for (uint16_t i = 0; i < vm->modules.len; i++) {
+        SemiModule* module = AS_PTR(&vm->modules.values[i], SemiModule);
 
         semiGCGrayObject(&vm->gc, (Object*)&module->exports);
         semiGCGrayObject(&vm->gc, (Object*)&module->globals);

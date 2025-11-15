@@ -22,7 +22,7 @@ TEST_F(VMInstructionGeneralTest, OpTrapWithZeroCode) {
     FunctionProto* func = CreateFunctionObject(0, code, 1, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "OP_TRAP with code 0 should return error code 0";
     ASSERT_EQ(vm->error, 0) << "VM error should be 0";
@@ -38,7 +38,7 @@ TEST_F(VMInstructionGeneralTest, OpTrapWithNonZeroCode) {
     FunctionProto* func = CreateFunctionObject(0, code, 1, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 42) << "OP_TRAP with code 42 should return error code 42";
     ASSERT_EQ(vm->error, 42) << "VM error should be 42";
@@ -57,7 +57,7 @@ TEST_F(VMInstructionGeneralTest, OpJumpPositiveOffset) {
     FunctionProto* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
 }
@@ -74,7 +74,7 @@ TEST_F(VMInstructionGeneralTest, OpJumpNegativeOffset) {
     FunctionProto* func = CreateFunctionObject(0, code, 3, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
 }
@@ -90,7 +90,7 @@ TEST_F(VMInstructionGeneralTest, OpJumpZeroOffsetNoop) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
 }
@@ -106,7 +106,7 @@ TEST_F(VMInstructionGeneralTest, InvalidPCAfterJump) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, SEMI_ERROR_INVALID_PC) << "VM should return INVALID_PC error";
     ASSERT_EQ(vm->error, SEMI_ERROR_INVALID_PC) << "VM error should be INVALID_PC";
@@ -128,7 +128,7 @@ TEST_F(VMInstructionGeneralTest, OpCJumpLargerPositiveOffset) {
     FunctionProto* func = CreateFunctionObject(0, code, 6, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
 }
@@ -145,7 +145,7 @@ TEST_F(VMInstructionGeneralTest, OpCJumpZeroOffset) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
 }
@@ -164,7 +164,7 @@ TEST_F(VMInstructionGeneralTest, OpCJumpNegativeOffset) {
     FunctionProto* func = CreateFunctionObject(0, code, 3, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
 }
@@ -234,7 +234,7 @@ TEST_F(VMInstructionGeneralTest, OpCJumpTruthyValues) {
         FunctionProto* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
         module->moduleInit  = func;
 
-        int result = semiVMRunMainModule(vm, module);
+        int result = RunModule(module);
 
         ASSERT_EQ(result, 0) << "Test case '" << test_case.name << "' should complete successfully";
 
@@ -267,7 +267,7 @@ TEST_F(VMInstructionGeneralTest, OpCJumpMixedTruthyAndFalsy) {
     FunctionProto* func = CreateFunctionObject(0, code, 6, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
 }
@@ -283,7 +283,7 @@ TEST_F(VMInstructionGeneralTest, OpNoopBasic) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
 }
@@ -303,7 +303,7 @@ TEST_F(VMInstructionGeneralTest, OpMoveSequential) {
     FunctionProto* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
     module->moduleInit  = func;
 
-    int result = semiVMRunMainModule(vm, module);
+    int result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[2].header, VALUE_TYPE_INT) << "Register 2 should have int type";

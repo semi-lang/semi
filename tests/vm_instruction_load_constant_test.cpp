@@ -28,7 +28,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadBoolInlineTrue) {
 
     vm->error = 0;
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Register 0 should have bool type";
@@ -46,7 +46,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadBoolInlineFalse) {
 
     vm->error = 0;
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[1].header, VALUE_TYPE_BOOL) << "Register 1 should have bool type";
@@ -65,7 +65,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadIntegerInline) {
 
     vm->error = 0;
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_INT) << "Register 0 should have int type";
@@ -83,7 +83,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadIntegerInlineZero) {
 
     vm->error = 0;
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[1].header, VALUE_TYPE_INT) << "Register 1 should have int type";
@@ -101,7 +101,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadIntegerInlineMaxValue) {
 
     vm->error = 0;
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[2].header, VALUE_TYPE_INT) << "Register 2 should have int type";
@@ -119,7 +119,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadIntegerInlineNegative) {
 
     vm->error = 0;
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_INT) << "Register 0 should have int type";
@@ -141,7 +141,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadIntegerFromConstantTable) {
 
     vm->error = 0;
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_INT) << "Register 0 should have int type";
@@ -162,7 +162,7 @@ TEST_F(VMInstructionLoadConstantTest, LoadFloatFromConstantTable) {
 
     vm->error = 0;
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_FLOAT) << "Register 0 should have float type";
@@ -183,7 +183,7 @@ TEST_F(VMInstructionLoadConstantTest, LoadFloatNegativeValue) {
 
     vm->error = 0;
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[1].header, VALUE_TYPE_FLOAT) << "Register 1 should have float type";
@@ -204,7 +204,7 @@ TEST_F(VMInstructionLoadConstantTest, LoadFloatZero) {
 
     vm->error = 0;
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[2].header, VALUE_TYPE_FLOAT) << "Register 2 should have float type";
@@ -226,7 +226,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadStringFromConstantTable) {
 
     vm->error = 0;
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(VALUE_TYPE(&vm->values[1]), VALUE_TYPE_OBJECT_STRING) << "Register 0 should have allocated string type";
@@ -247,7 +247,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadStringInlineEmpty) {
 
     vm->error = 0;
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_INLINE_STRING) << "Register 0 should have inline string type";
@@ -267,7 +267,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadStringInlineOneChar) {
 
     vm->error = 0;
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_INLINE_STRING) << "Register 0 should have inline string type";
@@ -288,7 +288,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadStringInlineTwoChars) {
 
     vm->error = 0;
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_INLINE_STRING) << "Register 0 should have inline string type";
@@ -312,7 +312,7 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadStringEmptyFromConstantTable) {
 
     vm->error = 0;
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(VALUE_TYPE(&vm->values[1]), VALUE_TYPE_INLINE_STRING) << "Register 1 should have allocated string type";
@@ -343,7 +343,7 @@ TEST_F(VMInstructionLoadConstantTest, LoadConstantsInDifferentRegisters) {
 
     vm->error = 0;
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
 
@@ -372,7 +372,7 @@ TEST_F(VMInstructionLoadConstantTest, LoadIntoHighRegisters) {
 
     vm->error = 0;
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[254].header, VALUE_TYPE_INT) << "Register 255 should have int type";

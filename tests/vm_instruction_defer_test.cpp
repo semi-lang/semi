@@ -110,7 +110,7 @@ TEST_F(VMInstructionDeferTest, SingleDeferBlock) {
 
     module->moduleInit = CreateFunctionObject(0, mainCode, 8, 3, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should execute successfully";
 
@@ -185,7 +185,7 @@ TEST_F(VMInstructionDeferTest, MultipleDeferBlocks) {
 
     module->moduleInit = CreateFunctionObject(0, mainCode, 13, 3, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should execute successfully";
 
@@ -240,7 +240,7 @@ TEST_F(VMInstructionDeferTest, DeferWithEarlyReturn) {
 
     module->moduleInit = CreateFunctionObject(0, mainCode, 14, 4, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should execute successfully";
 
@@ -325,7 +325,7 @@ TEST_F(VMInstructionDeferTest, NestedFunctionCallsWithDefer) {
 
     module->moduleInit = CreateFunctionObject(0, outerCode, 13, 3, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should execute successfully";
 

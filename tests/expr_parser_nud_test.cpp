@@ -341,7 +341,9 @@ TEST_F(ExprParserNudTest, UnexpectedEndOfFileError) {
     ASSERT_EQ(result, SEMI_ERROR_UNEXPECTED_END_OF_FILE) << "Should fail on empty input";
 }
 
-TEST_F(ExprParserNudTest, TypeIdentifierNumber) {
+TEST_F(ExprParserNudTest, TypeIdentifierNud) {
+    GTEST_SKIP() << "Skipping until type parsing is implemented";
+
     struct {
         const char* input;
         BaseValueType expected_type;

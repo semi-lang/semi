@@ -304,14 +304,24 @@ class VMTest : public ::testing::Test {
 
         return func;
     }
+
+    ErrorId RunModule(SemiModule* module) {
+        const char* moduleName   = "test_module";
+        uint8_t moduleNameLength = (uint8_t)strlen(moduleName);
+
+        InternedChar* moduleNameInterned = semiSymbolTableInsert(&vm->symbolTable, moduleName, moduleNameLength);
+        IdentifierId moduleNameId        = semiSymbolTableGetId(moduleNameInterned);
+
+        semiDictSet(&vm->gc, &vm->modules, semiValueNewInt(moduleNameId), semiValueNewPtr(module, VALUE_TYPE_UNSET));
+
+        return semiRunModule(vm, moduleName, moduleNameLength);
+    }
 };
 
 class CompilerTest : public ::testing::Test {
    public:
     Compiler compiler;
     SemiVM* vm;
-
-    // If calling `ParseModule`, this will hold the compiled module.
     SemiModule* module;
 
     // If calling `ParseStatement`, this will hold the block scope.
@@ -319,25 +329,21 @@ class CompilerTest : public ::testing::Test {
 
     void SetUp() override {
         vm = semiCreateVM(NULL);
-        semiCompilerInit(&vm->gc, &compiler);
+        semiCompilerInit(&compiler);
 
         compiler.gc                = &vm->gc;
         compiler.symbolTable       = &vm->symbolTable;
         compiler.classes           = &vm->classes;
         compiler.globalIdentifiers = &vm->globalIdentifiers;
 
-        VariableListInit(&compiler.variables);
-        VariableListEnsureCapacity(&vm->gc, &compiler.variables, 32);
-
+        VariableListEnsureCapacity(compiler.gc, &compiler.variables, 32);
         compiler.artifactModule = semiVMModuleCreate(compiler.gc, SEMI_REPL_MODULE_ID);
-        semiPrimitivesInitBuiltInModuleTypes(&vm->gc, &vm->symbolTable, compiler.artifactModule);
-        module = nullptr;
+        semiPrimitivesInitBuiltInModuleTypes(compiler.gc, compiler.symbolTable, compiler.artifactModule);
+        module = compiler.artifactModule;
     }
 
     void TearDown() override {
-        if (module != nullptr) {
-            semiVMModuleDestroy(&vm->gc, module);
-        }
+        semiVMModuleDestroy(&vm->gc, module);
         semiCompilerCleanup(&compiler);
         semiDestroyVM(vm);
     }
@@ -368,7 +374,7 @@ class CompilerTest : public ::testing::Test {
     }
 
     VariableDescription* FindVariable(const char* identifier) {
-        InternedChar* internedIdentifier = semiSymbolTableGet(&vm->symbolTable, identifier, strlen(identifier));
+        InternedChar* internedIdentifier = semiSymbolTableGet(compiler.symbolTable, identifier, strlen(identifier));
         if (internedIdentifier == nullptr) {
             return nullptr;  // Variable not found
         }
@@ -385,7 +391,7 @@ class CompilerTest : public ::testing::Test {
 
     void InitializeVariable(const char* var_name) {
         // Insert identifier into symbol table
-        InternedChar* identifier = semiSymbolTableInsert(&vm->symbolTable, var_name, strlen(var_name));
+        InternedChar* identifier = semiSymbolTableInsert(compiler.symbolTable, var_name, strlen(var_name));
         ASSERT_NE(identifier, nullptr) << "Failed to insert identifier '" << var_name << "' into symbol table";
         IdentifierId identifierId = semiSymbolTableGetId(identifier);
 
@@ -393,29 +399,24 @@ class CompilerTest : public ::testing::Test {
         LocalRegisterId registerId = compiler.currentFunction->nextRegisterId;
         compiler.currentFunction->nextRegisterId++;
 
-        VariableListAppend(&vm->gc,
+        VariableListAppend(compiler.gc,
                            &compiler.variables,
                            (VariableDescription){.identifierId = identifierId, .registerId = registerId});
         compiler.currentFunction->currentBlock->variableStackEnd = compiler.variables.size;
     }
 
     ErrorId ParseModule(const char* input) {
-        semiVMModuleDestroy(&vm->gc, compiler.artifactModule);
-        compiler.artifactModule = nullptr;
-
         SemiModuleSource moduleSource = {
             .source     = input,
             .length     = (unsigned int)strlen(input),
             .name       = "test_module",
-            .nameLength = (unsigned int)strlen("test_module"),
+            .nameLength = (uint8_t)strlen("test_module"),
         };
-        SemiModule* result = semiCompilerCompileModule(&compiler, vm, &moduleSource);
-        if (result == NULL) {
-            return compiler.errorJmpBuf.errorId;
-        }
 
-        module = result;
-        return 0;
+        if (setjmp(compiler.errorJmpBuf.env) == 0) {
+            semiCompilerCompileModule(&compiler, &moduleSource, module);
+        }
+        return compiler.errorJmpBuf.errorId;
     }
 
     ErrorId ParseExpression(const char* input, PrattExpr* expr) {
@@ -456,7 +457,7 @@ class CompilerTest : public ::testing::Test {
     }
 
     ModuleVariableId GetModuleVariableId(const char* identifier, bool* isExport = nullptr) {
-        InternedChar* internedIdentifier = semiSymbolTableGet(&vm->symbolTable, identifier, strlen(identifier));
+        InternedChar* internedIdentifier = semiSymbolTableGet(compiler.symbolTable, identifier, strlen(identifier));
         if (internedIdentifier == nullptr) {
             if (isExport) *isExport = false;
             return INVALID_MODULE_VARIABLE_ID;
@@ -486,7 +487,7 @@ class CompilerTest : public ::testing::Test {
 
     void InitializeModuleVariable(const char* varName, bool isExport = false) {
         // Insert identifier into symbol table
-        InternedChar* identifier = semiSymbolTableInsert(&vm->symbolTable, varName, strlen(varName));
+        InternedChar* identifier = semiSymbolTableInsert(compiler.symbolTable, varName, strlen(varName));
         ASSERT_NE(identifier, nullptr) << "Failed to insert identifier '" << varName << "' into symbol table";
         IdentifierId identifierId = semiSymbolTableGetId(identifier);
 
@@ -496,7 +497,7 @@ class CompilerTest : public ::testing::Test {
         Value dummyValue       = semiValueNewInt(0);  // Dummy value
         ValueHash hash         = semiHash64Bits(identifierId);
 
-        bool result = semiDictSetWithHash(&vm->gc, targetDict, keyValue, dummyValue, hash);
+        bool result = semiDictSetWithHash(compiler.gc, targetDict, keyValue, dummyValue, hash);
         ASSERT_TRUE(result) << "Failed to add module variable '" << varName << "'";
     }
 

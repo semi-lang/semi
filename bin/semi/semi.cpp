@@ -38,6 +38,7 @@ void initOpcodeNames() {
     SET_OPCODE_NAME(OP_LOAD_INLINE_STRING);
     SET_OPCODE_NAME(OP_GET_MODULE_VAR);
     SET_OPCODE_NAME(OP_SET_MODULE_VAR);
+    SET_OPCODE_NAME(OP_DEFER_CALL);
 
     SET_OPCODE_NAME(OP_MOVE);
     SET_OPCODE_NAME(OP_GET_UPVALUE);
@@ -254,41 +255,31 @@ bool readStdinToString(std::string& content) {
     return true;
 }
 
-void printError(ErrorId errorId, const char* message) {
-    if (errorId != 0) {
-#ifdef SEMI_DEBUG_MSG
-        std::cerr << "Error " << errorId << ": " << message << std::endl;
-#else
-        std::cerr << "Error " << errorId << std::endl;
-#endif  // SEMI_DEBUG_MSG
-    }
-}
-
-ErrorId compileAndRun(SemiVM* vm, const char* source, size_t length, bool isRepl, bool disassemble) {
-    const char* scriptMainModuleName  = "<script>";
-    size_t scriptMainModuleNameLength = strlen(scriptMainModuleName);
+ErrorId compileAndRun(SemiVM* vm, const char* source, unsigned int length, bool isRepl, bool disassemble) {
+    const char* scriptModuleName   = "<script>";
+    uint8_t scriptModuleNameLength = (uint8_t)strlen(scriptModuleName);
 
     SemiModuleSource moduleSource = {
         .source     = source,
-        .length     = (unsigned int)length,
-        .name       = scriptMainModuleName,
-        .nameLength = (unsigned int)scriptMainModuleNameLength,
+        .length     = length,
+        .name       = scriptModuleName,
+        .nameLength = scriptModuleNameLength,
     };
 
-    Compiler compiler;
-    semiCompilerInit(&vm->gc, &compiler);
-
-    SemiModule* module = NULL;
-
-    if (vm->modules.size > 0) {
-        if (!semiCompilerInheritMainModule(&compiler, vm)) {
-            goto handle_error;
-        }
-    }
-
-    module = semiCompilerCompileModule(&compiler, vm, &moduleSource);
+    SemiModule* module = semiVMCompileModule(vm, &moduleSource);
     if (module == NULL) {
-        goto handle_error;
+        ErrorId errorId = vm->error;
+        uint32_t line   = vm->errorDetails.compileError.line;
+        size_t column   = vm->errorDetails.compileError.column;
+
+#if defined(SEMI_DEBUG_MSG)
+        const char* message = vm->errorMessage != NULL ? vm->errorMessage : "Unknown error";
+        std::cerr << "Error " << errorId << " at line " << line << ", column " << column << ": " << message
+                  << std::endl;
+#else
+        std::cerr << "Error " << errorId << " at line " << line << ", column " << column << std::endl;
+#endif  // defined(SEMI_DEBUG_MSG)
+        return errorId;
     }
 
     if (disassemble) {
@@ -304,19 +295,7 @@ ErrorId compileAndRun(SemiVM* vm, const char* source, size_t length, bool isRepl
         std::cout << "=== EXECUTION ===" << std::endl;
     }
 
-    semiCompilerCleanup(&compiler);
-    return semiVMRunMainModule(vm, module);
-
-handle_error:
-#ifdef SEMI_DEBUG_MSG
-    printError(compiler.errorJmpBuf.errorId, compiler.errorJmpBuf.message);
-#else
-    printError(compiler.errorJmpBuf.errorId, "An error occurred during compilation.");
-#endif  // SEMI_DEBUG_MSG
-
-    ErrorId errorId = compiler.errorJmpBuf.errorId;
-    semiCompilerCleanup(&compiler);
-    return errorId;
+    return semiRunModule(vm, scriptModuleName, scriptModuleNameLength);
 }
 
 static const char* printFunctionName = "print";
@@ -365,13 +344,8 @@ int executeSource(const char* source, bool isRepl, bool disassemble) {
     semiVMAddGlobalVariable(
         vm, nowFunctionName, (IdentifierLength)strlen(nowFunctionName), semiValueNewNativeFunction(nowFunction));
 
-    ErrorId errId = compileAndRun(vm, source, strlen(source), isRepl, disassemble);
+    ErrorId errId = compileAndRun(vm, source, (unsigned int)strlen(source), isRepl, disassemble);
     if (errId != 0) {
-#ifdef SEMI_DEBUG_MSG
-        printError(errId, vm->errorMessage);
-#else
-        printError(errId, "An error occurred during execution.");
-#endif  // SEMI_DEBUG_MSG
         return 1;
     } else if (vm->returnedValue != NULL && !IS_INVALID(vm->returnedValue)) {
         std::cout << "=> ";
@@ -425,10 +399,8 @@ void runRepl(bool disassemble) {
 
         if (!input.empty()) {
             const char* source = input.c_str();
-            ErrorId errId      = compileAndRun(vm, source, strlen(source), true, disassemble);
-            if (errId != 0) {
-                printError(errId, "An error occurred during execution.");
-            } else if (vm->returnedValue != NULL && !IS_INVALID(vm->returnedValue)) {
+            ErrorId errId      = compileAndRun(vm, source, (unsigned int)strlen(source), true, disassemble);
+            if (errId == 0 && vm->returnedValue != NULL && !IS_INVALID(vm->returnedValue)) {
                 std::cout << "=> ";
                 printValue(*vm->returnedValue);
                 std::cout << std::endl;

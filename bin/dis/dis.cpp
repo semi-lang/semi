@@ -107,9 +107,6 @@ int main(int argc, char* argv[]) {
     semiVMAddGlobalVariable(
         vm, printFunctionName, (IdentifierLength)strlen(printFunctionName), semiValueNewNativeFunction(printFunction));
 
-    Compiler compiler;
-    semiCompilerInit(&vm->gc, &compiler);
-
     // Initialize predefined variables
     for (const std::string& varName : predefinedVars) {
         const char* varNameCStr = varName.c_str();
@@ -120,10 +117,10 @@ int main(int argc, char* argv[]) {
         .source     = source,
         .length     = (unsigned int)strlen(source),
         .name       = moduleSourceName,
-        .nameLength = (unsigned int)strlen(moduleSourceName),
+        .nameLength = (uint8_t)strlen(moduleSourceName),
     };
 
-    SemiModule* module = semiCompilerCompileModule(&compiler, vm, &moduleSource);
+    SemiModule* module = semiVMCompileModule(vm, &moduleSource);
     if (module == NULL) {
         goto cleanup;
     }
@@ -145,12 +142,12 @@ int main(int argc, char* argv[]) {
     }
 
 cleanup:
-    ErrorId errorId = compiler.errorJmpBuf.errorId;
-    uint32_t line   = compiler.lexer.line + 1;
-    size_t column   = compiler.lexer.curr - compiler.lexer.lineStart + 1;
+    ErrorId errorId = vm->error;
+    uint32_t line   = vm->errorDetails.compileError.line;
+    size_t column   = vm->errorDetails.compileError.column;
     if (errorId != 0) {
 #if defined(SEMI_DEBUG_MSG)
-        const char* message = compiler.errorJmpBuf.message;
+        const char* message = vm->errorMessage != NULL ? vm->errorMessage : "Unknown error";
         std::cerr << "Error " << errorId << " at line " << line << ", column " << column << ": " << message
                   << std::endl;
 #else
@@ -158,7 +155,6 @@ cleanup:
 #endif  // defined(SEMI_DEBUG_MSG)
     }
 
-    semiCompilerCleanup(&compiler);
     semiDestroyVM(vm);
 
     return errorId == 0 ? 0 : 1;

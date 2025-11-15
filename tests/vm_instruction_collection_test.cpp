@@ -69,7 +69,7 @@ TEST_F(VMInstructionCollectionTest, OpGetItemStringIndexing) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit  = func;
 
-        ErrorId result = semiVMRunMainModule(vm, module);
+        ErrorId result = RunModule(module);
 
         if (test_case.expect_error) {
             EXPECT_EQ(result, test_case.expected_error);
@@ -110,7 +110,7 @@ TEST_F(VMInstructionCollectionTest, OpGetItemUnsupportedTypes) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit  = func;
 
-        ErrorId result = semiVMRunMainModule(vm, module);
+        ErrorId result = RunModule(module);
         EXPECT_EQ(result, test_case.expected_error);
     }
 }
@@ -141,7 +141,7 @@ TEST_F(VMInstructionCollectionTest, OpSetItemDict) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
     EXPECT_EQ(result, 0) << "SET_ITEM on dict should succeed";
 
     // Verify the value was set by using dict's internal functions
@@ -190,7 +190,7 @@ TEST_F(VMInstructionCollectionTest, OpSetItemList) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit  = func;
 
-        ErrorId result = semiVMRunMainModule(vm, module);
+        ErrorId result = RunModule(module);
 
         if (test_case.expect_error) {
             EXPECT_EQ(result, test_case.expected_error);
@@ -238,7 +238,7 @@ TEST_F(VMInstructionCollectionTest, OpSetItemListErrors) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit  = func;
 
-        ErrorId result = semiVMRunMainModule(vm, module);
+        ErrorId result = RunModule(module);
         EXPECT_EQ(result, error_case.expected_error);
     }
 }
@@ -271,7 +271,7 @@ TEST_F(VMInstructionCollectionTest, OpSetItemUnsupportedTypes) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit  = func;
 
-        ErrorId result = semiVMRunMainModule(vm, module);
+        ErrorId result = RunModule(module);
         EXPECT_EQ(result, test_case.expected_error);
     }
 }
@@ -315,7 +315,7 @@ TEST_F(VMInstructionCollectionTest, OpContainDict) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit  = func;
 
-        ErrorId result = semiVMRunMainModule(vm, module);
+        ErrorId result = RunModule(module);
         EXPECT_EQ(result, 0) << "CONTAIN should succeed";
         EXPECT_EQ(VALUE_TYPE(&vm->values[0]), VALUE_TYPE_BOOL) << "Result should be boolean";
         EXPECT_EQ(AS_BOOL(&vm->values[0]), test_case.expected_result);
@@ -362,7 +362,7 @@ TEST_F(VMInstructionCollectionTest, OpContainList) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit  = func;
 
-        ErrorId result = semiVMRunMainModule(vm, module);
+        ErrorId result = RunModule(module);
         EXPECT_EQ(result, 0) << "CONTAIN should succeed";
         EXPECT_EQ(VALUE_TYPE(&vm->values[0]), VALUE_TYPE_BOOL) << "Result should be boolean";
         EXPECT_EQ(AS_BOOL(&vm->values[0]), test_case.expected_result);
@@ -411,7 +411,7 @@ TEST_F(VMInstructionCollectionTest, OpContainString) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit  = func;
 
-        ErrorId result = semiVMRunMainModule(vm, module);
+        ErrorId result = RunModule(module);
         EXPECT_EQ(result, 0) << "CONTAIN should succeed";
         EXPECT_EQ(VALUE_TYPE(&vm->values[0]), VALUE_TYPE_BOOL) << "Result should be boolean";
         EXPECT_EQ(AS_BOOL(&vm->values[0]), test_case.expected_result);
@@ -450,7 +450,7 @@ TEST_F(VMInstructionCollectionTest, OpContainStringMultiChar) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit  = func;
 
-        ErrorId result = semiVMRunMainModule(vm, module);
+        ErrorId result = RunModule(module);
         EXPECT_EQ(result, 0) << "CONTAIN should succeed for multi-character search";
         EXPECT_EQ(VALUE_TYPE(&vm->values[0]), VALUE_TYPE_BOOL) << "Result should be boolean";
         EXPECT_EQ(AS_BOOL(&vm->values[0]), test_case.expected_result);
@@ -484,7 +484,7 @@ TEST_F(VMInstructionCollectionTest, OpContainUnsupportedTypes) {
         FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
         module->moduleInit  = func;
 
-        ErrorId result = semiVMRunMainModule(vm, module);
+        ErrorId result = RunModule(module);
         EXPECT_EQ(result, test_case.expected_error);
     }
 }
@@ -505,7 +505,7 @@ TEST_F(VMInstructionCollectionTest, OpCollectionInstructionsWithConstants) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
     EXPECT_EQ(result, 0) << "GET_ITEM with constant should succeed";
     EXPECT_TRUE(IS_INLINE_STRING(&vm->values[0])) << "Result should be inline string";
     EXPECT_EQ(AS_INLINE_STRING(&vm->values[0]).c[0], 'i') << "Should get second character";

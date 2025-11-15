@@ -29,7 +29,7 @@ TEST_F(VMInstructionFunctionCallTest, CallZeroArgumentFunction) {
 
     module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 1) << "VM should complete successfully";
 
@@ -55,7 +55,7 @@ TEST_F(VMInstructionFunctionCallTest, CallFunctionWithArguments) {
 
     module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 1) << "VM should complete successfully";
 
@@ -88,7 +88,7 @@ TEST_F(VMInstructionFunctionCallTest, NestedFunctionCalls) {
 
     module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully with nested calls";
 
@@ -104,7 +104,7 @@ TEST_F(VMInstructionFunctionCallTest, ReturnValue) {
 
     module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "Should not return invalid error";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_INT) << "Returned value should be an integer";
@@ -125,7 +125,7 @@ TEST_F(VMInstructionFunctionCallTest, CallNonFunctionObject) {
 
     module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, SEMI_ERROR_UNEXPECTED_TYPE) << "Should return type error";
     ASSERT_EQ(vm->error, SEMI_ERROR_UNEXPECTED_TYPE) << "VM error should be set";
@@ -147,7 +147,7 @@ TEST_F(VMInstructionFunctionCallTest, CallArityMismatch) {
 
     module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, SEMI_ERROR_ARGS_COUNT_MISMATCH) << "Should return arity mismatch error";
     ASSERT_EQ(vm->error, SEMI_ERROR_ARGS_COUNT_MISMATCH) << "VM error should be set";
@@ -199,7 +199,7 @@ TEST_F(VMInstructionFunctionCallTest, CallStackGrowth) {
 
     module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should handle stack growth successfully";
 
@@ -236,7 +236,7 @@ TEST_F(VMInstructionFunctionCallTest, ArgumentPositioning) {
 
     module->moduleInit = CreateFunctionObject(0, code, 5, 254, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[5].as.i, 20) << "Returned value should be copied to the function register";
@@ -266,7 +266,7 @@ TEST_F(VMInstructionFunctionCallTest, PCCorrectlyRestored) {
 
     module->moduleInit = CreateFunctionObject(0, code, 4, 254, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
 
@@ -298,7 +298,7 @@ TEST_F(VMInstructionFunctionCallTest, FunctionWithMaxArity) {
 
     module->moduleInit = CreateFunctionObject(0, code, 4, 254, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should handle maximum arity successfully";
 }
@@ -319,7 +319,7 @@ TEST_F(VMInstructionFunctionCallTest, ImmediateReturn) {
 
     module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should handle immediate return";
     ASSERT_EQ(vm->frameCount, 1) << "Only root frame should remain";
@@ -375,7 +375,7 @@ TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionNoArgs) {
 
     module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->frameCount, 1) << "Only root frame should remain";
@@ -399,7 +399,7 @@ TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionWithArgs) {
 
     module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->frameCount, 1) << "Only root frame should remain";
@@ -420,7 +420,7 @@ TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionWithError) {
 
     module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, SEMI_ERROR_UNEXPECTED_TYPE) << "VM should return error from native function";
     ASSERT_EQ(vm->error, SEMI_ERROR_UNEXPECTED_TYPE) << "VM error should be set by native function";
@@ -444,7 +444,7 @@ TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionMaxArguments) {
 
     module->moduleInit = CreateFunctionObject(0, code, 3, 255, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->frameCount, 1) << "Only root frame should remain";
@@ -473,7 +473,7 @@ TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionArgumentPositioning) {
 
     module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->frameCount, 1) << "Only root frame should remain";
@@ -499,7 +499,7 @@ TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionZeroReturnValue) {
 
     module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->frameCount, 1) << "Only root frame should remain";
@@ -526,7 +526,7 @@ TEST_F(VMInstructionFunctionCallTest, FunctionReachesEndWithMatchingCoarity) {
 
     module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully when function reaches end with matching coarity";
     ASSERT_EQ(vm->frameCount, 1) << "Only root frame should remain";
@@ -551,7 +551,7 @@ TEST_F(VMInstructionFunctionCallTest, FunctionReachesEndWithMismatchedCoarity) {
 
     module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
 
-    ErrorId result = semiVMRunMainModule(vm, module);
+    ErrorId result = RunModule(module);
 
     ASSERT_EQ(result, SEMI_ERROR_MISSING_RETURN_VALUE) << "VM should return missing return value error";
     ASSERT_EQ(vm->error, SEMI_ERROR_MISSING_RETURN_VALUE) << "VM error should be set to missing return value";
