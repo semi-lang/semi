@@ -144,6 +144,8 @@ typedef enum {
     OP_SET_ITEM,              // |   T   |  R[A][RK(B, kb)] = R[C]
     OP_DEL_ITEM,              // |   T   |  R[A] = delete R[B][RK(C, kc)]
     OP_CONTAIN,               // |   T   |  R[A] := RK(B, kb)] in R[C]
+    OP_APPEND_LIST,           // |   T   |  append B elements to R[A], starting from R[A+1]
+    OP_APPEND_MAP,            // |   T   |  append B elements to R[A], starting from (R[A+1], R[A+2]) as key-value pairs
     OP_CALL,                  // |   T   |  R[A](R[A+1], R[A+2], ..., R[A+B]), B is the number of arguments.
                               //            The return value is stored in R[A].
     OP_RETURN,                // |   T   |  return from function; if A != 255, copy R[A] to the caller register.
@@ -164,7 +166,8 @@ MAKE_INSTRUCTION_MACRO_T(GT, GE, EQ, NEQ)
 MAKE_INSTRUCTION_MACRO_T(BITWISE_AND, BITWISE_OR, BITWISE_XOR, BITWISE_INVERT, BITWISE_L_SHIFT, BITWISE_R_SHIFT)
 MAKE_INSTRUCTION_MACRO_T(ITER_NEXT)
 MAKE_INSTRUCTION_MACRO_T(BOOL_NOT)
-MAKE_INSTRUCTION_MACRO_T(GET_ITEM, SET_ITEM, CONTAIN, GET_ATTR, SET_ATTR)
+MAKE_INSTRUCTION_MACRO_T(
+    NEW_COLLECTION, GET_ITEM, SET_ITEM, DEL_ITEM, CONTAIN, APPEND_LIST, APPEND_MAP, GET_ATTR, SET_ATTR)
 MAKE_INSTRUCTION_MACRO_T(MOVE, GET_UPVALUE, SET_UPVALUE, CLOSE_UPVALUES, CALL, RETURN, CHECK_TYPE)
 MAKE_INSTRUCTION_MACRO_J(JUMP)
 

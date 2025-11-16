@@ -1370,6 +1370,11 @@ static void binaryLed(Compiler* compiler, const PrattState state, PrattExpr* lef
 static void typeCheckLed(Compiler* compiler, const PrattState state, PrattExpr* leftExpr, PrattExpr* retExpr);
 static void indexLed(Compiler* compiler, const PrattState state, PrattExpr* leftExpr, PrattExpr* retExpr);
 static void functionCallLed(Compiler* compiler, const PrattState state, PrattExpr* leftExpr, PrattExpr* retExpr);
+static void collectionInitializerLed(Compiler* compiler,
+                                     const PrattState state,
+                                     PrattExpr* leftExpr,
+                                     PrattExpr* retExpr);
+static void structInitializerLed(Compiler* compiler, const PrattState state, PrattExpr* leftExpr, PrattExpr* retExpr);
 
 // TOKEN_ORDER_NOTE: The size of this table is determined by the biggest token value. Please order
 //                   the tokens by their value, and be sure to access the precedence only with
@@ -1506,29 +1511,9 @@ static void variableNud(Compiler* compiler, const PrattState state, PrattExpr* r
     SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNINITIALIZED_VARIABLE, "Uninitialized variable");
 }
 
-static TypeId typeNud(Compiler* compiler) {
-    if (peekToken(&compiler->lexer) == TK_IDENTIFIER) {
-        // <module_name>.<type_name>
-        nextToken(&compiler->lexer);  // Consume the identifier token
-        InternedChar* moduleName        = semiSymbolTableInsert(compiler->symbolTable,
-                                                         compiler->lexer.tokenValue.identifier.name,
-                                                         compiler->lexer.tokenValue.identifier.length);
-        IdentifierId moduleIdentifierId = semiSymbolTableGetId(moduleName);
-        nextToken(&compiler->lexer);  // Consume the identifier token
-        if (peekToken(&compiler->lexer) != TK_DOT) {
-            SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNEXPECTED_TOKEN, "Expected '.' in type name");
-        }
-        nextToken(&compiler->lexer);  // Consume the '.' token
-        if (peekToken(&compiler->lexer) != TK_TYPE_IDENTIFIER) {
-            SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNEXPECTED_TOKEN, "Expected type name after module name");
-        }
-        InternedChar* typeName = semiSymbolTableInsert(compiler->symbolTable,
-                                                       compiler->lexer.tokenValue.identifier.name,
-                                                       compiler->lexer.tokenValue.identifier.length);
-        nextToken(&compiler->lexer);  // Consume the identifier token
-    }
-
-    nextToken(&compiler->lexer);  // Consume the identifier token
+static void typeIdentifierNud(Compiler* compiler, const PrattState state, PrattExpr* restrict expr) {
+    (void)state;
+    nextToken(&compiler->lexer);  // Consume the type identifier token
 
     InternedChar* identifier  = semiSymbolTableInsert(compiler->symbolTable,
                                                      compiler->lexer.tokenValue.identifier.name,
@@ -1539,7 +1524,7 @@ static TypeId typeNud(Compiler* compiler) {
         SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNDEFINED_TYPE, "Undefined type");
     }
 
-    return (TypeId)AS_INT(&baseTypeIndexValue);
+    *expr = PRATT_EXPR_TYPE((TypeId)AS_INT(&baseTypeIndexValue));
 }
 
 static IdentifierId newIdentifierNud(Compiler* compiler) {
@@ -1938,9 +1923,18 @@ static void binaryLed(Compiler* compiler, const PrattState state, PrattExpr* lef
     restoreNextRegisterId(compiler, state.targetRegister + 1);
 }
 
-// Handle 'is' type check expressions. We can't use binaryLed because type identifiers are not regular expressions. We
-// want to make sure when we encouter a type identifier not after 'is', it must be followed by something that makes it a
-// valid expression, e.g., a class literal or a type cast.
+// Handle 'is' type check expressions. We can't use binaryLed because `{` is a expression stop-token but also part of
+// the struct initializer. To work around this, we make both the precedence between `is` and `TK_TYPE_IDENTIFER` and the
+// one between `TK_TYPE_IDENTIFER` and `}` infinity (always grouped together). This allows us to parse the following
+// cases:
+//
+// ```
+// # `is` and `SomeType` are grouped together
+// if a is SomeType { ... }
+//
+// # `SomeType` and `{}` are grouped together
+// if a == SomeType{} {}
+// ```
 static void typeCheckLed(Compiler* compiler, const PrattState state, PrattExpr* leftExpr, PrattExpr* restrict retExpr) {
     nextToken(&compiler->lexer);  // Consume 'is'
 
@@ -1949,7 +1943,9 @@ static void typeCheckLed(Compiler* compiler, const PrattState state, PrattExpr* 
     Token token = nextToken(&compiler->lexer);
     if (token == TK_TYPE_IDENTIFIER) {
         // Simple case: x is SomeType
-        targetTypeId = typeNud(compiler);
+        PrattExpr typeExpr;
+        typeIdentifierNud(compiler, state, &typeExpr);
+        targetTypeId = typeExpr.value.type;
     } else if (token == TK_IDENTIFIER) {
         // Module-qualified case: x is module.Type
         SEMI_COMPILE_ABORT(
@@ -2111,6 +2107,167 @@ parsed_arguments:
     restoreNextRegisterId(compiler, state.targetRegister + 1);
 }
 
+static void structInitializerLed(Compiler* compiler,
+                                 const PrattState state,
+                                 PrattExpr* leftExpr,
+                                 PrattExpr* restrict retExpr) {
+    (void)state;
+    (void)leftExpr;
+    (void)retExpr;
+
+    nextToken(&compiler->lexer);  // Consume '{'
+    updateBracketCount(compiler, TK_OPEN_BRACE);
+
+    // Currently we don't support any fields in struct initializer.
+    MATCH_NEXT_TOKEN_OR_ABORT(compiler, TK_CLOSE_BRACE, "Expected closing brace for struct initializer");
+    updateBracketCount(compiler, TK_CLOSE_BRACE);
+}
+
+static void collectionInitializerLed(Compiler* compiler,
+                                     const PrattState state,
+                                     PrattExpr* leftExpr,
+                                     PrattExpr* restrict retExpr) {
+    uint8_t regb;
+    bool kb;
+    saveConstantExprToOperand(compiler, semiValueNewInt(leftExpr->value.type), &regb, &kb);
+    PCLocation pcMakeCollection =
+        emitCode(compiler, INSTRUCTION_NEW_COLLECTION(state.targetRegister, regb, 0, kb, false));
+    restoreNextRegisterId(compiler, state.targetRegister + 1);
+
+    nextToken(&compiler->lexer);  // Consume '['
+    updateBracketCount(compiler, TK_OPEN_BRACKET);
+    if (peekToken(&compiler->lexer) == TK_CLOSE_BRACKET) {
+        // Empty collection
+        nextToken(&compiler->lexer);  // Consume ']'
+        updateBracketCount(compiler, TK_CLOSE_BRACKET);
+        *retExpr = PRATT_EXPR_REG(state.targetRegister);
+        return;
+    }
+
+    unsigned int totalElementCount = 0;
+    uint8_t unflushedCount         = 0;
+    uint8_t maxUnflushedCount      = MAX_LOCAL_REGISTER_ID - state.targetRegister;
+    if (maxUnflushedCount > 16) {
+        maxUnflushedCount = 16;
+    }
+
+    LocalRegisterId elementReg = reserveTempRegister(compiler);
+    PrattState elementState    = {
+           .rightBindingPower = PRECEDENCE_NONE,
+           .targetRegister    = elementReg,
+    };
+    PrattExpr elementExpr;
+    semiParseExpression(compiler, elementState, &elementExpr);
+    saveExprToRegister(compiler, &elementExpr, elementReg);
+
+    bool isMap;
+    if (peekToken(&compiler->lexer) == TK_COLON) {
+        isMap = true;
+        unflushedCount++;
+        totalElementCount++;
+        nextToken(&compiler->lexer);  // Consume ':'
+
+        LocalRegisterId valueReg = reserveTempRegister(compiler);
+        PrattState valueState    = {
+               .rightBindingPower = PRECEDENCE_NONE,
+               .targetRegister    = valueReg,
+        };
+        PrattExpr valueExpr;
+        semiParseExpression(compiler, valueState, &valueExpr);
+        saveExprToRegister(compiler, &valueExpr, valueReg);
+        maxUnflushedCount = maxUnflushedCount >> 1;  // Each map element takes two slots
+    } else {
+        isMap = false;
+        unflushedCount++;
+        totalElementCount++;
+    }
+    if (maxUnflushedCount == 0) {
+        SEMI_COMPILE_ABORT(
+            compiler, SEMI_ERROR_TOO_MANY_LOCAL_VARIABLES, "Not enough registers to initialize collection");
+    }
+
+    while (true) {
+        Token t = peekToken(&compiler->lexer);
+        if (t != TK_COMMA) {
+            break;
+        }
+        nextToken(&compiler->lexer);  // Consume ','
+        if (peekToken(&compiler->lexer) == TK_CLOSE_BRACKET) {
+            break;
+        }
+
+        if (unflushedCount == maxUnflushedCount) {
+            emitCode(compiler,
+                     isMap ? INSTRUCTION_APPEND_MAP(state.targetRegister, unflushedCount, 0, false, false)
+                           : INSTRUCTION_APPEND_LIST(state.targetRegister, unflushedCount, 0, false, false));
+            restoreNextRegisterId(compiler, state.targetRegister + 1);
+            unflushedCount = 0;
+        }
+
+        elementReg   = reserveTempRegister(compiler);
+        elementState = (PrattState){
+            .rightBindingPower = PRECEDENCE_NONE,
+            .targetRegister    = elementReg,
+        };
+        semiParseExpression(compiler, elementState, &elementExpr);
+        saveExprToRegister(compiler, &elementExpr, elementReg);
+
+        t = peekToken(&compiler->lexer);
+        if (isMap) {
+            if (t != TK_COLON) {
+                SEMI_COMPILE_ABORT(compiler,
+                                   SEMI_ERROR_UNEXPECTED_TOKEN,
+                                   "Expected ':' in map initializer, mixing list and map syntax is not allowed");
+            }
+            nextToken(&compiler->lexer);  // Consume ':'
+
+            LocalRegisterId valueReg = reserveTempRegister(compiler);
+            PrattState valueState    = {
+                   .rightBindingPower = PRECEDENCE_NONE,
+                   .targetRegister    = valueReg,
+            };
+            PrattExpr valueExpr;
+            semiParseExpression(compiler, valueState, &valueExpr);
+            saveExprToRegister(compiler, &valueExpr, valueReg);
+            unflushedCount++;
+        } else {
+            if (t == TK_COLON) {
+                SEMI_COMPILE_ABORT(compiler,
+                                   SEMI_ERROR_UNEXPECTED_TOKEN,
+                                   "Unexpected ':' in list initializer, mixing list and map syntax is not allowed");
+            }
+
+            unflushedCount++;
+            if (unflushedCount == maxUnflushedCount) {
+                emitCode(compiler, INSTRUCTION_APPEND_LIST(state.targetRegister, maxUnflushedCount, 0, false, false));
+                restoreNextRegisterId(compiler, state.targetRegister + 1);
+                unflushedCount = 0;
+            }
+        }
+    }
+
+    if (peekToken(&compiler->lexer) != TK_CLOSE_BRACKET) {
+        SEMI_COMPILE_ABORT(
+            compiler, SEMI_ERROR_UNEXPECTED_TOKEN, "Expected closing bracket for collection initializer");
+    }
+    nextToken(&compiler->lexer);  // Consume ']'
+    updateBracketCount(compiler, TK_CLOSE_BRACKET);
+
+    if (unflushedCount > 0) {
+        emitCode(compiler,
+                 isMap ? INSTRUCTION_APPEND_MAP(state.targetRegister, unflushedCount, 0, false, false)
+                       : INSTRUCTION_APPEND_LIST(state.targetRegister, unflushedCount, 0, false, false));
+        restoreNextRegisterId(compiler, state.targetRegister + 1);
+    }
+
+    patchCode(compiler,
+              pcMakeCollection,
+              INSTRUCTION_NEW_COLLECTION(
+                  state.targetRegister, regb, totalElementCount > 128 ? 128 : (uint8_t)totalElementCount, kb, false));
+
+    *retExpr = PRATT_EXPR_REG(state.targetRegister);
+}
+
 // The algorithm for Pratt parsing. This is the entry point for expression parsing in Semi.
 //
 // ```python
@@ -2145,8 +2302,11 @@ void semiParseExpression(Compiler* compiler, const PrattState state, PrattExpr* 
         }
 
         case TK_IDENTIFIER:
-        case TK_TYPE_IDENTIFIER:
             nudFn = variableNud;
+            break;
+
+        case TK_TYPE_IDENTIFIER:
+            nudFn = typeIdentifierNud;
             break;
 
         case TK_BANG:
@@ -2177,7 +2337,6 @@ void semiParseExpression(Compiler* compiler, const PrattState state, PrattExpr* 
             case TK_COLON:
             case TK_COMMA:
             case TK_SEMICOLON:
-            case TK_OPEN_BRACE:
             case TK_CLOSE_BRACE:
             case TK_CLOSE_BRACKET:
             case TK_CLOSE_PAREN:
@@ -2185,13 +2344,25 @@ void semiParseExpression(Compiler* compiler, const PrattState state, PrattExpr* 
             case TK_DOUBLE_DOTS:
             case TK_STEP:
             case TK_BINDING:
-            case TK_ASSIGN: {
-                if (compiler->errorJmpBuf.errorId != 0) {
-                    SEMI_COMPILE_ABORT(compiler, compiler->errorJmpBuf.errorId, compiler->errorJmpBuf.message);
+            case TK_ASSIGN:
+                return;
+
+            case TK_OPEN_BRACE: {
+                if (expr->type == PRATT_EXPR_TYPE_TYPE) {
+                    ledFn            = structInitializerLed;
+                    leftBindingPower = PRECEDENCE_ACCESS;
+                    break;
                 }
                 return;
             }
-
+            case TK_OPEN_BRACKET: {
+                if (expr->type == PRATT_EXPR_TYPE_TYPE) {
+                    ledFn            = collectionInitializerLed;
+                    leftBindingPower = PRECEDENCE_ACCESS;
+                    break;
+                }
+                // fall through
+            }
             default: {
                 ledFn            = LED_FN(token);
                 leftBindingPower = LEFT_PRECEDENCE(token);

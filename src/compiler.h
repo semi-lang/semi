@@ -214,7 +214,7 @@ typedef enum {
     PRECEDENCE_FACTOR   = 20,  // * / % << >>
     PRECEDENCE_EXPONENT = 22,  // **
     PRECEDENCE_UNARY    = 24,  // ! - ~
-    PRECEDENCE_ACCESS   = 26,  // . [] ()
+    PRECEDENCE_ACCESS   = 26,  // . [] () <TYPE_IDENTIFIER>{}
 } Precedence;
 
 #define PRECEDENCE_NON_KEYWORD PRECEDENCE_EQ
