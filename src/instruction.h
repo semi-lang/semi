@@ -40,6 +40,12 @@ typedef uint32_t Instruction;
 
 #define GET_OPCODE(instruction) ((instruction) & OPCODE_MASK)  // Bits 0-5
 
+// N-type instructions
+#define MAKE_INSTRUCTION_N(name)                         \
+    static inline Instruction INSTRUCTION_##name(void) { \
+        return 0;                                        \
+    }
+
 // T-type instructions
 #define MAKE_INSTRUCTION_T(name)                                                                      \
     static inline Instruction INSTRUCTION_##name(uint8_t A, uint8_t B, uint8_t C, bool kb, bool kc) { \
@@ -74,23 +80,12 @@ typedef uint32_t Instruction;
 #define OPERAND_J_S(instruction) ((instruction & (1 << 7)) != 0)  // Bits 7
 #define OPERAND_J_J(instruction) ((uint32_t)(instruction >> 8))   // Bits 8-31
 
-// Opcode definitions
-//
-// Explanation of the symbols:
-//   * R[X]:                  Register of n, where n is the value of `X` in the instruction.
-//   * K[X]:                  Constant value at symbol table with index X.
-//   * to_bool(x):            Convert x to boolean, where 0 is false and non-zero is true.
-//   * RK(X, k):              If k is false, it is the value of register X, otherwise it is an
-//                            integer value X-128.
-//   * uRK(X, k):             If k is false, it is the value of register X, otherwise it is an
-//                            integer value X.
-//   * range(from, to, step): Create a range object with start, end, and step.
-//   * inline_range(K):       Create an inline range object with start=(K>>8), end=(K&(2^8-1)), step=1.
-
 // X-macro for all opcodes
-// Arguments: macro(name, type)
 //   name: opcode name without OP_ prefix
 //   type: instruction type - N (none), J (jump), K (constant), T (ternary)
+//
+// We choose to duplicate the list of opcodes here because we want to preserve
+// the comments explaining each opcode.
 #define OPCODE_X_MACRO(X)     \
     X(NOOP, N)                \
     X(JUMP, J)                \
@@ -142,6 +137,18 @@ typedef uint32_t Instruction;
     X(RETURN, T)              \
     X(CHECK_TYPE, T)
 
+// Opcode definitions
+//
+// Explanation of the symbols:
+//   * R[X]:                  Register of n, where n is the value of `X` in the instruction.
+//   * K[X]:                  Constant value at symbol table with index X.
+//   * to_bool(x):            Convert x to boolean, where 0 is false and non-zero is true.
+//   * RK(X, k):              If k is false, it is the value of register X, otherwise it is an
+//                            integer value X-128.
+//   * uRK(X, k):             If k is false, it is the value of register X, otherwise it is an
+//                            integer value X.
+//   * range(from, to, step): Create a range object with start, end, and step.
+//   * inline_range(K):       Create an inline range object with start=(K>>8), end=(K&(2^8-1)), step=1.
 typedef enum {
     // clang-format off
     OP_NOOP = 0,              // |       |  no operation
@@ -211,24 +218,11 @@ typedef enum {
 
 #define MAX_OPCODE OP_CHECK_TYPE
 
-// Helper macros to generate instruction creation functions based on type
-// These dispatch to the appropriate MAKE_INSTRUCTION_* macro based on the instruction type
-#define MAKE_INSTRUCTION_BY_TYPE(name, type) MAKE_INSTRUCTION_BY_TYPE_##type(name)
-#define MAKE_INSTRUCTION_BY_TYPE_N(name)     /* NOOP handled separately below */
-#define MAKE_INSTRUCTION_BY_TYPE_J(name)     MAKE_INSTRUCTION_J(name)
-#define MAKE_INSTRUCTION_BY_TYPE_K(name)     MAKE_INSTRUCTION_K(name)
-#define MAKE_INSTRUCTION_BY_TYPE_T(name)     MAKE_INSTRUCTION_T(name)
-
 // Generate all instruction creation functions using OPCODE_X_MACRO
 // This automatically creates INSTRUCTION_* functions for all opcodes by using
 // the centralized opcode list and dispatching to the appropriate type-specific macro
-#define MAKE_INSTRUCTION_MACRO() OPCODE_X_MACRO(MAKE_INSTRUCTION_BY_TYPE)
+#define MAKE_INSTRUCTION_BY_TYPE(name, type) MAKE_INSTRUCTION_##type(name)
+OPCODE_X_MACRO(MAKE_INSTRUCTION_BY_TYPE)
+#undef MAKE_INSTRUCTION_BY_TYPE
 
-// Generate all instruction functions using the new X-macro approach
-MAKE_INSTRUCTION_MACRO()
-
-// Special case: NOOP has no operands
-static inline Instruction INSTRUCTION_NOOP(void) {
-    return 0;
-}
 #endif /* SEMI_INSTRUCTION_H */
