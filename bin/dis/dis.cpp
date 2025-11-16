@@ -47,8 +47,6 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    initOpcodeNames();
-
     std::string sourceBuffer;
     const char* source;
     std::vector<std::string> predefinedVars;

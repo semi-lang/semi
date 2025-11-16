@@ -86,6 +86,62 @@ typedef uint32_t Instruction;
 //                            integer value X.
 //   * range(from, to, step): Create a range object with start, end, and step.
 //   * inline_range(K):       Create an inline range object with start=(K>>8), end=(K&(2^8-1)), step=1.
+
+// X-macro for all opcodes
+// Arguments: macro(name, type)
+//   name: opcode name without OP_ prefix
+//   type: instruction type - N (none), J (jump), K (constant), T (ternary)
+#define OPCODE_X_MACRO(X)     \
+    X(NOOP, N)                \
+    X(JUMP, J)                \
+    X(EXTRA_ARG, J)           \
+    X(TRAP, K)                \
+    X(C_JUMP, K)              \
+    X(LOAD_CONSTANT, K)       \
+    X(LOAD_BOOL, K)           \
+    X(LOAD_INLINE_INTEGER, K) \
+    X(LOAD_INLINE_STRING, K)  \
+    X(GET_MODULE_VAR, K)      \
+    X(SET_MODULE_VAR, K)      \
+    X(DEFER_CALL, K)          \
+    X(MOVE, T)                \
+    X(GET_UPVALUE, T)         \
+    X(SET_UPVALUE, T)         \
+    X(CLOSE_UPVALUES, T)      \
+    X(ADD, T)                 \
+    X(SUBTRACT, T)            \
+    X(MULTIPLY, T)            \
+    X(DIVIDE, T)              \
+    X(FLOOR_DIVIDE, T)        \
+    X(MODULO, T)              \
+    X(POWER, T)               \
+    X(NEGATE, T)              \
+    X(GT, T)                  \
+    X(GE, T)                  \
+    X(EQ, T)                  \
+    X(NEQ, T)                 \
+    X(BITWISE_AND, T)         \
+    X(BITWISE_OR, T)          \
+    X(BITWISE_XOR, T)         \
+    X(BITWISE_L_SHIFT, T)     \
+    X(BITWISE_R_SHIFT, T)     \
+    X(BITWISE_INVERT, T)      \
+    X(MAKE_RANGE, T)          \
+    X(ITER_NEXT, T)           \
+    X(BOOL_NOT, T)            \
+    X(GET_ATTR, T)            \
+    X(SET_ATTR, T)            \
+    X(NEW_COLLECTION, T)      \
+    X(GET_ITEM, T)            \
+    X(SET_ITEM, T)            \
+    X(DEL_ITEM, T)            \
+    X(CONTAIN, T)             \
+    X(APPEND_LIST, T)         \
+    X(APPEND_MAP, T)          \
+    X(CALL, T)                \
+    X(RETURN, T)              \
+    X(CHECK_TYPE, T)
+
 typedef enum {
     // clang-format off
     OP_NOOP = 0,              // |       |  no operation
@@ -155,22 +211,23 @@ typedef enum {
 
 #define MAX_OPCODE OP_CHECK_TYPE
 
-#include "./instruction_macro.h"
+// Helper macros to generate instruction creation functions based on type
+// These dispatch to the appropriate MAKE_INSTRUCTION_* macro based on the instruction type
+#define MAKE_INSTRUCTION_BY_TYPE(name, type) MAKE_INSTRUCTION_BY_TYPE_##type(name)
+#define MAKE_INSTRUCTION_BY_TYPE_N(name)     /* NOOP handled separately below */
+#define MAKE_INSTRUCTION_BY_TYPE_J(name)     MAKE_INSTRUCTION_J(name)
+#define MAKE_INSTRUCTION_BY_TYPE_K(name)     MAKE_INSTRUCTION_K(name)
+#define MAKE_INSTRUCTION_BY_TYPE_T(name)     MAKE_INSTRUCTION_T(name)
 
-// Instruction creation macros: 10 opcodes per macro call
-MAKE_INSTRUCTION_MACRO_K(LOAD_CONSTANT, LOAD_BOOL, LOAD_INLINE_INTEGER, LOAD_INLINE_STRING, TRAP, C_JUMP)
-MAKE_INSTRUCTION_MACRO_K(GET_MODULE_VAR, SET_MODULE_VAR, DEFER_CALL)
-MAKE_INSTRUCTION_MACRO_T(MAKE_RANGE)
-MAKE_INSTRUCTION_MACRO_T(ADD, SUBTRACT, MULTIPLY, DIVIDE, FLOOR_DIVIDE, NEGATE, MODULO, POWER)
-MAKE_INSTRUCTION_MACRO_T(GT, GE, EQ, NEQ)
-MAKE_INSTRUCTION_MACRO_T(BITWISE_AND, BITWISE_OR, BITWISE_XOR, BITWISE_INVERT, BITWISE_L_SHIFT, BITWISE_R_SHIFT)
-MAKE_INSTRUCTION_MACRO_T(ITER_NEXT)
-MAKE_INSTRUCTION_MACRO_T(BOOL_NOT)
-MAKE_INSTRUCTION_MACRO_T(
-    NEW_COLLECTION, GET_ITEM, SET_ITEM, DEL_ITEM, CONTAIN, APPEND_LIST, APPEND_MAP, GET_ATTR, SET_ATTR)
-MAKE_INSTRUCTION_MACRO_T(MOVE, GET_UPVALUE, SET_UPVALUE, CLOSE_UPVALUES, CALL, RETURN, CHECK_TYPE)
-MAKE_INSTRUCTION_MACRO_J(JUMP)
+// Generate all instruction creation functions using OPCODE_X_MACRO
+// This automatically creates INSTRUCTION_* functions for all opcodes by using
+// the centralized opcode list and dispatching to the appropriate type-specific macro
+#define MAKE_INSTRUCTION_MACRO() OPCODE_X_MACRO(MAKE_INSTRUCTION_BY_TYPE)
 
+// Generate all instruction functions using the new X-macro approach
+MAKE_INSTRUCTION_MACRO()
+
+// Special case: NOOP has no operands
 static inline Instruction INSTRUCTION_NOOP(void) {
     return 0;
 }

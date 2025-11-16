@@ -5,101 +5,61 @@ extern "C" {
 #include "../src/instruction.h"
 }
 
-static const char* opcodeNames[MAX_OPCODE + 1];
-static bool isOpcodeInitialized = false;
+// Global opcode name and type lookup tables
+// These are statically initialized to avoid runtime overhead
 
-static void initOpcodeNames() {
-    if (isOpcodeInitialized) {
-        return;
-    }
-    isOpcodeInitialized = true;
+// Suppress C99 designated initializer warnings - they're valid C99 and will be standard in C++20
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc99-designator"
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wc99-extensions"
+#endif
 
-#define SET_OPCODE_NAME(op) opcodeNames[op] = #op
+// Static opcode name strings - initialized via X-macro
+static const char* opcodeNames[MAX_OPCODE + 1] = {
+#define OPCODE_NAME_INIT(name, type) [OP_##name] = "OP_" #name,
+    OPCODE_X_MACRO(OPCODE_NAME_INIT)
+#undef OPCODE_NAME_INIT
+};
 
-    SET_OPCODE_NAME(OP_NOOP);
+// Static opcode type strings - initialized via X-macro
+static const char* opcodeTypes[MAX_OPCODE + 1] = {
+#define OPCODE_TYPE_INIT_N(name, type) [OP_##name] = "N",
+#define OPCODE_TYPE_INIT_J(name, type) [OP_##name] = "J",
+#define OPCODE_TYPE_INIT_K(name, type) [OP_##name] = "K",
+#define OPCODE_TYPE_INIT_T(name, type) [OP_##name] = "T",
+#define OPCODE_TYPE_INIT(name, type)   OPCODE_TYPE_INIT_##type(name, type)
+    OPCODE_X_MACRO(OPCODE_TYPE_INIT)
+#undef OPCODE_TYPE_INIT_N
+#undef OPCODE_TYPE_INIT_J
+#undef OPCODE_TYPE_INIT_K
+#undef OPCODE_TYPE_INIT_T
+#undef OPCODE_TYPE_INIT
+};
 
-    SET_OPCODE_NAME(OP_JUMP);
-    SET_OPCODE_NAME(OP_EXTRA_ARG);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
-    SET_OPCODE_NAME(OP_TRAP);
-    SET_OPCODE_NAME(OP_C_JUMP);
-    SET_OPCODE_NAME(OP_LOAD_CONSTANT);
-    SET_OPCODE_NAME(OP_LOAD_BOOL);
-    SET_OPCODE_NAME(OP_LOAD_INLINE_INTEGER);
-    SET_OPCODE_NAME(OP_LOAD_INLINE_STRING);
-    SET_OPCODE_NAME(OP_GET_MODULE_VAR);
-    SET_OPCODE_NAME(OP_SET_MODULE_VAR);
-    SET_OPCODE_NAME(OP_DEFER_CALL);
-
-    SET_OPCODE_NAME(OP_MOVE);
-    SET_OPCODE_NAME(OP_GET_UPVALUE);
-    SET_OPCODE_NAME(OP_SET_UPVALUE);
-    SET_OPCODE_NAME(OP_CLOSE_UPVALUES);
-    SET_OPCODE_NAME(OP_ADD);
-    SET_OPCODE_NAME(OP_SUBTRACT);
-    SET_OPCODE_NAME(OP_MULTIPLY);
-    SET_OPCODE_NAME(OP_DIVIDE);
-    SET_OPCODE_NAME(OP_FLOOR_DIVIDE);
-    SET_OPCODE_NAME(OP_MODULO);
-    SET_OPCODE_NAME(OP_POWER);
-    SET_OPCODE_NAME(OP_NEGATE);
-    SET_OPCODE_NAME(OP_GT);
-    SET_OPCODE_NAME(OP_GE);
-    SET_OPCODE_NAME(OP_EQ);
-    SET_OPCODE_NAME(OP_NEQ);
-    SET_OPCODE_NAME(OP_BITWISE_AND);
-    SET_OPCODE_NAME(OP_BITWISE_OR);
-    SET_OPCODE_NAME(OP_BITWISE_XOR);
-    SET_OPCODE_NAME(OP_BITWISE_L_SHIFT);
-    SET_OPCODE_NAME(OP_BITWISE_R_SHIFT);
-    SET_OPCODE_NAME(OP_BITWISE_INVERT);
-    SET_OPCODE_NAME(OP_MAKE_RANGE);
-    SET_OPCODE_NAME(OP_ITER_NEXT);
-    SET_OPCODE_NAME(OP_BOOL_NOT);
-    SET_OPCODE_NAME(OP_GET_ATTR);
-    SET_OPCODE_NAME(OP_SET_ATTR);
-    SET_OPCODE_NAME(OP_NEW_COLLECTION);
-    SET_OPCODE_NAME(OP_GET_ITEM);
-    SET_OPCODE_NAME(OP_SET_ITEM);
-    SET_OPCODE_NAME(OP_DEL_ITEM);
-    SET_OPCODE_NAME(OP_CONTAIN);
-    SET_OPCODE_NAME(OP_APPEND_LIST);
-    SET_OPCODE_NAME(OP_APPEND_MAP);
-    SET_OPCODE_NAME(OP_CALL);
-    SET_OPCODE_NAME(OP_RETURN);
-    SET_OPCODE_NAME(OP_CHECK_TYPE);
-
-#undef SET_OPCODE_NAME
+// Inline accessor functions
+static inline const char* getOpcodeName(Opcode opcode) {
+    return (opcode <= MAX_OPCODE) ? opcodeNames[opcode] : "UNKNOWN";
 }
 
-static const char* getInstructionType(Opcode opcode) {
-    switch (opcode) {
-        case OP_NOOP:
-            return "N";
-        case OP_JUMP:
-        case OP_EXTRA_ARG:
-            return "J";
-        case OP_TRAP:
-        case OP_C_JUMP:
-        case OP_LOAD_CONSTANT:
-        case OP_LOAD_BOOL:
-        case OP_LOAD_INLINE_INTEGER:
-        case OP_LOAD_INLINE_STRING:
-        case OP_GET_MODULE_VAR:
-        case OP_SET_MODULE_VAR:
-        case OP_DEFER_CALL:
-            return "K";
-        default:
-            return "T";
-    }
+static inline const char* getOpcodeType(Opcode opcode) {
+    return (opcode <= MAX_OPCODE) ? opcodeTypes[opcode] : "UNKNOWN";
 }
 
 static void printInstruction(Instruction instruction, PCLocation pc) {
-    initOpcodeNames();
-
     Opcode opcode          = (Opcode)GET_OPCODE(instruction);
-    const char* opcodeName = (opcode < sizeof(opcodeNames) / sizeof(opcodeNames[0])) ? opcodeNames[opcode] : "UNKNOWN";
-    const char* type       = getInstructionType(opcode);
+    const char* opcodeName = getOpcodeName(opcode);
+    const char* type       = getOpcodeType(opcode);
 
     // Print hex location every 4 lines, otherwise print spaces
     if (pc % 4 == 0) {
@@ -138,8 +98,6 @@ static void printInstruction(Instruction instruction, PCLocation pc) {
 }
 
 static void disassembleCode(Instruction* instructions, size_t count) {
-    initOpcodeNames();
-
     std::cout << std::left << std::setw(4) << "Loc" << std::setw(25) << "Opcode" << std::setw(7) << "Type"
               << "Operands" << std::endl;
     std::cout << "-----------------------------------------------------------------------" << std::endl;

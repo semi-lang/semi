@@ -6,7 +6,10 @@
 #include <cstring>
 #include <string>
 
+#include "instruction_verifier.hpp"
 #include "test_common.hpp"
+
+using namespace InstructionVerifier;
 
 class CompilerIfTest : public CompilerTest {};
 
@@ -17,17 +20,12 @@ TEST_F(CompilerIfTest, SimpleIfStatement) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Simple if statement should parse successfully";
 
-    // Verify CLOSE_UPVALUES instruction is emitted at the end
-    ASSERT_EQ(GetCodeSize(), 3) << "Should generate 3 instruction";
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(0),
-                            makeKInstruction(OP_LOAD_BOOL, 0, 0, true, false),
-                            "First instruction should load 'true' into register 0");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(1),
-                            makeKInstruction(OP_C_JUMP, 0, 1, false, true),
-                            "Second instruction should be conditional jump based on register 0");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(2),
-                            makeKInstruction(OP_CLOSE_UPVALUES, 0, 0, false, false),
-                            "Third instruction should be CLOSE_UPVALUES");
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_BOOL         A=0x00 K=0x0000 i=T s=F
+1: OP_C_JUMP            A=0x00 K=0x0001 i=F s=T
+2: OP_CLOSE_UPVALUES    A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerIfTest, IfElseStatement) {
@@ -36,19 +34,13 @@ TEST_F(CompilerIfTest, IfElseStatement) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "If-else statement should parse successfully";
 
-    // Verify instruction generation
-    ASSERT_EQ(GetCodeSize(), 4) << "Should generate 4 instructions";
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(0),
-                            makeKInstruction(OP_LOAD_BOOL, 0, 0, true, false),
-                            "First instruction should load 'true' into register 0");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(1),
-                            makeKInstruction(OP_C_JUMP, 0, 2, false, true),
-                            "Second instruction should be conditional jump");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(2), makeJInstruction(OP_JUMP, 1, true), "Third instruction should be unconditional jump");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(3),
-                            makeKInstruction(OP_CLOSE_UPVALUES, 0, 0, false, false),
-                            "Fourth instruction should be CLOSE_UPVALUES");
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_BOOL         A=0x00 K=0x0000 i=T s=F
+1: OP_C_JUMP            A=0x00 K=0x0002 i=F s=T
+2: OP_JUMP              J=0x000001 s=T
+3: OP_CLOSE_UPVALUES    A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerIfTest, IfElifStatement) {
@@ -57,25 +49,15 @@ TEST_F(CompilerIfTest, IfElifStatement) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "If-elif statement should parse successfully";
 
-    // Verify instruction generation
-    ASSERT_EQ(GetCodeSize(), 6) << "Should generate 6 instructions";
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(0),
-                            makeKInstruction(OP_LOAD_BOOL, 0, 0, false, false),
-                            "First instruction should load 'false' into register 0");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(1),
-                            makeKInstruction(OP_C_JUMP, 0, 2, false, true),
-                            "Second instruction should be conditional jump");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(2), makeJInstruction(OP_JUMP, 3, true), "Third instruction should be unconditional jump");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(3),
-                            makeKInstruction(OP_LOAD_BOOL, 0, 0, true, false),
-                            "Fourth instruction should load 'true' into register 0");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(4),
-                            makeKInstruction(OP_C_JUMP, 0, 1, false, true),
-                            "Fifth instruction should be conditional jump");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(5),
-                            makeKInstruction(OP_CLOSE_UPVALUES, 0, 0, false, false),
-                            "Sixth instruction should be CLOSE_UPVALUES");
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_BOOL         A=0x00 K=0x0000 i=F s=F
+1: OP_C_JUMP            A=0x00 K=0x0002 i=F s=T
+2: OP_JUMP              J=0x000003 s=T
+3: OP_LOAD_BOOL         A=0x00 K=0x0000 i=T s=F
+4: OP_C_JUMP            A=0x00 K=0x0001 i=F s=T
+5: OP_CLOSE_UPVALUES    A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerIfTest, IfElifElseStatement) {
@@ -84,27 +66,16 @@ TEST_F(CompilerIfTest, IfElifElseStatement) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "If-elif-else statement should parse successfully";
 
-    // Verify instruction generation
-    ASSERT_EQ(GetCodeSize(), 7) << "Should generate 7 instructions";
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(0),
-                            makeKInstruction(OP_LOAD_BOOL, 0, 0, false, false),
-                            "First instruction should load 'false' into register 0");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(1),
-                            makeKInstruction(OP_C_JUMP, 0, 2, false, true),
-                            "Second instruction should be conditional jump");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(2), makeJInstruction(OP_JUMP, 4, true), "Third instruction should be unconditional jump");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(3),
-                            makeKInstruction(OP_LOAD_BOOL, 0, 0, false, false),
-                            "Fourth instruction should load 'false' into register 0");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(4),
-                            makeKInstruction(OP_C_JUMP, 0, 2, false, true),
-                            "Fifth instruction should be conditional jump");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(5), makeJInstruction(OP_JUMP, 1, true), "Sixth instruction should be unconditional jump");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(6),
-                            makeKInstruction(OP_CLOSE_UPVALUES, 0, 0, false, false),
-                            "Seventh instruction should be CLOSE_UPVALUES");
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_BOOL         A=0x00 K=0x0000 i=F s=F
+1: OP_C_JUMP            A=0x00 K=0x0002 i=F s=T
+2: OP_JUMP              J=0x000004 s=T
+3: OP_LOAD_BOOL         A=0x00 K=0x0000 i=F s=F
+4: OP_C_JUMP            A=0x00 K=0x0002 i=F s=T
+5: OP_JUMP              J=0x000001 s=T
+6: OP_CLOSE_UPVALUES    A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 // Condition Expression Types
@@ -114,20 +85,13 @@ TEST_F(CompilerIfTest, ConstantTrueCondition) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Constant true condition should parse successfully";
 
-    // Verify instruction generation
-    ASSERT_EQ(GetCodeSize(), 4) << "Should generate 4 instructions";
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(0),
-                            makeKInstruction(OP_LOAD_BOOL, 0, 0, true, false),
-                            "First instruction should load 'true' into register 0");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(1),
-                            makeKInstruction(OP_C_JUMP, 0, 2, false, true),
-                            "Second instruction should be conditional jump");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(2),
-                            makeKInstruction(OP_LOAD_INLINE_INTEGER, 0, 5, true, true),
-                            "Third instruction should load integer 5 into register 0");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(3),
-                            makeKInstruction(OP_CLOSE_UPVALUES, 0, 0, false, false),
-                            "Fourth instruction should be CLOSE_UPVALUES");
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_BOOL              A=0x00 K=0x0000 i=T s=F
+1: OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
+2: OP_LOAD_INLINE_INTEGER    A=0x00 K=0x0005 i=T s=T
+3: OP_CLOSE_UPVALUES         A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerIfTest, ConstantFalseCondition) {
@@ -136,22 +100,14 @@ TEST_F(CompilerIfTest, ConstantFalseCondition) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Constant false condition should parse successfully";
 
-    // Verify instruction generation
-    ASSERT_EQ(GetCodeSize(), 5) << "Should generate 5 instructions";
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(0),
-                            makeKInstruction(OP_LOAD_BOOL, 0, 0, false, false),
-                            "First instruction should load 'false' into register 0");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(1),
-                            makeKInstruction(OP_C_JUMP, 0, 2, false, true),
-                            "Second instruction should be conditional jump");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(2), makeJInstruction(OP_JUMP, 2, true), "Third instruction should be unconditional jump");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(3),
-                            makeKInstruction(OP_LOAD_INLINE_INTEGER, 0, 10, true, true),
-                            "Fourth instruction should load integer 10 into register 0");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(4),
-                            makeKInstruction(OP_CLOSE_UPVALUES, 0, 0, false, false),
-                            "Fifth instruction should be CLOSE_UPVALUES");
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_BOOL              A=0x00 K=0x0000 i=F s=F
+1: OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
+2: OP_JUMP                   J=0x000002 s=T
+3: OP_LOAD_INLINE_INTEGER    A=0x00 K=0x000A i=T s=T
+4: OP_CLOSE_UPVALUES         A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 }
 TEST_F(CompilerIfTest, VariableCondition) {
     InitializeVariable("x");
@@ -160,14 +116,11 @@ TEST_F(CompilerIfTest, VariableCondition) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Variable condition should parse successfully";
 
-    // Verify instruction generation
-    ASSERT_EQ(GetCodeSize(), 2) << "Should generate 2 instructions";
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(0),
-                            makeKInstruction(OP_C_JUMP, 0, 1, false, true),
-                            "First instruction should be conditional jump using variable x");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(1),
-                            makeKInstruction(OP_CLOSE_UPVALUES, 1, 0, false, false),
-                            "Second instruction should be CLOSE_UPVALUES");
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_C_JUMP            A=0x00 K=0x0001 i=F s=T
+1: OP_CLOSE_UPVALUES    A=0x01 B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerIfTest, ComplexExpressionCondition) {
@@ -177,17 +130,12 @@ TEST_F(CompilerIfTest, ComplexExpressionCondition) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Complex expression condition should parse successfully";
 
-    // Verify instruction generation
-    ASSERT_EQ(GetCodeSize(), 3) << "Should generate 3 instructions";
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(0),
-                            makeTInstruction(OP_GT, 1, 0, 0x85, false, true),
-                            "First instruction should perform GT comparison between x and constant 5");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(1),
-                            makeKInstruction(OP_C_JUMP, 1, 1, false, true),
-                            "Second instruction should be conditional jump using comparison result");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(2),
-                            makeKInstruction(OP_CLOSE_UPVALUES, 1, 0, false, false),
-                            "Third instruction should be CLOSE_UPVALUES");
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_GT                A=0x01 B=0x00 C=0x85 kb=F kc=T
+1: OP_C_JUMP            A=0x01 K=0x0001 i=F s=T
+2: OP_CLOSE_UPVALUES    A=0x01 B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerIfTest, VariableBindingInElifBlock) {
@@ -196,28 +144,16 @@ TEST_F(CompilerIfTest, VariableBindingInElifBlock) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Variable binding in elif block should succeed";
 
-    // Verify instruction generation
-    ASSERT_EQ(GetCodeSize(), 7) << "Should generate 7 instructions";
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(0),
-                            makeKInstruction(OP_LOAD_BOOL, 0, 0, false, false),
-                            "First instruction should load 'false' into register 0");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(1),
-                            makeKInstruction(OP_C_JUMP, 0, 2, false, true),
-                            "Second instruction should be conditional jump");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(2), makeJInstruction(OP_JUMP, 4, true), "Third instruction should be unconditional jump");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(3),
-                            makeKInstruction(OP_LOAD_BOOL, 0, 0, true, false),
-                            "Fourth instruction should load 'true' into register 0");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(4),
-                            makeKInstruction(OP_C_JUMP, 0, 2, false, true),
-                            "Fifth instruction should be conditional jump");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(5),
-                            makeKInstruction(OP_LOAD_INLINE_INTEGER, 0, 15, true, true),
-                            "Sixth instruction should load integer 15 into register 0");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(6),
-                            makeKInstruction(OP_CLOSE_UPVALUES, 0, 0, false, false),
-                            "Seventh instruction should be CLOSE_UPVALUES");
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_BOOL              A=0x00 K=0x0000 i=F s=F
+1: OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
+2: OP_JUMP                   J=0x000004 s=T
+3: OP_LOAD_BOOL              A=0x00 K=0x0000 i=T s=F
+4: OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
+5: OP_LOAD_INLINE_INTEGER    A=0x00 K=0x000F i=T s=T
+6: OP_CLOSE_UPVALUES         A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerIfTest, VariableShadowingPrevention) {
@@ -234,23 +170,14 @@ TEST_F(CompilerIfTest, SiblingScopeIsolation) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Sibling scope isolation should work";
 
-    // Verify instruction generation
-    ASSERT_EQ(GetCodeSize(), 5) << "Should generate 5 instructions";
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(0),
-                            makeKInstruction(OP_C_JUMP, 0, 3, false, true),
-                            "First instruction should be conditional jump using someCondition");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(1),
-                            makeKInstruction(OP_LOAD_INLINE_INTEGER, 1, 5, true, true),
-                            "Second instruction should load integer 5 for x in if block");
-    ASSERT_J_INSTRUCTION_EQ(GetInstruction(2),
-                            makeJInstruction(OP_JUMP, 2, true),
-                            "Third instruction should be unconditional jump to skip else block");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(3),
-                            makeKInstruction(OP_LOAD_INLINE_INTEGER, 1, 10, true, true),
-                            "Fourth instruction should load integer 10 for x in else block");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(4),
-                            makeKInstruction(OP_CLOSE_UPVALUES, 1, 0, false, false),
-                            "Fifth instruction should be CLOSE_UPVALUES");
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_C_JUMP                 A=0x00 K=0x0003 i=F s=T
+1: OP_LOAD_INLINE_INTEGER    A=0x01 K=0x0005 i=T s=T
+2: OP_JUMP                   J=0x000002 s=T
+3: OP_LOAD_INLINE_INTEGER    A=0x01 K=0x000A i=T s=T
+4: OP_CLOSE_UPVALUES         A=0x01 B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerIfTest, VariableAccessFromParentScope) {
@@ -259,23 +186,14 @@ TEST_F(CompilerIfTest, VariableAccessFromParentScope) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Variable access from parent scope should work";
 
-    // Verify instruction generation
-    ASSERT_EQ(GetCodeSize(), 5) << "Should generate 5 instructions";
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(0),
-                            makeKInstruction(OP_LOAD_INLINE_INTEGER, 0, 5, true, true),
-                            "First instruction should load integer 5 into register 0 for x");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(1),
-                            makeKInstruction(OP_LOAD_BOOL, 1, 0, true, false),
-                            "Second instruction should load 'true' into register 1");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(2),
-                            makeKInstruction(OP_C_JUMP, 1, 2, false, true),
-                            "Third instruction should be conditional jump");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(3),
-                            makeTInstruction(OP_MOVE, 1, 0, 0, false, false),
-                            "Fourth instruction should move x from register 0 to register 1 for y");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(4),
-                            makeKInstruction(OP_CLOSE_UPVALUES, 1, 0, false, false),
-                            "Fifth instruction should be CLOSE_UPVALUES");
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_INLINE_INTEGER    A=0x00 K=0x0005 i=T s=T
+1: OP_LOAD_BOOL              A=0x01 K=0x0000 i=T s=F
+2: OP_C_JUMP                 A=0x01 K=0x0002 i=F s=T
+3: OP_MOVE                   A=0x01 B=0x00 C=0x00 kb=F kc=F
+4: OP_CLOSE_UPVALUES         A=0x01 B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerIfTest, VariableAssignmentInBlocks) {
@@ -284,23 +202,14 @@ TEST_F(CompilerIfTest, VariableAssignmentInBlocks) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Variable assignment in blocks should work";
 
-    // Verify instruction generation
-    ASSERT_EQ(GetCodeSize(), 5) << "Should generate 5 instructions";
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(0),
-                            makeKInstruction(OP_LOAD_INLINE_INTEGER, 0, 5, true, true),
-                            "First instruction should load integer 5 into register 0 for x");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(1),
-                            makeKInstruction(OP_LOAD_BOOL, 1, 0, true, false),
-                            "Second instruction should load 'true' into register 1");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(2),
-                            makeKInstruction(OP_C_JUMP, 1, 2, false, true),
-                            "Third instruction should be conditional jump");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(3),
-                            makeKInstruction(OP_LOAD_INLINE_INTEGER, 0, 10, true, true),
-                            "Fourth instruction should load integer 10 into register 0 (assignment to x)");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(4),
-                            makeKInstruction(OP_CLOSE_UPVALUES, 1, 0, false, false),
-                            "Fifth instruction should be CLOSE_UPVALUES");
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_INLINE_INTEGER    A=0x00 K=0x0005 i=T s=T
+1: OP_LOAD_BOOL              A=0x01 K=0x0000 i=T s=F
+2: OP_C_JUMP                 A=0x01 K=0x0002 i=F s=T
+3: OP_LOAD_INLINE_INTEGER    A=0x00 K=0x000A i=T s=T
+4: OP_CLOSE_UPVALUES         A=0x01 B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerIfTest, VariableOutOfScopeAssignment) {
@@ -317,23 +226,14 @@ TEST_F(CompilerIfTest, UnbindVariableAfterScope) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Variable binding after scope should work (variables in different scopes)";
 
-    // Verify instruction generation
-    ASSERT_EQ(GetCodeSize(), 5) << "Should generate 5 instructions";
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(0),
-                            makeKInstruction(OP_LOAD_BOOL, 0, 0, true, false),
-                            "First instruction should load 'true' into register 0");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(1),
-                            makeKInstruction(OP_C_JUMP, 0, 2, false, true),
-                            "Second instruction should be conditional jump");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(2),
-                            makeKInstruction(OP_LOAD_INLINE_INTEGER, 0, 2, true, true),
-                            "Third instruction should load integer 2 into register 0 for x in if block");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(3),
-                            makeKInstruction(OP_CLOSE_UPVALUES, 0, 0, false, false),
-                            "Fourth instruction should be CLOSE_UPVALUES (end of if block)");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(4),
-                            makeKInstruction(OP_LOAD_INLINE_INTEGER, 0, 3, true, true),
-                            "Fifth instruction should load integer 3 into register 0 for x in outer scope");
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_BOOL              A=0x00 K=0x0000 i=T s=F
+1: OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
+2: OP_LOAD_INLINE_INTEGER    A=0x00 K=0x0002 i=T s=T
+3: OP_CLOSE_UPVALUES         A=0x00 B=0x00 C=0x00 kb=F kc=F
+4: OP_LOAD_INLINE_INTEGER    A=0x00 K=0x0003 i=T s=T
+)");
 }
 
 TEST_F(CompilerIfTest, UnbindVariableAfterElseScope) {
@@ -342,26 +242,15 @@ TEST_F(CompilerIfTest, UnbindVariableAfterElseScope) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Variable binding after else scope should work (variables in different scopes)";
 
-    // Verify instruction generation
-    ASSERT_EQ(GetCodeSize(), 6) << "Should generate 6 instructions";
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(0),
-                            makeKInstruction(OP_LOAD_BOOL, 0, 0, false, false),
-                            "First instruction should load 'false' into register 0");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(1),
-                            makeKInstruction(OP_C_JUMP, 0, 2, false, true),
-                            "Second instruction should be conditional jump");
-    ASSERT_J_INSTRUCTION_EQ(GetInstruction(2),
-                            makeJInstruction(OP_JUMP, 2, true),
-                            "Third instruction should be unconditional jump to skip else block");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(3),
-                            makeKInstruction(OP_LOAD_INLINE_INTEGER, 0, 10, true, true),
-                            "Fourth instruction should load integer 10 into register 0 for y in else block");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(4),
-                            makeKInstruction(OP_CLOSE_UPVALUES, 0, 0, false, false),
-                            "Fifth instruction should be CLOSE_UPVALUES (end of if-else block)");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(5),
-                            makeKInstruction(OP_LOAD_INLINE_INTEGER, 0, 20, true, true),
-                            "Sixth instruction should load integer 20 into register 0 for y in outer scope");
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_BOOL              A=0x00 K=0x0000 i=F s=F
+1: OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
+2: OP_JUMP                   J=0x000002 s=T
+3: OP_LOAD_INLINE_INTEGER    A=0x00 K=0x000A i=T s=T
+4: OP_CLOSE_UPVALUES         A=0x00 B=0x00 C=0x00 kb=F kc=F
+5: OP_LOAD_INLINE_INTEGER    A=0x00 K=0x0014 i=T s=T
+)");
 }
 
 // Negative Test Cases
@@ -405,16 +294,13 @@ TEST_F(CompilerIfTest, JumpInstructionVerification) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Should parse successfully";
 
-    // Check for C_JUMP instruction (conditional jump)
-    bool foundCJump = false;
-    for (size_t i = 0; i < GetCodeSize(); i++) {
-        Instruction inst = GetInstruction(i);
-        if (GET_OPCODE(inst) == OP_C_JUMP) {
-            foundCJump = true;
-            break;
-        }
-    }
-    EXPECT_TRUE(foundCJump) << "Should generate conditional jump instruction";
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_BOOL         A=0x00 K=0x0000 i=F s=F
+1: OP_C_JUMP            A=0x00 K=0x0002 i=F s=T
+2: OP_JUMP              J=0x000001 s=T
+3: OP_CLOSE_UPVALUES    A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerIfTest, CloseUpvaluesInstruction) {
@@ -423,12 +309,12 @@ TEST_F(CompilerIfTest, CloseUpvaluesInstruction) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Should parse successfully";
 
-    // Verify CLOSE_UPVALUES instruction is emitted at the end
-    EXPECT_GT(GetCodeSize(), 0) << "Should generate at least one instruction";
-
-    // The last instruction should be CLOSE_UPVALUES
-    Instruction lastInst = GetInstruction(GetCodeSize() - 1);
-    EXPECT_EQ(GET_OPCODE(lastInst), OP_CLOSE_UPVALUES) << "Last instruction should be CLOSE_UPVALUES";
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_BOOL         A=0x00 K=0x0000 i=T s=F
+1: OP_C_JUMP            A=0x00 K=0x0001 i=F s=T
+2: OP_CLOSE_UPVALUES    A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 // Complex Nested Cases
@@ -438,29 +324,16 @@ TEST_F(CompilerIfTest, NestedIfStatements) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Nested if statements should parse successfully";
 
-    // Verify instruction generation
-    ASSERT_EQ(GetCodeSize(), 7) << "Should generate 7 instructions";
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(0),
-                            makeKInstruction(OP_LOAD_BOOL, 0, 0, true, false),
-                            "First instruction should load 'true' into register 0");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(1),
-                            makeKInstruction(OP_C_JUMP, 0, 5, false, true),
-                            "Second instruction should be conditional jump (outer if)");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(2),
-                            makeKInstruction(OP_LOAD_BOOL, 0, 0, true, false),
-                            "Third instruction should load 'true' into register 1");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(3),
-                            makeKInstruction(OP_C_JUMP, 0, 2, false, true),
-                            "Fourth instruction should be conditional jump (inner if)");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(4),
-                            makeKInstruction(OP_LOAD_INLINE_INTEGER, 0, 5, true, true),
-                            "Fifth instruction should load integer 5 into register 0 for x");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(5),
-                            makeKInstruction(OP_CLOSE_UPVALUES, 0, 0, false, false),
-                            "Sixth instruction should be CLOSE_UPVALUES (inner block)");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(6),
-                            makeKInstruction(OP_CLOSE_UPVALUES, 0, 0, false, false),
-                            "Seventh instruction should be CLOSE_UPVALUES (outer block)");
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_BOOL              A=0x00 K=0x0000 i=T s=F
+1: OP_C_JUMP                 A=0x00 K=0x0005 i=F s=T
+2: OP_LOAD_BOOL              A=0x00 K=0x0000 i=T s=F
+3: OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
+4: OP_LOAD_INLINE_INTEGER    A=0x00 K=0x0005 i=T s=T
+5: OP_CLOSE_UPVALUES         A=0x00 B=0x00 C=0x00 kb=F kc=F
+6: OP_CLOSE_UPVALUES         A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 // Edge Cases
@@ -484,54 +357,42 @@ TEST_F(CompilerIfTest, LongElifChainsWithinLimits) {
     ErrorId result = ParseStatement(source.c_str(), false);
     EXPECT_EQ(result, 0) << "Long elif chains within limits should succeed";
 
-    // Verify instruction generation - should generate many instructions for the chain
-    ASSERT_EQ(GetCodeSize(), 35) << "Should generate 35 instructions for long elif chain";
-
-    // Verify the pattern: each if/elif generates 3 instructions (LOAD_BOOL, C_JUMP, JUMP)
-    // Total: 11 conditions (1 if + 10 elif) * 3 instructions = 33 instructions
-    // Plus: 1 LOAD_INLINE_INTEGER for else block + 1 CLOSE_UPVALUES = 35 total
-
-    size_t instructionIndex = 0;
-    // Verify pattern for each if/elif condition (11 total: 1 if + 10 elif)
-    for (int condition = 0; condition < 11; condition++) {
-        // Each condition block generates 3 instructions
-
-        // 1. LOAD_BOOL instruction
-        ASSERT_K_INSTRUCTION_EQ(GetInstruction(instructionIndex),
-                                makeKInstruction(OP_LOAD_BOOL, 0, 0, false, false),
-                                ("Instruction " + std::to_string(instructionIndex) +
-                                 " should load 'false' for condition " + std::to_string(condition))
-                                    .c_str());
-        instructionIndex++;
-
-        // 2. C_JUMP instruction
-        ASSERT_K_INSTRUCTION_EQ(GetInstruction(instructionIndex),
-                                makeKInstruction(OP_C_JUMP, 0, 2, false, true),
-                                ("Instruction " + std::to_string(instructionIndex) +
-                                 " should be conditional jump for condition " + std::to_string(condition))
-                                    .c_str());
-        instructionIndex++;
-
-        // 3. JUMP instruction (skip distance decreases by 3 each time)
-        // Last condition (condition 10) has jump offset 2, second-to-last has 5, etc.
-        uint32_t expectedJumpOffset = (11 - condition - 1) * 3 + 2;
-        ASSERT_J_INSTRUCTION_EQ(GetInstruction(instructionIndex),
-                                makeJInstruction(OP_JUMP, expectedJumpOffset, true),
-                                ("Instruction " + std::to_string(instructionIndex) +
-                                 " should be unconditional jump with offset " + std::to_string(expectedJumpOffset))
-                                    .c_str());
-        instructionIndex++;
-    }
-
-    // Verify else block instruction (LOAD_INLINE_INTEGER)
-    ASSERT_K_INSTRUCTION_EQ(
-        GetInstruction(instructionIndex),
-        makeKInstruction(OP_LOAD_INLINE_INTEGER, 0, 1, true, true),
-        ("Instruction " + std::to_string(instructionIndex) + " should load integer 1 for else block").c_str());
-    instructionIndex++;
-
-    // Verify final CLOSE_UPVALUES instruction
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(instructionIndex),
-                            makeKInstruction(OP_CLOSE_UPVALUES, 0, 0, false, false),
-                            ("Instruction " + std::to_string(instructionIndex) + " should be CLOSE_UPVALUES").c_str());
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0:  OP_LOAD_BOOL              A=0x00 K=0x0000 i=F s=F
+1:  OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
+2:  OP_JUMP                   J=0x000020 s=T
+3:  OP_LOAD_BOOL              A=0x00 K=0x0000 i=F s=F
+4:  OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
+5:  OP_JUMP                   J=0x00001D s=T
+6:  OP_LOAD_BOOL              A=0x00 K=0x0000 i=F s=F
+7:  OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
+8:  OP_JUMP                   J=0x00001A s=T
+9:  OP_LOAD_BOOL              A=0x00 K=0x0000 i=F s=F
+10: OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
+11: OP_JUMP                   J=0x000017 s=T
+12: OP_LOAD_BOOL              A=0x00 K=0x0000 i=F s=F
+13: OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
+14: OP_JUMP                   J=0x000014 s=T
+15: OP_LOAD_BOOL              A=0x00 K=0x0000 i=F s=F
+16: OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
+17: OP_JUMP                   J=0x000011 s=T
+18: OP_LOAD_BOOL              A=0x00 K=0x0000 i=F s=F
+19: OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
+20: OP_JUMP                   J=0x00000E s=T
+21: OP_LOAD_BOOL              A=0x00 K=0x0000 i=F s=F
+22: OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
+23: OP_JUMP                   J=0x00000B s=T
+24: OP_LOAD_BOOL              A=0x00 K=0x0000 i=F s=F
+25: OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
+26: OP_JUMP                   J=0x000008 s=T
+27: OP_LOAD_BOOL              A=0x00 K=0x0000 i=F s=F
+28: OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
+29: OP_JUMP                   J=0x000005 s=T
+30: OP_LOAD_BOOL              A=0x00 K=0x0000 i=F s=F
+31: OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
+32: OP_JUMP                   J=0x000002 s=T
+33: OP_LOAD_INLINE_INTEGER    A=0x00 K=0x0001 i=T s=T
+34: OP_CLOSE_UPVALUES         A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 }

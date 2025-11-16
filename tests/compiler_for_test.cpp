@@ -6,7 +6,10 @@
 #include <cstring>
 #include <string>
 
+#include "instruction_verifier.hpp"
 #include "test_common.hpp"
+
+using namespace InstructionVerifier;
 
 class CompilerForTest : public CompilerTest {};
 
@@ -17,28 +20,17 @@ TEST_F(CompilerForTest, SimpleForLoopWithRange) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Simple for loop with range should parse successfully";
 
-    // Expected instructions:
-    // 0. OP_LOAD_CONSTANT  K      A: 0x00, K: 0x0000, i: false, s: false  (range 0..10 step 1)
-    // 1. OP_ITER_NEXT      T      A: 0xFF, B: 0x01, C: 0x00               (index=invalid, item=reg1, iter=reg0)
-    // 2. OP_JUMP           J      J: 0x00000002, s: true                  (jump to end if no more)
-    // 3. OP_JUMP           J      J: 0x00000002, s: false                 (jump back to iter_next)
-    // 4. OP_CLOSE_UPVALUES T      A: 0x00, B: 0x00, C: 0x00               (cleanup upvalues)
+    VerifyCompilation(module, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=F
+1: OP_ITER_NEXT       A=0xFF B=0x01 C=0x00 kb=F kc=F
+2: OP_JUMP            J=0x000002 s=T
+3: OP_JUMP            J=0x000002 s=F
+4: OP_CLOSE_UPVALUES  A=0x00 B=0x00 C=0x00 kb=F kc=F
 
-    ASSERT_EQ(GetCodeSize(), 5) << "Should generate exactly 5 instructions for basic for loop";
-
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(0),
-                            makeKInstruction(OP_LOAD_CONSTANT, 0, 0, false, false),
-                            "First instruction should load range constant");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(1),
-                            makeTInstruction(OP_ITER_NEXT, 0xFF, 1, 0, false, false),
-                            "Second instruction should be ITER_NEXT");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(2), makeJInstruction(OP_JUMP, 2, true), "Third instruction should jump to end");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(3), makeJInstruction(OP_JUMP, 2, false), "Fourth instruction should jump back to loop");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(4),
-                            makeTInstruction(OP_CLOSE_UPVALUES, 0, 0, 0, false, false),
-                            "Fifth instruction should close upvalues");
+[Constants]
+K[0]: Range start=0 end=10 step=1
+)");
 }
 
 TEST_F(CompilerForTest, ForLoopWithExplicitStep) {
@@ -47,37 +39,17 @@ TEST_F(CompilerForTest, ForLoopWithExplicitStep) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "For loop with explicit step should parse successfully";
 
-    // Expected instructions are the same pattern as simple range, but with step stored in constant table
-    // 0. OP_LOAD_CONSTANT  K      A: 0x00, K: 0x0000, i: false, s: false  (range from constant table)
-    // 1. OP_ITER_NEXT      T      A: 0xFF, B: 0x01, C: 0x00               (index=invalid, item=reg1, iter=reg0)
-    // 2. OP_JUMP           J      J: 0x00000002, s: true                  (jump to end if no more)
-    // 3. OP_JUMP           J      J: 0x00000002, s: false                 (jump back to iter_next)
-    // 4. OP_CLOSE_UPVALUES T      A: 0x00, B: 0x00, C: 0x00               (cleanup upvalues)
+    VerifyCompilation(module, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=F
+1: OP_ITER_NEXT       A=0xFF B=0x01 C=0x00 kb=F kc=F
+2: OP_JUMP            J=0x000002 s=T
+3: OP_JUMP            J=0x000002 s=F
+4: OP_CLOSE_UPVALUES  A=0x00 B=0x00 C=0x00 kb=F kc=F
 
-    ASSERT_EQ(GetCodeSize(), 5) << "Should generate exactly 5 instructions for for loop with step";
-
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(0),
-                            makeKInstruction(OP_LOAD_CONSTANT, 0, 0, false, false),
-                            "First instruction should create range iterator from constant table");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(1),
-                            makeTInstruction(OP_ITER_NEXT, 0xFF, 1, 0, false, false),
-                            "Second instruction should be ITER_NEXT");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(2), makeJInstruction(OP_JUMP, 2, true), "Third instruction should jump to end");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(3), makeJInstruction(OP_JUMP, 2, false), "Fourth instruction should jump back to loop");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(4),
-                            makeTInstruction(OP_CLOSE_UPVALUES, 0, 0, 0, false, false),
-                            "Fifth instruction should close upvalues");
-
-    ASSERT_EQ(compiler.artifactModule->constantTable.constantMap->len, 1)
-        << "Constant table should contain exactly one entry for the range object";
-    ASSERT_EQ(VALUE_TYPE(&compiler.artifactModule->constantTable.constantMap->keys[0].key), VALUE_TYPE_OBJECT_RANGE)
-        << "Constant table should contain an object range";
-    ObjectRange* rangeObj = AS_OBJECT_RANGE(&compiler.artifactModule->constantTable.constantMap->keys[0].key);
-    ASSERT_EQ(AS_INT(&rangeObj->start), 0) << "Range start should be 0";
-    ASSERT_EQ(AS_INT(&rangeObj->end), 10) << "Range end should be 10";
-    ASSERT_EQ(AS_INT(&rangeObj->step), 2) << "Range step should be 2";
+[Constants]
+K[0]: Range start=0 end=10 step=2
+)");
 }
 
 TEST_F(CompilerForTest, ForLoopWithIndexAndItem) {
@@ -86,28 +58,17 @@ TEST_F(CompilerForTest, ForLoopWithIndexAndItem) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "For loop with index and item should parse successfully";
 
-    // Expected instructions:
-    // 0. OP_LOAD_CONSTANT  K      A: 0x00, K: 0x0000, i: false, s: false  (range 0..5 step 1)
-    // 1. OP_ITER_NEXT      T      A: 0x02, B: 0x01, C: 0x00              (index=reg2, item=reg1, iter=reg0)
-    // 2. OP_JUMP           J      J: 0x00000002, s: true                 (jump to end if no more)
-    // 3. OP_JUMP           J      J: 0x00000002, s: false                (jump back to iter_next)
-    // 4. OP_CLOSE_UPVALUES T      A: 0x00, B: 0x00, C: 0x00              (cleanup upvalues)
+    VerifyCompilation(module, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=F
+1: OP_ITER_NEXT       A=0x02 B=0x01 C=0x00 kb=F kc=F
+2: OP_JUMP            J=0x000002 s=T
+3: OP_JUMP            J=0x000002 s=F
+4: OP_CLOSE_UPVALUES  A=0x00 B=0x00 C=0x00 kb=F kc=F
 
-    ASSERT_EQ(GetCodeSize(), 5) << "Should generate exactly 5 instructions for for loop with index and item";
-
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(0),
-                            makeKInstruction(OP_LOAD_CONSTANT, 0, 0, false, false),
-                            "First instruction should load range from constant table");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(1),
-                            makeTInstruction(OP_ITER_NEXT, 2, 1, 0, false, false),
-                            "Second instruction should be ITER_NEXT with index and item registers");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(2), makeJInstruction(OP_JUMP, 2, true), "Third instruction should jump to end");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(3), makeJInstruction(OP_JUMP, 2, false), "Fourth instruction should jump back to loop");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(4),
-                            makeTInstruction(OP_CLOSE_UPVALUES, 0, 0, 0, false, false),
-                            "Fifth instruction should close upvalues");
+[Constants]
+K[0]: Range start=0 end=5 step=1
+)");
 }
 
 TEST_F(CompilerForTest, ForLoopWithVariableInRange) {
@@ -118,32 +79,15 @@ TEST_F(CompilerForTest, ForLoopWithVariableInRange) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "For loop with variables in range should parse successfully";
 
-    // Expected instructions:
-    // 0. OP_MOVE           T      A: 0x02, B: 0x00, C: 0x00              (move start to temp register)
-    // 1. OP_MAKE_RANGE     T      A: 0x02, B: 0x01, C: 0x81              (create range from start..end with step 1)
-    // 2. OP_ITER_NEXT      T      A: 0xFF, B: 0x03, C: 0x02              (index=invalid, item=reg3, iter=reg2)
-    // 3. OP_JUMP           J      J: 0x00000002, s: true                 (jump to end if no more)
-    // 4. OP_JUMP           J      J: 0x00000002, s: false                (jump back to iter_next)
-    // 5. OP_CLOSE_UPVALUES T      A: 0x02, B: 0x00, C: 0x00              (cleanup upvalues)
-
-    ASSERT_EQ(GetCodeSize(), 6) << "Should generate exactly 6 instructions for variable range for loop";
-
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(0),
-                            makeTInstruction(OP_MOVE, 2, 0, 0, false, false),
-                            "First instruction should move start variable");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(1),
-                            makeTInstruction(OP_MAKE_RANGE, 2, 1, 0x81, false, true),
-                            "Second instruction should create range from variables");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(2),
-                            makeTInstruction(OP_ITER_NEXT, 0xFF, 3, 2, false, false),
-                            "Third instruction should be ITER_NEXT");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(3), makeJInstruction(OP_JUMP, 2, true), "Fourth instruction should jump to end");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(4), makeJInstruction(OP_JUMP, 2, false), "Fifth instruction should jump back to loop");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(5),
-                            makeTInstruction(OP_CLOSE_UPVALUES, 2, 0, 0, false, false),
-                            "Sixth instruction should close upvalues");
+    VerifyCompilation(module, R"(
+[Instructions]
+0: OP_MOVE           A=0x02 B=0x00 C=0x00 kb=F kc=F
+1: OP_MAKE_RANGE     A=0x02 B=0x01 C=0x81 kb=F kc=T
+2: OP_ITER_NEXT      A=0xFF B=0x03 C=0x02 kb=F kc=F
+3: OP_JUMP           J=0x000002 s=T
+4: OP_JUMP           J=0x000002 s=F
+5: OP_CLOSE_UPVALUES A=0x02 B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerForTest, NestedForLoops) {
@@ -152,46 +96,23 @@ TEST_F(CompilerForTest, NestedForLoops) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Nested for loops should parse successfully";
 
-    // Expected instructions:
-    // 0. OP_LOAD_CONSTANT  K      A: 0x00, K: 0x0000, i: false, s: false  (outer loop iterator)
-    // 1. OP_ITER_NEXT      T      A: 0xFF, B: 0x01, C: 0x00               (outer loop iter_next)
-    // 2. OP_JUMP           J      J: 0x00000007, s: true                  (jump to outer end)
-    // 3. OP_LOAD_CONSTANT  K      A: 0x02, K: 0x0001, i: false, s: false  (inner loop iterator)
-    // 4. OP_ITER_NEXT      T      A: 0xFF, B: 0x03, C: 0x02               (inner loop iter_next)
-    // 5. OP_JUMP           J      J: 0x00000002, s: true                  (jump to inner end)
-    // 6. OP_JUMP           J      J: 0x00000002, s: false                 (jump back to inner iter_next)
-    // 7. OP_CLOSE_UPVALUES T      A: 0x02, B: 0x00, C: 0x00               (cleanup inner upvalues)
-    // 8. OP_JUMP           J      J: 0x00000007, s: false                 (jump back to outer iter_next)
-    // 9. OP_CLOSE_UPVALUES T      A: 0x00, B: 0x00, C: 0x00               (cleanup outer upvalues)
+    VerifyCompilation(module, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=F
+1: OP_ITER_NEXT       A=0xFF B=0x01 C=0x00 kb=F kc=F
+2: OP_JUMP            J=0x000007 s=T
+3: OP_LOAD_CONSTANT   A=0x02 K=0x0001 i=F s=F
+4: OP_ITER_NEXT       A=0xFF B=0x03 C=0x02 kb=F kc=F
+5: OP_JUMP            J=0x000002 s=T
+6: OP_JUMP            J=0x000002 s=F
+7: OP_CLOSE_UPVALUES  A=0x02 B=0x00 C=0x00 kb=F kc=F
+8: OP_JUMP            J=0x000007 s=F
+9: OP_CLOSE_UPVALUES  A=0x00 B=0x00 C=0x00 kb=F kc=F
 
-    ASSERT_EQ(GetCodeSize(), 10) << "Should generate exactly 10 instructions for nested for loops";
-
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(0),
-                            makeKInstruction(OP_LOAD_CONSTANT, 0, 0, false, false),
-                            "First instruction should load outer loop constant");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(1),
-                            makeTInstruction(OP_ITER_NEXT, 0xFF, 1, 0, false, false),
-                            "Second instruction should be outer ITER_NEXT");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(2), makeJInstruction(OP_JUMP, 7, true), "Third instruction should jump to outer end");
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(3),
-                            makeKInstruction(OP_LOAD_CONSTANT, 2, 1, false, false),
-                            "Fourth instruction should load inner loop constant");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(4),
-                            makeTInstruction(OP_ITER_NEXT, 0xFF, 3, 2, false, false),
-                            "Fifth instruction should be inner ITER_NEXT");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(5), makeJInstruction(OP_JUMP, 2, true), "Sixth instruction should jump to inner end");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(6), makeJInstruction(OP_JUMP, 2, false), "Seventh instruction should jump back to inner loop");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(7),
-                            makeTInstruction(OP_CLOSE_UPVALUES, 2, 0, 0, false, false),
-                            "Eighth instruction should close inner upvalues");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(8), makeJInstruction(OP_JUMP, 7, false), "Ninth instruction should jump back to outer loop");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(9),
-                            makeTInstruction(OP_CLOSE_UPVALUES, 0, 0, 0, false, false),
-                            "Tenth instruction should close outer upvalues");
+[Constants]
+K[0]: Range start=0 end=3 step=1
+K[1]: Range start=0 end=2 step=1
+)");
 }
 
 // Range Expression Tests
@@ -201,28 +122,17 @@ TEST_F(CompilerForTest, ConstantRangeOptimization) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Constant range should be optimized";
 
-    // Expected instructions:
-    // 0. OP_LOAD_CONSTANT  K      A: 0x00, K: 0x0000, i: false, s: false  (range 1..5 step 1)
-    // 1. OP_ITER_NEXT      T      A: 0xFF, B: 0x01, C: 0x00               (index=invalid, item=reg1, iter=reg0)
-    // 2. OP_JUMP           J      J: 0x00000002, s: true                  (jump to end if no more)
-    // 3. OP_JUMP           J      J: 0x00000002, s: false                 (jump back to iter_next)
-    // 4. OP_CLOSE_UPVALUES T      A: 0x00, B: 0x00, C: 0x00               (cleanup upvalues)
+    VerifyCompilation(module, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=F
+1: OP_ITER_NEXT       A=0xFF B=0x01 C=0x00 kb=F kc=F
+2: OP_JUMP            J=0x000002 s=T
+3: OP_JUMP            J=0x000002 s=F
+4: OP_CLOSE_UPVALUES  A=0x00 B=0x00 C=0x00 kb=F kc=F
 
-    ASSERT_EQ(GetCodeSize(), 5) << "Should generate exactly 5 instructions for constant range optimization";
-
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(0),
-                            makeKInstruction(OP_LOAD_CONSTANT, 0, 0, false, false),
-                            "First instruction should load range constant");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(1),
-                            makeTInstruction(OP_ITER_NEXT, 0xFF, 1, 0, false, false),
-                            "Second instruction should be ITER_NEXT");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(2), makeJInstruction(OP_JUMP, 2, true), "Third instruction should jump to end");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(3), makeJInstruction(OP_JUMP, 2, false), "Fourth instruction should jump back to loop");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(4),
-                            makeTInstruction(OP_CLOSE_UPVALUES, 0, 0, 0, false, false),
-                            "Fifth instruction should close upvalues");
+[Constants]
+K[0]: Range start=1 end=5 step=1
+)");
 }
 
 TEST_F(CompilerForTest, NegativeRangeStep) {
@@ -231,37 +141,17 @@ TEST_F(CompilerForTest, NegativeRangeStep) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Range with negative step should parse successfully";
 
-    // Expected instructions:
-    // 0. OP_LOAD_CONSTANT  K      A: 0x00, K: 0x0000, i: false, s: false  (range from constant table)
-    // 1. OP_ITER_NEXT      T      A: 0xFF, B: 0x01, C: 0x00               (index=invalid, item=reg1, iter=reg0)
-    // 2. OP_JUMP           J      J: 0x00000002, s: true                  (jump to end if no more)
-    // 3. OP_JUMP           J      J: 0x00000002, s: false                 (jump back to iter_next)
-    // 4. OP_CLOSE_UPVALUES T      A: 0x00, B: 0x00, C: 0x00               (cleanup upvalues)
+    VerifyCompilation(module, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=F
+1: OP_ITER_NEXT       A=0xFF B=0x01 C=0x00 kb=F kc=F
+2: OP_JUMP            J=0x000002 s=T
+3: OP_JUMP            J=0x000002 s=F
+4: OP_CLOSE_UPVALUES  A=0x00 B=0x00 C=0x00 kb=F kc=F
 
-    ASSERT_EQ(GetCodeSize(), 5) << "Should generate exactly 5 instructions for negative step range";
-
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(0),
-                            makeKInstruction(OP_LOAD_CONSTANT, 0, 0, false, false),
-                            "First instruction should load range constant");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(1),
-                            makeTInstruction(OP_ITER_NEXT, 0xFF, 1, 0, false, false),
-                            "Second instruction should be ITER_NEXT");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(2), makeJInstruction(OP_JUMP, 2, true), "Third instruction should jump to end");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(3), makeJInstruction(OP_JUMP, 2, false), "Fourth instruction should jump back to loop");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(4),
-                            makeTInstruction(OP_CLOSE_UPVALUES, 0, 0, 0, false, false),
-                            "Fifth instruction should close upvalues");
-
-    ASSERT_EQ(compiler.artifactModule->constantTable.constantMap->len, 1)
-        << "Constant table should contain exactly one entry for the range object";
-    ASSERT_EQ(VALUE_TYPE(&compiler.artifactModule->constantTable.constantMap->keys[0].key), VALUE_TYPE_OBJECT_RANGE)
-        << "Constant table should contain an object range";
-    ObjectRange* rangeObj = AS_OBJECT_RANGE(&compiler.artifactModule->constantTable.constantMap->keys[0].key);
-    ASSERT_EQ(AS_INT(&rangeObj->start), 10) << "Range start should be 10";
-    ASSERT_EQ(AS_INT(&rangeObj->end), 0) << "Range end should be 0";
-    ASSERT_EQ(AS_INT(&rangeObj->step), -1) << "Range step should be -1";
+[Constants]
+K[0]: Range start=10 end=0 step=-1
+)");
 }
 
 TEST_F(CompilerForTest, ExpressionInRange) {
@@ -271,39 +161,16 @@ TEST_F(CompilerForTest, ExpressionInRange) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Range with expressions should parse successfully";
 
-    // Expected instructions (based on actual disassembly):
-    // 0. OP_SUBTRACT       T      A: 0x01, B: 0x00, C: 0x81              (x - 1 → reg1)
-    // 1. OP_ADD            T      A: 0x02, B: 0x00, C: 0x81              (x + 1 → reg2)
-    // 2. OP_MAKE_RANGE     T      A: 0x01, B: 0x02, C: 0x81              (create range from reg1..reg2 with step 1)
-    // 3. OP_ITER_NEXT      T      A: 0xFF, B: 0x02, C: 0x01              (index=invalid, item=reg2, iter=reg1)
-    // 4. OP_JUMP           J      J: 0x00000002, s: true                 (jump to end if no more)
-    // 5. OP_JUMP           J      J: 0x00000002, s: false                (jump back to iter_next)
-    // 6. OP_CLOSE_UPVALUES T      A: 0x01, B: 0x00, C: 0x00              (cleanup upvalues)
-
-    ASSERT_EQ(GetCodeSize(), 7) << "Should generate exactly 7 instructions for expression range";
-
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(0),
-                            makeTInstruction(OP_SUBTRACT, 1, 0, 0x81, false, true),
-                            "First instruction should compute x - 1");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(1),
-                            makeTInstruction(OP_ADD, 2, 0, 0x81, false, true),
-                            "Second instruction should compute x + 1");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(2),
-                            makeTInstruction(OP_MAKE_RANGE, 1, 2, 0x81, false, true),
-                            "Third instruction should create range from expressions");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(3),
-                            makeTInstruction(OP_ITER_NEXT, 0xFF, 2, 1, false, false),
-                            "Fourth instruction should be ITER_NEXT");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(4), makeJInstruction(OP_JUMP, 2, true), "Fifth instruction should jump to end");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(5), makeJInstruction(OP_JUMP, 2, false), "Sixth instruction should jump back to loop");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(6),
-                            makeTInstruction(OP_CLOSE_UPVALUES, 1, 0, 0, false, false),
-                            "Seventh instruction should close upvalues");
-
-    VariableDescription* xVar = FindVariable("x");
-    ASSERT_NE(xVar, nullptr) << "Variable 'x' should be bound";
+    VerifyCompilation(module, R"(
+[Instructions]
+0: OP_SUBTRACT       A=0x01 B=0x00 C=0x81 kb=F kc=T
+1: OP_ADD            A=0x02 B=0x00 C=0x81 kb=F kc=T
+2: OP_MAKE_RANGE     A=0x01 B=0x02 C=0x81 kb=F kc=T
+3: OP_ITER_NEXT      A=0xFF B=0x02 C=0x01 kb=F kc=F
+4: OP_JUMP           J=0x000002 s=T
+5: OP_JUMP           J=0x000002 s=F
+6: OP_CLOSE_UPVALUES A=0x01 B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 // Break and Continue Tests
@@ -313,31 +180,18 @@ TEST_F(CompilerForTest, ForLoopWithBreak) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "For loop with break should parse successfully";
 
-    // Expected instructions:
-    // 0. OP_LOAD_CONSTANT  K      A: 0x00, K: 0x0000, i: false, s: false  (range 0..10 step 1)
-    // 1. OP_ITER_NEXT      T      A: 0xFF, B: 0x01, C: 0x00               (index=invalid, item=reg1, iter=reg0)
-    // 2. OP_JUMP           J      J: 0x00000003, s: true                  (jump to end if no more)
-    // 3. OP_JUMP           J      J: 0x00000002, s: true                  (break - jump to end)
-    // 4. OP_JUMP           J      J: 0x00000003, s: false                 (jump back to iter_next)
-    // 5. OP_CLOSE_UPVALUES T      A: 0x00, B: 0x00, C: 0x00               (cleanup upvalues)
+    VerifyCompilation(module, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=F
+1: OP_ITER_NEXT       A=0xFF B=0x01 C=0x00 kb=F kc=F
+2: OP_JUMP            J=0x000003 s=T
+3: OP_JUMP            J=0x000002 s=T
+4: OP_JUMP            J=0x000003 s=F
+5: OP_CLOSE_UPVALUES  A=0x00 B=0x00 C=0x00 kb=F kc=F
 
-    ASSERT_EQ(GetCodeSize(), 6) << "Should generate exactly 6 instructions for for loop with break";
-
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(0),
-                            makeKInstruction(OP_LOAD_CONSTANT, 0, 0, false, false),
-                            "First instruction should load range constant");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(1),
-                            makeTInstruction(OP_ITER_NEXT, 0xFF, 1, 0, false, false),
-                            "Second instruction should be ITER_NEXT");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(2), makeJInstruction(OP_JUMP, 3, true), "Third instruction should jump to end if no more");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(3), makeJInstruction(OP_JUMP, 2, true), "Fourth instruction should be break - jump to end");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(4), makeJInstruction(OP_JUMP, 3, false), "Fifth instruction should jump back to iter_next");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(5),
-                            makeTInstruction(OP_CLOSE_UPVALUES, 0, 0, 0, false, false),
-                            "Sixth instruction should close upvalues");
+[Constants]
+K[0]: Range start=0 end=10 step=1
+)");
 }
 
 TEST_F(CompilerForTest, ForLoopWithContinue) {
@@ -346,32 +200,18 @@ TEST_F(CompilerForTest, ForLoopWithContinue) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "For loop with continue should parse successfully";
 
-    // Expected instructions:
-    // 0. OP_LOAD_CONSTANT  K      A: 0x00, K: 0x0000, i: false, s: false  (range 0..10 step 1)
-    // 1. OP_ITER_NEXT      T      A: 0xFF, B: 0x01, C: 0x00               (index=invalid, item=reg1, iter=reg0)
-    // 2. OP_JUMP           J      J: 0x00000003, s: true                  (jump to end if no more)
-    // 3. OP_JUMP           J      J: 0x00000002, s: false                 (continue - jump back to iter_next)
-    // 4. OP_JUMP           J      J: 0x00000003, s: false                 (jump back to iter_next)
-    // 5. OP_CLOSE_UPVALUES T      A: 0x00, B: 0x00, C: 0x00               (cleanup upvalues)
+    VerifyCompilation(module, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=F
+1: OP_ITER_NEXT       A=0xFF B=0x01 C=0x00 kb=F kc=F
+2: OP_JUMP            J=0x000003 s=T
+3: OP_JUMP            J=0x000002 s=F
+4: OP_JUMP            J=0x000003 s=F
+5: OP_CLOSE_UPVALUES  A=0x00 B=0x00 C=0x00 kb=F kc=F
 
-    ASSERT_EQ(GetCodeSize(), 6) << "Should generate exactly 6 instructions for for loop with continue";
-
-    ASSERT_K_INSTRUCTION_EQ(GetInstruction(0),
-                            makeKInstruction(OP_LOAD_CONSTANT, 0, 0, false, false),
-                            "First instruction should load range constant");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(1),
-                            makeTInstruction(OP_ITER_NEXT, 0xFF, 1, 0, false, false),
-                            "Second instruction should be ITER_NEXT");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(2), makeJInstruction(OP_JUMP, 3, true), "Third instruction should jump to end if no more");
-    ASSERT_J_INSTRUCTION_EQ(GetInstruction(3),
-                            makeJInstruction(OP_JUMP, 2, false),
-                            "Fourth instruction should be continue - jump back to iter_next");
-    ASSERT_J_INSTRUCTION_EQ(
-        GetInstruction(4), makeJInstruction(OP_JUMP, 3, false), "Fifth instruction should jump back to iter_next");
-    ASSERT_T_INSTRUCTION_EQ(GetInstruction(5),
-                            makeTInstruction(OP_CLOSE_UPVALUES, 0, 0, 0, false, false),
-                            "Sixth instruction should close upvalues");
+[Constants]
+K[0]: Range start=0 end=10 step=1
+)");
 }
 
 TEST_F(CompilerForTest, ForLoopWithBreakAndContinue) {
@@ -380,29 +220,25 @@ TEST_F(CompilerForTest, ForLoopWithBreakAndContinue) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "For loop with both break and continue should parse successfully";
 
-    // The exact instruction count and offsets will vary due to the conditional logic,
-    // but we should see continue jumping back to iter_next and break jumping to end
-    ASSERT_GT(GetCodeSize(), 6) << "Should generate more than 6 instructions for complex for loop";
+    VerifyCompilation(module, R"(
+[Instructions]
+0:  OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=F
+1:  OP_ITER_NEXT       A=0xFF B=0x01 C=0x00 kb=F kc=F
+2:  OP_JUMP            J=0x00000F s=T
+3:  OP_EQ              A=0x02 B=0x01 C=0x82 kb=F kc=T
+4:  OP_C_JUMP          A=0x02 K=0x0002 i=F s=T
+5:  OP_JUMP            J=0x00000A s=F
+6:  OP_CLOSE_UPVALUES  A=0x01 B=0x00 C=0x00 kb=F kc=F
+7:  OP_EQ              A=0x01 B=0x01 C=0x84 kb=F kc=T
+8:  OP_C_JUMP          A=0x01 K=0x0002 i=F s=T
+9:  OP_JUMP            J=0x000006 s=T
+10: OP_CLOSE_UPVALUES  A=0x01 B=0x00 C=0x00 kb=F kc=F
+11: OP_JUMP            J=0x00000F s=F
+12: OP_CLOSE_UPVALUES  A=0x00 B=0x00 C=0x00 kb=F kc=F
 
-    // Verify that we have OP_JUMP instructions (break and continue will generate these)
-    bool foundContinueJump = false;
-    bool foundBreakJump    = false;
-
-    for (size_t i = 0; i < GetCodeSize(); i++) {
-        Instruction instr = GetInstruction(i);
-        if (GET_OPCODE(instr) == OP_JUMP) {
-            JInstruction jumpInstr = decodeJInstruction(instr);
-            // Continue jumps should be backward (s=false) and break jumps should be forward (s=true)
-            if (!jumpInstr.signFlag) {
-                foundContinueJump = true;
-            } else {
-                foundBreakJump = true;
-            }
-        }
-    }
-
-    EXPECT_TRUE(foundContinueJump) << "Should find at least one backward jump (for continue or loop continuation)";
-    EXPECT_TRUE(foundBreakJump) << "Should find at least one forward jump (for break or conditional jumps)";
+[Constants]
+K[0]: Range start=0 end=5 step=1
+)");
 }
 
 TEST_F(CompilerForTest, NestedForLoopsWithBreakAndContinue) {
@@ -411,10 +247,8 @@ TEST_F(CompilerForTest, NestedForLoopsWithBreakAndContinue) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Nested for loops with break and continue should parse successfully";
 
-    // Nested loops should generate multiple jump instructions
     ASSERT_GT(GetCodeSize(), 10) << "Should generate more than 10 instructions for nested loops with control flow";
 
-    // Count the number of jump instructions
     size_t jumpCount = 0;
     for (size_t i = 0; i < GetCodeSize(); i++) {
         Instruction instr = GetInstruction(i);
@@ -423,7 +257,6 @@ TEST_F(CompilerForTest, NestedForLoopsWithBreakAndContinue) {
         }
     }
 
-    // Should have multiple jumps: outer loop control, inner loop control, continue, break, conditionals
     EXPECT_GE(jumpCount, 6) << "Should have at least 6 jump instructions for nested loops with control flow";
 }
 

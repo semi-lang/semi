@@ -342,8 +342,6 @@ TEST_F(ExprParserNudTest, UnexpectedEndOfFileError) {
 }
 
 TEST_F(ExprParserNudTest, TypeIdentifierNud) {
-    GTEST_SKIP() << "Skipping until type parsing is implemented";
-
     struct {
         const char* input;
         BaseValueType expected_type;

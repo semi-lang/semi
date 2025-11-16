@@ -6,7 +6,10 @@
 #include <cstdio>
 #include <cstring>
 
+#include "instruction_verifier.hpp"
 #include "test_common.hpp"
+
+using namespace InstructionVerifier;
 
 class CompilerGlobalVariableTest : public CompilerTest {};
 
@@ -20,13 +23,10 @@ TEST_F(CompilerGlobalVariableTest, GlobalVariableCorrectlyResolvedDuringCompilat
     ErrorId result = ParseExpression("globalVar", &expr);
     ASSERT_EQ(result, 0) << "Parsing reference to global variable should succeed";
 
-    ASSERT_EQ(GetCodeSize(), 1) << "Should generate exactly 1 instruction";
-
-    Instruction instr = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr), OP_LOAD_CONSTANT) << "Should be LOAD_CONSTANT instruction";
-    ASSERT_FALSE(OPERAND_K_I(instr)) << "Should not be inline constant";
-    ASSERT_TRUE(OPERAND_K_S(instr)) << "Should have global flag set";
-    ASSERT_EQ(OPERAND_K_K(instr), 0) << "Should reference global constant at index 0";
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=T
+)");
 }
 
 TEST_F(CompilerGlobalVariableTest, MultipleGlobalVariablesResolvedCorrectly) {
@@ -44,13 +44,10 @@ TEST_F(CompilerGlobalVariableTest, MultipleGlobalVariablesResolvedCorrectly) {
     ErrorId result = ParseExpression("global2", &expr);
     ASSERT_EQ(result, 0) << "Parsing reference to second global variable should succeed";
 
-    ASSERT_EQ(GetCodeSize(), 1) << "Should generate exactly 1 instruction";
-
-    Instruction instr = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr), OP_LOAD_CONSTANT) << "Should be LOAD_CONSTANT instruction";
-    ASSERT_FALSE(OPERAND_K_I(instr)) << "Should not be inline constant";
-    ASSERT_TRUE(OPERAND_K_S(instr)) << "Should have global flag set";
-    ASSERT_EQ(OPERAND_K_K(instr), 1) << "Should reference global constant at index 1";
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT   A=0x00 K=0x0001 i=F s=T
+)");
 }
 
 TEST_F(CompilerGlobalVariableTest, LocalVariableCannotBeDefinedWhenGlobalExists) {
@@ -85,20 +82,10 @@ TEST_F(CompilerGlobalVariableTest, GlobalVariableGeneratesCorrectInstruction) {
     ErrorId result = ParseExpression("testGlobal", &expr);
     ASSERT_EQ(result, 0) << "Parsing reference to global variable should succeed";
 
-    ASSERT_EQ(GetCodeSize(), 1) << "Should generate exactly 1 instruction";
-
-    Instruction instr = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr), OP_LOAD_CONSTANT) << "Should be LOAD_CONSTANT instruction";
-
-    uint8_t targetReg    = OPERAND_K_A(instr);
-    uint16_t constantIdx = OPERAND_K_K(instr);
-    bool isInline        = OPERAND_K_I(instr);
-    bool isGlobal        = OPERAND_K_S(instr);
-
-    ASSERT_GE(targetReg, 0) << "Target register should be valid";
-    ASSERT_EQ(constantIdx, 0) << "Should reference global constant at index 0";
-    ASSERT_FALSE(isInline) << "Should not be inline constant";
-    ASSERT_TRUE(isGlobal) << "Should have global flag set (s=true)";
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=T
+)");
 }
 
 TEST_F(CompilerGlobalVariableTest, GlobalVariableTakesPrecedenceOverModuleVariable) {
@@ -140,13 +127,11 @@ TEST_F(CompilerGlobalVariableTest, GlobalVariableAccessInComplexExpression) {
     ErrorId result = ParseExpression("factor * 2", &expr);
     ASSERT_EQ(result, 0) << "Parsing complex expression with global variable should succeed";
 
-    ASSERT_GE(GetCodeSize(), 2) << "Should generate multiple instructions";
-
-    // The first instruction should load the global variable
-    Instruction firstInstr = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(firstInstr), OP_LOAD_CONSTANT) << "First instruction should be LOAD_CONSTANT";
-    ASSERT_TRUE(OPERAND_K_S(firstInstr)) << "Should have global flag set";
-    ASSERT_EQ(OPERAND_K_K(firstInstr), 0) << "Should reference global constant at index 0";
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=T
+1: OP_MULTIPLY        A=0x00 B=0x00 C=0x82 kb=F kc=T
+)");
 }
 
 TEST_F(CompilerGlobalVariableTest, GlobalVariableInAssignmentExpression) {
@@ -158,17 +143,9 @@ TEST_F(CompilerGlobalVariableTest, GlobalVariableInAssignmentExpression) {
     ErrorId result = ParseStatement("local := base + 10", true);
     ASSERT_EQ(result, 0) << "Parsing assignment with global variable should succeed";
 
-    ASSERT_GE(GetCodeSize(), 1) << "Should generate at least one instruction";
-
-    // Find the instruction that loads the global variable
-    bool foundGlobalLoad = false;
-    for (size_t i = 0; i < GetCodeSize(); i++) {
-        Instruction instr = GetInstruction(i);
-        if (GET_OPCODE(instr) == OP_LOAD_CONSTANT && OPERAND_K_S(instr)) {
-            foundGlobalLoad = true;
-            ASSERT_EQ(OPERAND_K_K(instr), 0) << "Should reference global constant at index 0";
-            break;
-        }
-    }
-    ASSERT_TRUE(foundGlobalLoad) << "Should find global variable load instruction";
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=T
+1: OP_ADD             A=0x00 B=0x00 C=0x8A kb=F kc=T
+)");
 }

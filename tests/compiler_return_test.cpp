@@ -6,7 +6,10 @@
 #include <cstring>
 #include <string>
 
+#include "instruction_verifier.hpp"
 #include "test_common.hpp"
+
+using namespace InstructionVerifier;
 
 class CompilerReturnTest : public CompilerTest {};
 
@@ -20,6 +23,20 @@ TEST_F(CompilerReturnTest, FirstReturnWithoutValue) {
 
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Function with return without value should parse successfully";
+
+    VerifyCompilation(module, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
+1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
+2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+
+[Constants]
+K[0]: FunctionProto arity=0 coarity=0 size=2 -> @test
+
+[Instructions:test]
+0: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 // Test Case 2: No previous return, now return one value
@@ -32,6 +49,21 @@ TEST_F(CompilerReturnTest, FirstReturnWithValue) {
 
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Function with return with value should parse successfully";
+
+    VerifyCompilation(module, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
+1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
+2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+
+[Constants]
+K[0]: FunctionProto arity=0 coarity=1 size=3 -> @test
+
+[Instructions:test]
+0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x002A i=T s=T
+1: OP_RETURN                A=0x00 B=0x00 C=0x00 kb=F kc=F
+2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 // Test Case 3: Previously returns 0 values, now returns 0 values (consistent)
@@ -47,6 +79,24 @@ TEST_F(CompilerReturnTest, ConsistentZeroValueReturns) {
 
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Consistent zero-value returns should parse successfully";
+
+    VerifyCompilation(module, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
+1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
+2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+
+[Constants]
+K[0]: FunctionProto arity=0 coarity=0 size=6 -> @test
+
+[Instructions:test]
+0: OP_LOAD_BOOL             A=0x00 K=0x0000 i=T s=F
+1: OP_C_JUMP                A=0x00 K=0x0002 i=F s=T
+2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+3: OP_CLOSE_UPVALUES        A=0x00 B=0x00 C=0x00 kb=F kc=F
+4: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+5: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 // Test Case 4: Previously returns 1 value, now returns 1 value (consistent)
@@ -62,6 +112,26 @@ TEST_F(CompilerReturnTest, ConsistentOneValueReturns) {
 
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Consistent one-value returns should parse successfully";
+
+    VerifyCompilation(module, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
+1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
+2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+
+[Constants]
+K[0]: FunctionProto arity=0 coarity=1 size=8 -> @test
+
+[Instructions:test]
+0: OP_LOAD_BOOL             A=0x00 K=0x0000 i=T s=F
+1: OP_C_JUMP                A=0x00 K=0x0003 i=F s=T
+2: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x002A i=T s=T
+3: OP_RETURN                A=0x00 B=0x00 C=0x00 kb=F kc=F
+4: OP_CLOSE_UPVALUES        A=0x00 B=0x00 C=0x00 kb=F kc=F
+5: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0018 i=T s=T
+6: OP_RETURN                A=0x00 B=0x00 C=0x00 kb=F kc=F
+7: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 // Test Case 5: Previously returns 0 values, but now returns 1 value (inconsistent)
@@ -118,6 +188,28 @@ TEST_F(CompilerReturnTest, NestedFunctionReturns) {
 
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Nested function returns should parse successfully";
+
+    VerifyCompilation(module, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT         A=0x00 K=0x0001 i=F s=F
+1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
+2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+
+[Constants]
+K[0]: FunctionProto arity=0 coarity=1 size=3 -> @inner
+K[1]: FunctionProto arity=0 coarity=1 size=4 -> @outer
+
+[Instructions:outer]
+0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
+1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x0002 i=T s=T
+2: OP_RETURN                A=0x01 B=0x00 C=0x00 kb=F kc=F
+3: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+
+[Instructions:inner]
+0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
+1: OP_RETURN                A=0x00 B=0x00 C=0x00 kb=F kc=F
+2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 // Test Case: Multiple inconsistent returns in complex control flow
@@ -153,6 +245,28 @@ TEST_F(CompilerReturnTest, ReturnWithDifferentExpressionTypes) {
 
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Return with different expression types should parse successfully";
+
+    VerifyCompilation(module, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT         A=0x00 K=0x0002 i=F s=F
+1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
+2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+
+[Constants]
+K[0]: String "hello" length=5
+K[1]: Float 3.14
+K[2]: FunctionProto arity=0 coarity=1 size=8 -> @test
+
+[Instructions:test]
+0: OP_LOAD_BOOL             A=0x00 K=0x0000 i=T s=F
+1: OP_C_JUMP                A=0x00 K=0x0003 i=F s=T
+2: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
+3: OP_RETURN                A=0x00 B=0x00 C=0x00 kb=F kc=F
+4: OP_CLOSE_UPVALUES        A=0x00 B=0x00 C=0x00 kb=F kc=F
+5: OP_LOAD_CONSTANT         A=0x00 K=0x0001 i=F s=F
+6: OP_RETURN                A=0x00 B=0x00 C=0x00 kb=F kc=F
+7: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 // Test Case: Return in for loop
@@ -170,6 +284,31 @@ TEST_F(CompilerReturnTest, ReturnInForLoop) {
 
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Return in for loop should parse successfully";
+
+    VerifyCompilation(module, R"(
+[Instructions]
+0:  OP_LOAD_CONSTANT         A=0x00 K=0x0001 i=F s=F
+1:  OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
+2:  OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+
+[Constants]
+K[0]: Range start=1 end=10 step=1
+K[1]: FunctionProto arity=0 coarity=1 size=12 -> @test
+
+[Instructions:test]
+0:  OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
+1:  OP_ITER_NEXT             A=0xFF B=0x01 C=0x00 kb=F kc=F
+2:  OP_JUMP                  J=0x000006 s=T
+3:  OP_EQ                    A=0x02 B=0x01 C=0x85 kb=F kc=T
+4:  OP_C_JUMP                A=0x02 K=0x0002 i=F s=T
+5:  OP_RETURN                A=0x01 B=0x00 C=0x00 kb=F kc=F
+6:  OP_CLOSE_UPVALUES        A=0x02 B=0x00 C=0x00 kb=F kc=F
+7:  OP_JUMP                  J=0x000006 s=F
+8:  OP_CLOSE_UPVALUES        A=0x00 B=0x00 C=0x00 kb=F kc=F
+9:  OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0000 i=T s=T
+10: OP_RETURN                A=0x00 B=0x00 C=0x00 kb=F kc=F
+11: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 // Test Case: Return without proper separator should fail
@@ -197,6 +336,24 @@ TEST_F(CompilerReturnTest, ReturnWithComplexExpression) {
 
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Return with complex expression should parse successfully";
+
+    VerifyCompilation(module, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
+1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
+2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+
+[Constants]
+K[0]: FunctionProto arity=0 coarity=1 size=6 -> @test
+
+[Instructions:test]
+0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0005 i=T s=T
+1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x000A i=T s=T
+2: OP_MULTIPLY              A=0x02 B=0x01 C=0x82 kb=F kc=T
+3: OP_ADD                   A=0x02 B=0x00 C=0x02 kb=F kc=F
+4: OP_RETURN                A=0x02 B=0x00 C=0x00 kb=F kc=F
+5: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 // Test Case: Empty function (implicit return)
@@ -208,6 +365,19 @@ TEST_F(CompilerReturnTest, EmptyFunction) {
 
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Empty function should parse successfully";
+
+    VerifyCompilation(module, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
+1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
+2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+
+[Constants]
+K[0]: FunctionProto arity=0 coarity=0 size=1 -> @test
+
+[Instructions:test]
+0: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 // Test Case: Function with only explicit void return
@@ -221,4 +391,19 @@ TEST_F(CompilerReturnTest, ExplicitVoidReturn) {
 
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Function with explicit void return should parse successfully";
+
+    VerifyCompilation(module, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
+1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
+2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+
+[Constants]
+K[0]: FunctionProto arity=0 coarity=0 size=3 -> @test
+
+[Instructions:test]
+0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x002A i=T s=T
+1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+)");
 }

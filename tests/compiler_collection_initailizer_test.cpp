@@ -7,11 +7,12 @@
 #include <set>
 #include <string>
 
+#include "instruction_verifier.hpp"
 #include "test_common.hpp"
 
-class CompilerCollectionInitializerTest : public CompilerTest {};
+using namespace InstructionVerifier;
 
-// TODO: Verify the exact instructions generated for collection initializers
+class CompilerCollectionInitializerTest : public CompilerTest {};
 
 TEST_F(CompilerCollectionInitializerTest, EmptyListInitializer) {
     const char* input = "List[]";
@@ -21,11 +22,10 @@ TEST_F(CompilerCollectionInitializerTest, EmptyListInitializer) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    ASSERT_EQ(GetCodeSize(), 1);
-    Instruction instr = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr), OP_NEW_COLLECTION);
-    ASSERT_EQ(OPERAND_T_A(instr), expr.value.reg);
-    ASSERT_EQ(OPERAND_T_C(instr), 0);
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_NEW_COLLECTION   A=0x00 B=0x86 C=0x00 kb=T kc=F
+)");
 }
 
 TEST_F(CompilerCollectionInitializerTest, EmptyDictInitializer) {
@@ -36,11 +36,10 @@ TEST_F(CompilerCollectionInitializerTest, EmptyDictInitializer) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    ASSERT_EQ(GetCodeSize(), 1);
-    Instruction instr = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr), OP_NEW_COLLECTION);
-    ASSERT_EQ(OPERAND_T_A(instr), expr.value.reg);
-    ASSERT_EQ(OPERAND_T_C(instr), 0);
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_NEW_COLLECTION   A=0x00 B=0x87 C=0x00 kb=T kc=F
+)");
 }
 
 TEST_F(CompilerCollectionInitializerTest, ListInitializerSingleElement) {
@@ -51,16 +50,12 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializerSingleElement) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    ASSERT_EQ(GetCodeSize(), 3);
-
-    Instruction instr0 = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr0), OP_NEW_COLLECTION);
-    ASSERT_EQ(OPERAND_T_A(instr0), expr.value.reg);
-
-    Instruction instr2 = GetInstruction(2);
-    ASSERT_EQ(GET_OPCODE(instr2), OP_APPEND_LIST);
-    ASSERT_EQ(OPERAND_T_A(instr2), expr.value.reg);
-    ASSERT_EQ(OPERAND_T_B(instr2), 1);
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_NEW_COLLECTION            A=0x00 B=0x86 C=0x01 kb=T kc=F
+1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
+2: OP_APPEND_LIST               A=0x00 B=0x01 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerCollectionInitializerTest, ListInitializerMultipleElements) {
@@ -71,16 +66,14 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializerMultipleElements) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    ASSERT_EQ(GetCodeSize(), 5);
-
-    Instruction instr0 = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr0), OP_NEW_COLLECTION);
-    ASSERT_EQ(OPERAND_T_A(instr0), expr.value.reg);
-
-    Instruction instr4 = GetInstruction(4);
-    ASSERT_EQ(GET_OPCODE(instr4), OP_APPEND_LIST);
-    ASSERT_EQ(OPERAND_T_A(instr4), expr.value.reg);
-    ASSERT_EQ(OPERAND_T_B(instr4), 3);
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_NEW_COLLECTION            A=0x00 B=0x86 C=0x01 kb=T kc=F
+1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
+2: OP_LOAD_INLINE_INTEGER       A=0x02 K=0x0002 i=T s=T
+3: OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0003 i=T s=T
+4: OP_APPEND_LIST               A=0x00 B=0x03 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerCollectionInitializerTest, ListInitializerWithTrailingComma) {
@@ -91,16 +84,14 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializerWithTrailingComma) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    ASSERT_EQ(GetCodeSize(), 5);
-
-    Instruction instr0 = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr0), OP_NEW_COLLECTION);
-    ASSERT_EQ(OPERAND_T_A(instr0), expr.value.reg);
-
-    Instruction instr4 = GetInstruction(4);
-    ASSERT_EQ(GET_OPCODE(instr4), OP_APPEND_LIST);
-    ASSERT_EQ(OPERAND_T_A(instr4), expr.value.reg);
-    ASSERT_EQ(OPERAND_T_B(instr4), 3);
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_NEW_COLLECTION            A=0x00 B=0x86 C=0x01 kb=T kc=F
+1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
+2: OP_LOAD_INLINE_INTEGER       A=0x02 K=0x0002 i=T s=T
+3: OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0003 i=T s=T
+4: OP_APPEND_LIST               A=0x00 B=0x03 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerCollectionInitializerTest, ListInitializerExactly16Elements) {
@@ -111,16 +102,27 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializerExactly16Elements) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    ASSERT_EQ(GetCodeSize(), 18);
-
-    Instruction instr0 = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr0), OP_NEW_COLLECTION);
-    ASSERT_EQ(OPERAND_T_A(instr0), expr.value.reg);
-
-    Instruction instr17 = GetInstruction(17);
-    ASSERT_EQ(GET_OPCODE(instr17), OP_APPEND_LIST);
-    ASSERT_EQ(OPERAND_T_A(instr17), expr.value.reg);
-    ASSERT_EQ(OPERAND_T_B(instr17), 16);
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0:  OP_NEW_COLLECTION            A=0x00 B=0x86 C=0x01 kb=T kc=F
+1:  OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
+2:  OP_LOAD_INLINE_INTEGER       A=0x02 K=0x0002 i=T s=T
+3:  OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0003 i=T s=T
+4:  OP_LOAD_INLINE_INTEGER       A=0x04 K=0x0004 i=T s=T
+5:  OP_LOAD_INLINE_INTEGER       A=0x05 K=0x0005 i=T s=T
+6:  OP_LOAD_INLINE_INTEGER       A=0x06 K=0x0006 i=T s=T
+7:  OP_LOAD_INLINE_INTEGER       A=0x07 K=0x0007 i=T s=T
+8:  OP_LOAD_INLINE_INTEGER       A=0x08 K=0x0008 i=T s=T
+9:  OP_LOAD_INLINE_INTEGER       A=0x09 K=0x0009 i=T s=T
+10: OP_LOAD_INLINE_INTEGER       A=0x0A K=0x000A i=T s=T
+11: OP_LOAD_INLINE_INTEGER       A=0x0B K=0x000B i=T s=T
+12: OP_LOAD_INLINE_INTEGER       A=0x0C K=0x000C i=T s=T
+13: OP_LOAD_INLINE_INTEGER       A=0x0D K=0x000D i=T s=T
+14: OP_LOAD_INLINE_INTEGER       A=0x0E K=0x000E i=T s=T
+15: OP_LOAD_INLINE_INTEGER       A=0x0F K=0x000F i=T s=T
+16: OP_LOAD_INLINE_INTEGER       A=0x10 K=0x0010 i=T s=T
+17: OP_APPEND_LIST               A=0x00 B=0x10 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerCollectionInitializerTest, ListInitializer17ElementsRequiresBatching) {
@@ -131,21 +133,29 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializer17ElementsRequiresBatch
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    ASSERT_EQ(GetCodeSize(), 20);
-
-    Instruction instr0 = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr0), OP_NEW_COLLECTION);
-    ASSERT_EQ(OPERAND_T_A(instr0), expr.value.reg);
-
-    Instruction instr17 = GetInstruction(17);
-    ASSERT_EQ(GET_OPCODE(instr17), OP_APPEND_LIST);
-    ASSERT_EQ(OPERAND_T_A(instr17), expr.value.reg);
-    ASSERT_EQ(OPERAND_T_B(instr17), 16);
-
-    Instruction instr19 = GetInstruction(19);
-    ASSERT_EQ(GET_OPCODE(instr19), OP_APPEND_LIST);
-    ASSERT_EQ(OPERAND_T_A(instr19), expr.value.reg);
-    ASSERT_EQ(OPERAND_T_B(instr19), 1);
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0:  OP_NEW_COLLECTION            A=0x00 B=0x86 C=0x01 kb=T kc=F
+1:  OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
+2:  OP_LOAD_INLINE_INTEGER       A=0x02 K=0x0002 i=T s=T
+3:  OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0003 i=T s=T
+4:  OP_LOAD_INLINE_INTEGER       A=0x04 K=0x0004 i=T s=T
+5:  OP_LOAD_INLINE_INTEGER       A=0x05 K=0x0005 i=T s=T
+6:  OP_LOAD_INLINE_INTEGER       A=0x06 K=0x0006 i=T s=T
+7:  OP_LOAD_INLINE_INTEGER       A=0x07 K=0x0007 i=T s=T
+8:  OP_LOAD_INLINE_INTEGER       A=0x08 K=0x0008 i=T s=T
+9:  OP_LOAD_INLINE_INTEGER       A=0x09 K=0x0009 i=T s=T
+10: OP_LOAD_INLINE_INTEGER       A=0x0A K=0x000A i=T s=T
+11: OP_LOAD_INLINE_INTEGER       A=0x0B K=0x000B i=T s=T
+12: OP_LOAD_INLINE_INTEGER       A=0x0C K=0x000C i=T s=T
+13: OP_LOAD_INLINE_INTEGER       A=0x0D K=0x000D i=T s=T
+14: OP_LOAD_INLINE_INTEGER       A=0x0E K=0x000E i=T s=T
+15: OP_LOAD_INLINE_INTEGER       A=0x0F K=0x000F i=T s=T
+16: OP_LOAD_INLINE_INTEGER       A=0x10 K=0x0010 i=T s=T
+17: OP_APPEND_LIST               A=0x00 B=0x10 C=0x00 kb=F kc=F
+18: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0011 i=T s=T
+19: OP_APPEND_LIST               A=0x00 B=0x01 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerCollectionInitializerTest, ListInitializer32ElementsRequiresDoubleBatching) {
@@ -158,21 +168,44 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializer32ElementsRequiresDoubl
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    ASSERT_EQ(GetCodeSize(), 35);
-
-    Instruction instr0 = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr0), OP_NEW_COLLECTION);
-    ASSERT_EQ(OPERAND_T_A(instr0), expr.value.reg);
-
-    Instruction instr17 = GetInstruction(17);
-    ASSERT_EQ(GET_OPCODE(instr17), OP_APPEND_LIST);
-    ASSERT_EQ(OPERAND_T_A(instr17), expr.value.reg);
-    ASSERT_EQ(OPERAND_T_B(instr17), 16);
-
-    Instruction instr34 = GetInstruction(34);
-    ASSERT_EQ(GET_OPCODE(instr34), OP_APPEND_LIST);
-    ASSERT_EQ(OPERAND_T_A(instr34), expr.value.reg);
-    ASSERT_EQ(OPERAND_T_B(instr34), 16);
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0:  OP_NEW_COLLECTION            A=0x00 B=0x86 C=0x01 kb=T kc=F
+1:  OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
+2:  OP_LOAD_INLINE_INTEGER       A=0x02 K=0x0002 i=T s=T
+3:  OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0003 i=T s=T
+4:  OP_LOAD_INLINE_INTEGER       A=0x04 K=0x0004 i=T s=T
+5:  OP_LOAD_INLINE_INTEGER       A=0x05 K=0x0005 i=T s=T
+6:  OP_LOAD_INLINE_INTEGER       A=0x06 K=0x0006 i=T s=T
+7:  OP_LOAD_INLINE_INTEGER       A=0x07 K=0x0007 i=T s=T
+8:  OP_LOAD_INLINE_INTEGER       A=0x08 K=0x0008 i=T s=T
+9:  OP_LOAD_INLINE_INTEGER       A=0x09 K=0x0009 i=T s=T
+10: OP_LOAD_INLINE_INTEGER       A=0x0A K=0x000A i=T s=T
+11: OP_LOAD_INLINE_INTEGER       A=0x0B K=0x000B i=T s=T
+12: OP_LOAD_INLINE_INTEGER       A=0x0C K=0x000C i=T s=T
+13: OP_LOAD_INLINE_INTEGER       A=0x0D K=0x000D i=T s=T
+14: OP_LOAD_INLINE_INTEGER       A=0x0E K=0x000E i=T s=T
+15: OP_LOAD_INLINE_INTEGER       A=0x0F K=0x000F i=T s=T
+16: OP_LOAD_INLINE_INTEGER       A=0x10 K=0x0010 i=T s=T
+17: OP_APPEND_LIST               A=0x00 B=0x10 C=0x00 kb=F kc=F
+18: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0011 i=T s=T
+19: OP_LOAD_INLINE_INTEGER       A=0x02 K=0x0012 i=T s=T
+20: OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0013 i=T s=T
+21: OP_LOAD_INLINE_INTEGER       A=0x04 K=0x0014 i=T s=T
+22: OP_LOAD_INLINE_INTEGER       A=0x05 K=0x0015 i=T s=T
+23: OP_LOAD_INLINE_INTEGER       A=0x06 K=0x0016 i=T s=T
+24: OP_LOAD_INLINE_INTEGER       A=0x07 K=0x0017 i=T s=T
+25: OP_LOAD_INLINE_INTEGER       A=0x08 K=0x0018 i=T s=T
+26: OP_LOAD_INLINE_INTEGER       A=0x09 K=0x0019 i=T s=T
+27: OP_LOAD_INLINE_INTEGER       A=0x0A K=0x001A i=T s=T
+28: OP_LOAD_INLINE_INTEGER       A=0x0B K=0x001B i=T s=T
+29: OP_LOAD_INLINE_INTEGER       A=0x0C K=0x001C i=T s=T
+30: OP_LOAD_INLINE_INTEGER       A=0x0D K=0x001D i=T s=T
+31: OP_LOAD_INLINE_INTEGER       A=0x0E K=0x001E i=T s=T
+32: OP_LOAD_INLINE_INTEGER       A=0x0F K=0x001F i=T s=T
+33: OP_LOAD_INLINE_INTEGER       A=0x10 K=0x0020 i=T s=T
+34: OP_APPEND_LIST               A=0x00 B=0x10 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerCollectionInitializerTest, DictInitializerSinglePair) {
@@ -183,16 +216,13 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializerSinglePair) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    ASSERT_EQ(GetCodeSize(), 4);
-
-    Instruction instr0 = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr0), OP_NEW_COLLECTION);
-    ASSERT_EQ(OPERAND_T_A(instr0), expr.value.reg);
-
-    Instruction instr3 = GetInstruction(3);
-    ASSERT_EQ(GET_OPCODE(instr3), OP_APPEND_MAP);
-    ASSERT_EQ(OPERAND_T_A(instr3), expr.value.reg);
-    ASSERT_EQ(OPERAND_T_B(instr3), 1);
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_NEW_COLLECTION            A=0x00 B=0x87 C=0x01 kb=T kc=F
+1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
+2: OP_LOAD_INLINE_INTEGER       A=0x02 K=0x000A i=T s=T
+3: OP_APPEND_MAP                A=0x00 B=0x01 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerCollectionInitializerTest, DictInitializerMultiplePairs) {
@@ -203,16 +233,17 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializerMultiplePairs) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    ASSERT_EQ(GetCodeSize(), 8);
-
-    Instruction instr0 = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr0), OP_NEW_COLLECTION);
-    ASSERT_EQ(OPERAND_T_A(instr0), expr.value.reg);
-
-    Instruction instr7 = GetInstruction(7);
-    ASSERT_EQ(GET_OPCODE(instr7), OP_APPEND_MAP);
-    ASSERT_EQ(OPERAND_T_A(instr7), expr.value.reg);
-    ASSERT_EQ(OPERAND_T_B(instr7), 3);
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_NEW_COLLECTION            A=0x00 B=0x87 C=0x01 kb=T kc=F
+1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
+2: OP_LOAD_INLINE_INTEGER       A=0x02 K=0x000A i=T s=T
+3: OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0002 i=T s=T
+4: OP_LOAD_INLINE_INTEGER       A=0x04 K=0x0014 i=T s=T
+5: OP_LOAD_INLINE_INTEGER       A=0x05 K=0x0003 i=T s=T
+6: OP_LOAD_INLINE_INTEGER       A=0x06 K=0x001E i=T s=T
+7: OP_APPEND_MAP                A=0x00 B=0x03 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerCollectionInitializerTest, DictInitializerWithTrailingComma) {
@@ -223,16 +254,15 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializerWithTrailingComma) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    ASSERT_EQ(GetCodeSize(), 6);
-
-    Instruction instr0 = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr0), OP_NEW_COLLECTION);
-    ASSERT_EQ(OPERAND_T_A(instr0), expr.value.reg);
-
-    Instruction instr5 = GetInstruction(5);
-    ASSERT_EQ(GET_OPCODE(instr5), OP_APPEND_MAP);
-    ASSERT_EQ(OPERAND_T_A(instr5), expr.value.reg);
-    ASSERT_EQ(OPERAND_T_B(instr5), 2);
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_NEW_COLLECTION            A=0x00 B=0x87 C=0x01 kb=T kc=F
+1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
+2: OP_LOAD_INLINE_INTEGER       A=0x02 K=0x000A i=T s=T
+3: OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0002 i=T s=T
+4: OP_LOAD_INLINE_INTEGER       A=0x04 K=0x0014 i=T s=T
+5: OP_APPEND_MAP                A=0x00 B=0x02 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerCollectionInitializerTest, DictInitializerExactly8Pairs) {
@@ -243,16 +273,27 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializerExactly8Pairs) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    ASSERT_EQ(GetCodeSize(), 18);
-
-    Instruction instr0 = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr0), OP_NEW_COLLECTION);
-    ASSERT_EQ(OPERAND_T_A(instr0), expr.value.reg);
-
-    Instruction instr17 = GetInstruction(17);
-    ASSERT_EQ(GET_OPCODE(instr17), OP_APPEND_MAP);
-    ASSERT_EQ(OPERAND_T_A(instr17), expr.value.reg);
-    ASSERT_EQ(OPERAND_T_B(instr17), 8);
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0:  OP_NEW_COLLECTION            A=0x00 B=0x87 C=0x01 kb=T kc=F
+1:  OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
+2:  OP_LOAD_INLINE_INTEGER       A=0x02 K=0x000A i=T s=T
+3:  OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0002 i=T s=T
+4:  OP_LOAD_INLINE_INTEGER       A=0x04 K=0x0014 i=T s=T
+5:  OP_LOAD_INLINE_INTEGER       A=0x05 K=0x0003 i=T s=T
+6:  OP_LOAD_INLINE_INTEGER       A=0x06 K=0x001E i=T s=T
+7:  OP_LOAD_INLINE_INTEGER       A=0x07 K=0x0004 i=T s=T
+8:  OP_LOAD_INLINE_INTEGER       A=0x08 K=0x0028 i=T s=T
+9:  OP_LOAD_INLINE_INTEGER       A=0x09 K=0x0005 i=T s=T
+10: OP_LOAD_INLINE_INTEGER       A=0x0A K=0x0032 i=T s=T
+11: OP_LOAD_INLINE_INTEGER       A=0x0B K=0x0006 i=T s=T
+12: OP_LOAD_INLINE_INTEGER       A=0x0C K=0x003C i=T s=T
+13: OP_LOAD_INLINE_INTEGER       A=0x0D K=0x0007 i=T s=T
+14: OP_LOAD_INLINE_INTEGER       A=0x0E K=0x0046 i=T s=T
+15: OP_LOAD_INLINE_INTEGER       A=0x0F K=0x0008 i=T s=T
+16: OP_LOAD_INLINE_INTEGER       A=0x10 K=0x0050 i=T s=T
+17: OP_APPEND_MAP                A=0x00 B=0x08 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerCollectionInitializerTest, DictInitializer9PairsRequiresBatching) {
@@ -263,21 +304,30 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializer9PairsRequiresBatching)
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    ASSERT_EQ(GetCodeSize(), 21);
-
-    Instruction instr0 = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr0), OP_NEW_COLLECTION);
-    ASSERT_EQ(OPERAND_T_A(instr0), expr.value.reg);
-
-    Instruction instr17 = GetInstruction(17);
-    ASSERT_EQ(GET_OPCODE(instr17), OP_APPEND_MAP);
-    ASSERT_EQ(OPERAND_T_A(instr17), expr.value.reg);
-    ASSERT_EQ(OPERAND_T_B(instr17), 8);
-
-    Instruction instr20 = GetInstruction(20);
-    ASSERT_EQ(GET_OPCODE(instr20), OP_APPEND_MAP);
-    ASSERT_EQ(OPERAND_T_A(instr20), expr.value.reg);
-    ASSERT_EQ(OPERAND_T_B(instr20), 1);
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0:  OP_NEW_COLLECTION            A=0x00 B=0x87 C=0x01 kb=T kc=F
+1:  OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
+2:  OP_LOAD_INLINE_INTEGER       A=0x02 K=0x000A i=T s=T
+3:  OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0002 i=T s=T
+4:  OP_LOAD_INLINE_INTEGER       A=0x04 K=0x0014 i=T s=T
+5:  OP_LOAD_INLINE_INTEGER       A=0x05 K=0x0003 i=T s=T
+6:  OP_LOAD_INLINE_INTEGER       A=0x06 K=0x001E i=T s=T
+7:  OP_LOAD_INLINE_INTEGER       A=0x07 K=0x0004 i=T s=T
+8:  OP_LOAD_INLINE_INTEGER       A=0x08 K=0x0028 i=T s=T
+9:  OP_LOAD_INLINE_INTEGER       A=0x09 K=0x0005 i=T s=T
+10: OP_LOAD_INLINE_INTEGER       A=0x0A K=0x0032 i=T s=T
+11: OP_LOAD_INLINE_INTEGER       A=0x0B K=0x0006 i=T s=T
+12: OP_LOAD_INLINE_INTEGER       A=0x0C K=0x003C i=T s=T
+13: OP_LOAD_INLINE_INTEGER       A=0x0D K=0x0007 i=T s=T
+14: OP_LOAD_INLINE_INTEGER       A=0x0E K=0x0046 i=T s=T
+15: OP_LOAD_INLINE_INTEGER       A=0x0F K=0x0008 i=T s=T
+16: OP_LOAD_INLINE_INTEGER       A=0x10 K=0x0050 i=T s=T
+17: OP_APPEND_MAP                A=0x00 B=0x08 C=0x00 kb=F kc=F
+18: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0009 i=T s=T
+19: OP_LOAD_INLINE_INTEGER       A=0x02 K=0x005A i=T s=T
+20: OP_APPEND_MAP                A=0x00 B=0x01 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerCollectionInitializerTest, DictInitializer16PairsRequiresDoubleBatching) {
@@ -290,21 +340,44 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializer16PairsRequiresDoubleBa
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    ASSERT_EQ(GetCodeSize(), 35);
-
-    Instruction instr0 = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr0), OP_NEW_COLLECTION);
-    ASSERT_EQ(OPERAND_T_A(instr0), expr.value.reg);
-
-    Instruction instr17 = GetInstruction(17);
-    ASSERT_EQ(GET_OPCODE(instr17), OP_APPEND_MAP);
-    ASSERT_EQ(OPERAND_T_A(instr17), expr.value.reg);
-    ASSERT_EQ(OPERAND_T_B(instr17), 8);
-
-    Instruction instr34 = GetInstruction(34);
-    ASSERT_EQ(GET_OPCODE(instr34), OP_APPEND_MAP);
-    ASSERT_EQ(OPERAND_T_A(instr34), expr.value.reg);
-    ASSERT_EQ(OPERAND_T_B(instr34), 8);
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0:  OP_NEW_COLLECTION            A=0x00 B=0x87 C=0x01 kb=T kc=F
+1:  OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
+2:  OP_LOAD_INLINE_INTEGER       A=0x02 K=0x000A i=T s=T
+3:  OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0002 i=T s=T
+4:  OP_LOAD_INLINE_INTEGER       A=0x04 K=0x0014 i=T s=T
+5:  OP_LOAD_INLINE_INTEGER       A=0x05 K=0x0003 i=T s=T
+6:  OP_LOAD_INLINE_INTEGER       A=0x06 K=0x001E i=T s=T
+7:  OP_LOAD_INLINE_INTEGER       A=0x07 K=0x0004 i=T s=T
+8:  OP_LOAD_INLINE_INTEGER       A=0x08 K=0x0028 i=T s=T
+9:  OP_LOAD_INLINE_INTEGER       A=0x09 K=0x0005 i=T s=T
+10: OP_LOAD_INLINE_INTEGER       A=0x0A K=0x0032 i=T s=T
+11: OP_LOAD_INLINE_INTEGER       A=0x0B K=0x0006 i=T s=T
+12: OP_LOAD_INLINE_INTEGER       A=0x0C K=0x003C i=T s=T
+13: OP_LOAD_INLINE_INTEGER       A=0x0D K=0x0007 i=T s=T
+14: OP_LOAD_INLINE_INTEGER       A=0x0E K=0x0046 i=T s=T
+15: OP_LOAD_INLINE_INTEGER       A=0x0F K=0x0008 i=T s=T
+16: OP_LOAD_INLINE_INTEGER       A=0x10 K=0x0050 i=T s=T
+17: OP_APPEND_MAP                A=0x00 B=0x08 C=0x00 kb=F kc=F
+18: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0009 i=T s=T
+19: OP_LOAD_INLINE_INTEGER       A=0x02 K=0x005A i=T s=T
+20: OP_LOAD_INLINE_INTEGER       A=0x03 K=0x000A i=T s=T
+21: OP_LOAD_INLINE_INTEGER       A=0x04 K=0x0064 i=T s=T
+22: OP_LOAD_INLINE_INTEGER       A=0x05 K=0x000B i=T s=T
+23: OP_LOAD_INLINE_INTEGER       A=0x06 K=0x006E i=T s=T
+24: OP_LOAD_INLINE_INTEGER       A=0x07 K=0x000C i=T s=T
+25: OP_LOAD_INLINE_INTEGER       A=0x08 K=0x0078 i=T s=T
+26: OP_LOAD_INLINE_INTEGER       A=0x09 K=0x000D i=T s=T
+27: OP_LOAD_INLINE_INTEGER       A=0x0A K=0x0082 i=T s=T
+28: OP_LOAD_INLINE_INTEGER       A=0x0B K=0x000E i=T s=T
+29: OP_LOAD_INLINE_INTEGER       A=0x0C K=0x008C i=T s=T
+30: OP_LOAD_INLINE_INTEGER       A=0x0D K=0x000F i=T s=T
+31: OP_LOAD_INLINE_INTEGER       A=0x0E K=0x0096 i=T s=T
+32: OP_LOAD_INLINE_INTEGER       A=0x0F K=0x0010 i=T s=T
+33: OP_LOAD_INLINE_INTEGER       A=0x10 K=0x00A0 i=T s=T
+34: OP_APPEND_MAP                A=0x00 B=0x08 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerCollectionInitializerTest, MixingListAndMapSyntaxColonInList) {
@@ -347,13 +420,14 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializerWithComplexExpressions)
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    size_t codeSize = GetCodeSize();
-    ASSERT_GT(codeSize, 2);
-
-    Instruction lastInstr = GetInstruction(codeSize - 1);
-    ASSERT_EQ(GET_OPCODE(lastInstr), OP_APPEND_LIST);
-    ASSERT_EQ(OPERAND_T_A(lastInstr), expr.value.reg);
-    ASSERT_EQ(OPERAND_T_B(lastInstr), 3);
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_NEW_COLLECTION            A=0x00 B=0x86 C=0x01 kb=T kc=F
+1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0003 i=T s=T
+2: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x000C i=T s=T
+3: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=F
+4: OP_APPEND_LIST               A=0x00 B=0x03 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerCollectionInitializerTest, DictInitializerWithComplexExpressions) {
@@ -364,13 +438,15 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializerWithComplexExpressions)
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    size_t codeSize = GetCodeSize();
-    ASSERT_GT(codeSize, 2);
-
-    Instruction lastInstr = GetInstruction(codeSize - 1);
-    ASSERT_EQ(GET_OPCODE(lastInstr), OP_APPEND_MAP);
-    ASSERT_EQ(OPERAND_T_A(lastInstr), expr.value.reg);
-    ASSERT_EQ(OPERAND_T_B(lastInstr), 2);
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_NEW_COLLECTION            A=0x00 B=0x87 C=0x01 kb=T kc=F
+1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0002 i=T s=T
+2: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0014 i=T s=T
+3: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
+4: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0019 i=T s=T
+5: OP_APPEND_MAP                A=0x00 B=0x02 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerCollectionInitializerTest, NestedListInitializers) {
@@ -381,8 +457,19 @@ TEST_F(CompilerCollectionInitializerTest, NestedListInitializers) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    size_t codeSize = GetCodeSize();
-    ASSERT_GT(codeSize, 6);
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0:  OP_NEW_COLLECTION            A=0x00 B=0x86 C=0x01 kb=T kc=F
+1:  OP_NEW_COLLECTION            A=0x01 B=0x86 C=0x01 kb=T kc=F
+2:  OP_LOAD_INLINE_INTEGER       A=0x02 K=0x0001 i=T s=T
+3:  OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0002 i=T s=T
+4:  OP_APPEND_LIST               A=0x01 B=0x02 C=0x00 kb=F kc=F
+5:  OP_NEW_COLLECTION            A=0x02 B=0x86 C=0x01 kb=T kc=F
+6:  OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0003 i=T s=T
+7:  OP_LOAD_INLINE_INTEGER       A=0x04 K=0x0004 i=T s=T
+8:  OP_APPEND_LIST               A=0x02 B=0x02 C=0x00 kb=F kc=F
+9:  OP_APPEND_LIST               A=0x00 B=0x02 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerCollectionInitializerTest, NestedDictInitializers) {
@@ -393,6 +480,19 @@ TEST_F(CompilerCollectionInitializerTest, NestedDictInitializers) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    size_t codeSize = GetCodeSize();
-    ASSERT_GT(codeSize, 6);
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0:  OP_NEW_COLLECTION            A=0x00 B=0x87 C=0x01 kb=T kc=F
+1:  OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
+2:  OP_NEW_COLLECTION            A=0x02 B=0x87 C=0x01 kb=T kc=F
+3:  OP_LOAD_INLINE_INTEGER       A=0x03 K=0x000A i=T s=T
+4:  OP_LOAD_INLINE_INTEGER       A=0x04 K=0x0064 i=T s=T
+5:  OP_APPEND_MAP                A=0x02 B=0x01 C=0x00 kb=F kc=F
+6:  OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0002 i=T s=T
+7:  OP_NEW_COLLECTION            A=0x04 B=0x87 C=0x01 kb=T kc=F
+8:  OP_LOAD_INLINE_INTEGER       A=0x05 K=0x0014 i=T s=T
+9:  OP_LOAD_INLINE_INTEGER       A=0x06 K=0x00C8 i=T s=T
+10: OP_APPEND_MAP                A=0x04 B=0x01 C=0x00 kb=F kc=F
+11: OP_APPEND_MAP                A=0x00 B=0x02 C=0x00 kb=F kc=F
+)");
 }

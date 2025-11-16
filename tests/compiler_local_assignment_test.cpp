@@ -5,7 +5,10 @@
 
 #include <cstring>
 
+#include "instruction_verifier.hpp"
 #include "test_common.hpp"
+
+using namespace InstructionVerifier;
 
 class CompilerLocalAssignmentTest : public CompilerTest {};
 
@@ -17,14 +20,10 @@ TEST_F(CompilerLocalAssignmentTest, LocalIntegerAssignment) {
     ASSERT_NE(var, nullptr) << "Variable 'x' should exist";
     ASSERT_EQ(var->registerId, 0) << "Variable 'x' should be in register 0";
 
-    ASSERT_EQ(GetCodeSize(), 1) << "Should generate exactly 1 instruction";
-
-    Instruction instr = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr), OP_LOAD_INLINE_INTEGER) << "Should be LOAD_INLINE_INTEGER instruction";
-    ASSERT_EQ(OPERAND_K_A(instr), var->registerId) << "Should load into variable's register";
-    ASSERT_EQ(OPERAND_K_K(instr), 42) << "Should load constant 42";
-    ASSERT_TRUE(OPERAND_K_I(instr)) << "Should be inline constant";
-    ASSERT_TRUE(OPERAND_K_S(instr)) << "Should be positive";
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x002A i=T s=T
+)");
 }
 
 TEST_F(CompilerLocalAssignmentTest, LocalDoubleAssignment) {
@@ -35,19 +34,13 @@ TEST_F(CompilerLocalAssignmentTest, LocalDoubleAssignment) {
     ASSERT_NE(var, nullptr) << "Variable 'y' should exist";
     ASSERT_EQ(var->registerId, 0) << "Variable 'y' should be in register 0";
 
-    ASSERT_EQ(GetCodeSize(), 1) << "Should generate exactly 1 instruction";
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=F
 
-    Instruction instr = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr), OP_LOAD_CONSTANT) << "Should be LOAD_CONSTANT instruction";
-    ASSERT_EQ(OPERAND_K_A(instr), var->registerId) << "Should load into variable's register";
-    ASSERT_FALSE(OPERAND_K_I(instr)) << "Floats always use constant table";
-
-    // The value should be stored in the constant table
-    uint16_t constIdx = OPERAND_K_K(instr);
-    ASSERT_LT(constIdx, semiConstantTableSize(&compiler.artifactModule->constantTable))
-        << "Constant index should be valid";
-    Value constValue = semiConstantTableGet(&compiler.artifactModule->constantTable, constIdx);
-    ASSERT_DOUBLE_EQ(AS_FLOAT(&constValue), 3.14) << "Constant value should be 3.14";
+[Constants]
+K[0]: Float 3.14
+)");
 }
 
 TEST_F(CompilerLocalAssignmentTest, LocalBooleanAssignment) {
@@ -58,13 +51,10 @@ TEST_F(CompilerLocalAssignmentTest, LocalBooleanAssignment) {
     ASSERT_NE(var, nullptr) << "Variable 'flag' should exist";
     ASSERT_EQ(var->registerId, 0) << "Variable 'flag' should be in register 0";
 
-    ASSERT_EQ(GetCodeSize(), 1) << "Should generate exactly 1 instruction";
-
-    Instruction instr = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr), OP_LOAD_BOOL) << "Should be LOAD_BOOL instruction";
-    ASSERT_EQ(OPERAND_K_A(instr), var->registerId) << "Should load into variable's register";
-    ASSERT_EQ(OPERAND_K_I(instr), 1) << "Should load true";
-    ASSERT_FALSE(OPERAND_K_S(instr)) << "Should not jump (K=0)";
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_BOOL   A=0x00 K=0x0000 i=T s=F
+)");
 }
 
 TEST_F(CompilerLocalAssignmentTest, LocalStringAssignment) {
@@ -75,21 +65,13 @@ TEST_F(CompilerLocalAssignmentTest, LocalStringAssignment) {
     ASSERT_NE(var, nullptr) << "Variable 'name' should exist";
     ASSERT_EQ(var->registerId, 0) << "Variable 'name' should be in register 0";
 
-    ASSERT_EQ(GetCodeSize(), 1) << "Should generate exactly 1 instruction";
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=F
 
-    Instruction instr = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr), OP_LOAD_CONSTANT) << "Should be LOAD_CONSTANT instruction";
-    ASSERT_EQ(OPERAND_K_A(instr), var->registerId) << "Should load into variable's register";
-
-    // The value should be stored in the constant table
-    uint16_t constIdx = OPERAND_K_K(instr);
-    ASSERT_LT(constIdx, semiConstantTableSize(&compiler.artifactModule->constantTable))
-        << "Constant index should be valid";
-
-    Value constValue = semiConstantTableGet(&compiler.artifactModule->constantTable, constIdx);
-    ASSERT_EQ(VALUE_TYPE(&constValue), VALUE_TYPE_OBJECT_STRING) << "Should be string constant";
-    ASSERT_EQ(AS_OBJECT_STRING(&constValue)->length, 5) << "String should have correct size";
-    ASSERT_EQ(strncmp((const char*)AS_OBJECT_STRING(&constValue)->str, "hello", 5), 0) << "String content should match";
+[Constants]
+K[0]: String "hello" length=5
+)");
 }
 
 TEST_F(CompilerLocalAssignmentTest, LocalExpressionAssignment) {
@@ -100,14 +82,10 @@ TEST_F(CompilerLocalAssignmentTest, LocalExpressionAssignment) {
     ASSERT_NE(var, nullptr) << "Variable 'result' should exist";
     ASSERT_EQ(var->registerId, 0) << "Variable 'result' should be in register 0";
 
-    ASSERT_EQ(GetCodeSize(), 1) << "Should generate exactly 1 instruction";
-
-    Instruction instr = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr), OP_LOAD_INLINE_INTEGER) << "Should be LOAD_INLINE_INTEGER instruction";
-    ASSERT_EQ(OPERAND_K_A(instr), var->registerId) << "Should load into variable's register";
-    ASSERT_EQ(OPERAND_K_K(instr), 15) << "Should load constant 15";
-    ASSERT_TRUE(OPERAND_K_I(instr)) << "Should be inline constant";
-    ASSERT_TRUE(OPERAND_K_S(instr)) << "Should be positive";
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x000F i=T s=T
+)");
 }
 
 TEST_F(CompilerLocalAssignmentTest, LocalVariableToLocalVariableAssignment) {
@@ -125,15 +103,10 @@ TEST_F(CompilerLocalAssignmentTest, LocalVariableToLocalVariableAssignment) {
 
     ASSERT_NE(var_x->registerId, var_y->registerId) << "Variables should have different registers";
 
-    ASSERT_EQ(GetCodeSize(), 1) << "Should generate exactly 1 instruction";
-
-    Instruction instr = GetInstruction(0);
-    ASSERT_EQ(GET_OPCODE(instr), OP_MOVE) << "Should be MOVE instruction";
-    ASSERT_EQ(OPERAND_T_A(instr), var_y->registerId) << "Should move into y's register";
-    ASSERT_EQ(OPERAND_T_B(instr), var_x->registerId) << "Should move from x's register";
-    ASSERT_EQ(OPERAND_T_C(instr), 0) << "Should not have conditional jump";
-    ASSERT_FALSE(OPERAND_T_KB(instr)) << "Source should be register";
-    ASSERT_FALSE(OPERAND_T_KC(instr)) << "Jump offset should be register";
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_MOVE   A=0x01 B=0x00 C=0x00 kb=F kc=F
+)");
 }
 
 TEST_F(CompilerLocalAssignmentTest, LocalVariableReassignment) {
@@ -147,14 +120,11 @@ TEST_F(CompilerLocalAssignmentTest, LocalVariableReassignment) {
     ASSERT_EQ(result, 0) << "Assignment should succeed";
 
     ASSERT_EQ(compiler.variables.size, 1) << "Should have only one variable";
-    ASSERT_EQ(GetCodeSize(), 1) << "Should generate exactly 1 instruction";
 
-    // Both instructions should target the same register
-    Instruction inst = GetInstruction(0);
-
-    ASSERT_EQ(GET_OPCODE(inst), OP_LOAD_INLINE_INTEGER) << "Should be LOAD_INLINE_INTEGER";
-    ASSERT_EQ(OPERAND_K_A(inst), var->registerId) << "Should use same register";
-    ASSERT_EQ(OPERAND_K_K(inst), 100) << "Should load 100";
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0064 i=T s=T
+)");
 }
 
 TEST_F(CompilerLocalAssignmentTest, MultipleLocalVariablesUniqueRegisters) {
@@ -178,6 +148,13 @@ TEST_F(CompilerLocalAssignmentTest, MultipleLocalVariablesUniqueRegisters) {
     ASSERT_NE(var_a->registerId, var_b->registerId) << "Variables should have different registers";
     ASSERT_NE(var_b->registerId, var_c->registerId) << "Variables should have different registers";
     ASSERT_NE(var_a->registerId, var_c->registerId) << "Variables should have different registers";
+
+    VerifyCompilation(&compiler, R"(
+[Instructions]
+0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
+1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x0002 i=T s=T
+2: OP_LOAD_INLINE_INTEGER   A=0x02 K=0x0003 i=T s=T
+)");
 }
 
 TEST_F(CompilerLocalAssignmentTest, AssignmentToConstant) {
