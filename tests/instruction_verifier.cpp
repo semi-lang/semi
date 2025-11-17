@@ -21,12 +21,19 @@ namespace InstructionVerifier {
 /*
  │ SpecParser Implementation
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
-
+#pragma region SpecParser Implementation
 SpecParser::SpecParser(const char* spec)
-    : spec(spec), pos(0), line(1), col(1), currentSection(SECTION_NONE), currentFunctionLabel("") {}
+    : spec(spec),
+      pos(0),
+      line(1),
+      col(1),
+      currentSection(SECTION_NONE),
+      currentFunctionLabel(""),
+      currentSpec(nullptr) {}
 
 ParsedSpec SpecParser::parse() {
     ParsedSpec result;
+    currentSpec = &result;
 
     while (!isAtEnd()) {
         skipWhitespace();
@@ -54,6 +61,18 @@ ParsedSpec SpecParser::parse() {
             case SECTION_PREDEFINE_GLOBAL_VARS:
                 if (!isAtEnd() && peek() != '[') {
                     result.predefineGlobalVars.push_back(parsePreDefineVariable());
+                }
+                break;
+
+            case SECTION_PREDEFINE_REGISTERS:
+                if (!isAtEnd() && peek() != '[') {
+                    result.predefineRegisters.push_back(parsePreDefineRegister());
+                }
+                break;
+
+            case SECTION_MODULE_INIT:
+                if (!isAtEnd() && peek() != '[') {
+                    parseModuleInitMetadata();
                 }
                 break;
 
@@ -117,6 +136,11 @@ void SpecParser::parseSectionHeader() {
         currentSection = SECTION_PREDEFINE_MODULE_VARS;
     } else if (matchKeyword("PreDefine:GlobalVariables]")) {
         currentSection = SECTION_PREDEFINE_GLOBAL_VARS;
+    } else if (matchKeyword("PreDefine:Registers]")) {
+        currentSection = SECTION_PREDEFINE_REGISTERS;
+    } else if (matchKeyword("ModuleInit]")) {
+        currentSection       = SECTION_MODULE_INIT;
+        currentFunctionLabel = "";
     } else if (matchKeyword("Instructions]")) {
         currentSection       = SECTION_INSTRUCTIONS;
         currentFunctionLabel = "";
@@ -264,34 +288,8 @@ ParsedConstant SpecParser::parseConstant() {
     parseIdentifier(constant.typeName, sizeof(constant.typeName));
     skipWhitespace();
 
-    // Parse properties (rest of line)
-    size_t propIdx = 0;
-    while (!isAtEnd() && peek() != '\n' && peek() != '\r') {
-        if (propIdx < sizeof(constant.properties) - 1) {
-            constant.properties[propIdx++] = peek();
-        }
-        advance();
-    }
-    constant.properties[propIdx] = '\0';
-
-    // Trim trailing whitespace from properties
-    while (propIdx > 0 && isspace((unsigned char)constant.properties[propIdx - 1])) {
-        constant.properties[--propIdx] = '\0';
-    }
-
-    // Check for label (-> @label)
-    const char* arrow = strstr(constant.properties, "->");
-    if (arrow) {
-        const char* at = strchr(arrow, '@');
-        if (at) {
-            at++;  // Skip '@'
-            size_t labelIdx = 0;
-            while (*at && !isspace((unsigned char)*at) && labelIdx < sizeof(constant.label) - 1) {
-                constant.label[labelIdx++] = *at++;
-            }
-            constant.label[labelIdx] = '\0';
-        }
-    }
+    // Parse value and properties from current position
+    constant.parsedValue = parseValueFromProperties(constant.typeName, constant.properties);
 
     skipToNextLine();
     return constant;
@@ -374,26 +372,66 @@ PreDefineVariable SpecParser::parsePreDefineVariable() {
     skipWhitespace();
 
     // Parse type name
-    parseIdentifier(var.typeName, sizeof(var.typeName));
+    char typeName[32];
+    parseIdentifier(typeName, sizeof(typeName));
     skipWhitespace();
 
-    // Parse value (rest of line)
-    size_t valIdx = 0;
-    while (!isAtEnd() && peek() != '\n' && peek() != '\r') {
-        if (valIdx < sizeof(var.value) - 1) {
-            var.value[valIdx++] = peek();
-        }
-        advance();
-    }
-    var.value[valIdx] = '\0';
-
-    // Trim trailing whitespace
-    while (valIdx > 0 && isspace((unsigned char)var.value[valIdx - 1])) {
-        var.value[--valIdx] = '\0';
-    }
+    // Parse value from current position
+    std::map<std::string, std::string> propsMap;
+    var.value = parseValueFromProperties(typeName, propsMap);
 
     skipToNextLine();
     return var;
+}
+
+PreDefineRegister SpecParser::parsePreDefineRegister() {
+    PreDefineRegister reg = {};
+
+    // Parse R[index]:
+    if (!parseRowHeader('R', (size_t&)reg.index)) {
+        error("Expected 'R[<index>]:' for register");
+    }
+
+    // Parse type name
+    char typeName[32];
+    parseIdentifier(typeName, sizeof(typeName));
+    skipWhitespace();
+
+    // Parse value from current position
+    std::map<std::string, std::string> propsMap;
+    reg.value = parseValueFromProperties(typeName, propsMap);
+
+    skipToNextLine();
+    return reg;
+}
+
+void SpecParser::parseModuleInitMetadata() {
+    auto& func = currentSpec->functions[currentFunctionLabel];
+    strcpy(func.label, "");
+
+    // Parse key=value pairs
+    while (!isAtEnd() && peek() != '\n' && peek() != '\r' && peek() != '[') {
+        char key[32];
+        parseIdentifier(key, sizeof(key));
+
+        if (!match('=')) error("Expected '=' after metadata key");
+
+        uint32_t value = parseDecimal();
+
+        if (strcmp(key, "arity") == 0) {
+            func.arity = (uint8_t)value;
+        } else if (strcmp(key, "coarity") == 0) {
+            func.coarity = (uint8_t)value;
+        } else if (strcmp(key, "maxStackSize") == 0) {
+            func.maxStackSize = (uint8_t)value;
+        } else {
+            errorFmt("Unknown metadata key: %s", key);
+        }
+
+        skipWhitespace();
+    }
+
+    skipToNextLine();
 }
 
 Opcode SpecParser::parseOpcode(char* name, size_t nameSize) {
@@ -603,9 +641,152 @@ bool SpecParser::matchKeyword(const char* keyword) {
     error(buffer);
 }
 
+ParsedValue SpecParser::parseValueFromProperties(const char* typeName, std::map<std::string, std::string>& propsMap) {
+    ParsedValue result = {};
+
+    // Read properties from current position to end of line
+    char properties[256];
+    size_t propIdx = 0;
+    while (!isAtEnd() && peek() != '\n' && peek() != '\r') {
+        if (propIdx < sizeof(properties) - 1) {
+            properties[propIdx++] = peek();
+        }
+        advance();
+    }
+    properties[propIdx] = '\0';
+
+    // Trim trailing whitespace
+    while (propIdx > 0 && isspace((unsigned char)properties[propIdx - 1])) {
+        properties[--propIdx] = '\0';
+    }
+
+    if (strcmp(typeName, "Int") == 0) {
+        result.type              = ParsedValue::TYPE_INT;
+        result.as.intValue.value = atoll(properties);
+        propsMap["value"]        = properties;
+    } else if (strcmp(typeName, "Float") == 0) {
+        result.type                = ParsedValue::TYPE_FLOAT;
+        result.as.floatValue.value = atof(properties);
+        propsMap["value"]          = properties;
+    } else if (strcmp(typeName, "Bool") == 0) {
+        result.type               = ParsedValue::TYPE_BOOL;
+        result.as.boolValue.value = (strcmp(properties, "true") == 0 || strcmp(properties, "T") == 0);
+        propsMap["value"]         = properties;
+    } else if (strcmp(typeName, "String") == 0) {
+        result.type = ParsedValue::TYPE_STRING;
+
+        // Parse: "text" length=N
+        const char* start = strchr(properties, '"');
+        if (!start) errorFmt("Invalid String constant format: %s", properties);
+        start++;  // Skip opening quote
+
+        const char* end = start;
+        size_t textIdx  = 0;
+        while (*end && *end != '"' && textIdx < sizeof(result.as.stringValue.text) - 1) {
+            if (*end == '\\' && *(end + 1) == '"') {
+                // Handle escaped quote
+                result.as.stringValue.text[textIdx++] = '"';
+                end += 2;
+            } else {
+                result.as.stringValue.text[textIdx++] = *end++;
+            }
+        }
+        result.as.stringValue.text[textIdx] = '\0';
+
+        if (*end != '"') errorFmt("Invalid String constant format: %s", properties);
+        end++;  // Skip closing quote
+
+        // Parse length
+        const char* lengthPos = strstr(end, "length=");
+        if (lengthPos) {
+            sscanf(lengthPos, "length=%zu", &result.as.stringValue.length);
+            propsMap["length"] = lengthPos + 7;  // Skip "length="
+        } else {
+            result.as.stringValue.length = textIdx;
+        }
+
+        propsMap["text"] = result.as.stringValue.text;
+    } else if (strcmp(typeName, "Range") == 0) {
+        result.type = ParsedValue::TYPE_RANGE;
+
+        // Parse: start=N end=N step=N
+        if (sscanf(properties,
+                   "start=%lld end=%lld step=%lld",
+                   &result.as.rangeValue.start,
+                   &result.as.rangeValue.end,
+                   &result.as.rangeValue.step) != 3) {
+            errorFmt("Invalid Range constant format: %s", properties);
+        }
+
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%lld", result.as.rangeValue.start);
+        propsMap["start"] = buf;
+        snprintf(buf, sizeof(buf), "%lld", result.as.rangeValue.end);
+        propsMap["end"] = buf;
+        snprintf(buf, sizeof(buf), "%lld", result.as.rangeValue.step);
+        propsMap["step"] = buf;
+    } else if (strcmp(typeName, "FunctionProto") == 0) {
+        result.type = ParsedValue::TYPE_FUNCTION_REF;
+
+        // Parse: arity=N coarity=N maxStackSize=N [-> @label]
+        uint8_t maxStackSize = 0;
+        if (sscanf(properties,
+                   "arity=%hhu coarity=%hhu maxStackSize=%hhu",
+                   &result.as.functionValue.arity,
+                   &result.as.functionValue.coarity,
+                   &maxStackSize) != 3) {
+            errorFmt("Invalid FunctionProto constant format: %s", properties);
+        }
+
+        // Store maxStackSize in the size field temporarily (will be used correctly later)
+        result.as.functionValue.size = maxStackSize;
+
+        // Check for label (-> @label)
+        const char* arrow = strstr(properties, "->");
+        if (arrow) {
+            const char* at = strchr(arrow, '@');
+            if (at) {
+                at++;  // Skip '@'
+                size_t labelIdx = 0;
+                while (*at && !isspace((unsigned char)*at) && labelIdx < sizeof(result.label) - 1) {
+                    result.label[labelIdx++] = *at++;
+                }
+                result.label[labelIdx] = '\0';
+                propsMap["label"]      = result.label;
+            }
+        } else {
+            result.label[0] = '\0';
+        }
+
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%hhu", result.as.functionValue.arity);
+        propsMap["arity"] = buf;
+        snprintf(buf, sizeof(buf), "%hhu", result.as.functionValue.coarity);
+        propsMap["coarity"] = buf;
+        snprintf(buf, sizeof(buf), "%hhu", maxStackSize);
+        propsMap["maxStackSize"] = buf;
+
+        // Update the ParsedFunction with the metadata from this constant
+        if (result.label[0] != '\0' && currentSpec != nullptr) {
+            auto& func        = currentSpec->functions[result.label];
+            func.arity        = result.as.functionValue.arity;
+            func.coarity      = result.as.functionValue.coarity;
+            func.maxStackSize = maxStackSize;
+        }
+    } else {
+        // Unknown type - store raw properties
+        result.type     = ParsedValue::TYPE_UNKNOWN;
+        propsMap["raw"] = properties;
+    }
+
+    return result;
+}
+#pragma endregion
+
 /*
  │ Verifier Implementation
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
+#pragma region Verifier Implementation
 
 Verifier::Verifier(const ParsedSpec& spec) : spec(spec) {}
 
@@ -869,10 +1050,10 @@ void Verifier::verifyConstantFunctionProto(const Value* value, const ParsedConst
 
     FunctionProto* func = AS_PTR(value, FunctionProto);
 
-    // Parse expected properties: "arity=X coarity=Y size=Z"
-    uint8_t expectedArity = 0, expectedCoarity = 0;
-    size_t expectedSize = 0;
-    sscanf(constant.properties, "arity=%hhu coarity=%hhu size=%zu", &expectedArity, &expectedCoarity, &expectedSize);
+    // Get expected values from parsed data
+    uint8_t expectedArity        = constant.parsedValue.as.functionValue.arity;
+    uint8_t expectedCoarity      = constant.parsedValue.as.functionValue.coarity;
+    uint8_t expectedMaxStackSize = (uint8_t)constant.parsedValue.as.functionValue.size;
 
     // Verify arity
     if (func->arity != expectedArity) {
@@ -888,18 +1069,18 @@ void Verifier::verifyConstantFunctionProto(const Value* value, const ParsedConst
                       << "  Actual:   coarity=" << (int)func->coarity;
     }
 
-    // Verify size
-    if (func->chunk.size != expectedSize) {
-        ADD_FAILURE() << "FunctionProto size mismatch at [Constants].(" << constant.index << "):\n"
-                      << "  Expected: size=" << expectedSize << "\n"
-                      << "  Actual:   size=" << func->chunk.size;
+    // Verify maxStackSize
+    if (func->maxStackSize != expectedMaxStackSize) {
+        ADD_FAILURE() << "FunctionProto maxStackSize mismatch at [Constants].(" << constant.index << "):\n"
+                      << "  Expected: maxStackSize=" << (int)expectedMaxStackSize << "\n"
+                      << "  Actual:   maxStackSize=" << (int)func->maxStackSize;
     }
 
     // Verify nested function instructions if label is provided
-    if (constant.label[0] != '\0') {
-        auto funcIt = spec.functions.find(constant.label);
+    if (constant.parsedValue.label[0] != '\0') {
+        auto funcIt = spec.functions.find(constant.parsedValue.label);
         if (funcIt != spec.functions.end()) {
-            verifyInstructions(func, funcIt->second, constant.label);
+            verifyInstructions(func, funcIt->second, constant.parsedValue.label);
         }
     }
 }
@@ -912,9 +1093,8 @@ void Verifier::verifyConstantInt(const Value* value, const ParsedConstant& const
         return;
     }
 
-    // Parse expected value
-    int64_t expectedValue = 0;
-    sscanf(constant.properties, "%lld", &expectedValue);
+    // Get expected value from parsed data
+    int64_t expectedValue = constant.parsedValue.as.intValue.value;
 
     int64_t actualValue = AS_INT(value);
 
@@ -933,9 +1113,8 @@ void Verifier::verifyConstantFloat(const Value* value, const ParsedConstant& con
         return;
     }
 
-    // Parse expected value
-    double expectedValue = 0.0;
-    sscanf(constant.properties, "%lf", &expectedValue);
+    // Get expected value from parsed data
+    double expectedValue = constant.parsedValue.as.floatValue.value;
 
     double actualValue = AS_FLOAT(value);
 
@@ -957,54 +1136,22 @@ void Verifier::verifyConstantString(const Value* value, const ParsedConstant& co
         return;
     }
 
-    // Parse expected properties: "text" length=X [bytes=Y]
-    // Find the quoted string
-    const char* start = strchr(constant.properties, '"');
-    if (!start) {
-        ADD_FAILURE() << "Invalid String properties format at [Constants].(" << constant.index
-                      << "): missing opening quote";
-        return;
-    }
-    start++;  // Skip opening quote
-
-    const char* end = strchr(start, '"');
-    if (!end) {
-        ADD_FAILURE() << "Invalid String properties format at [Constants].(" << constant.index
-                      << "): missing closing quote";
-        return;
-    }
-
-    std::string expectedText(start, end - start);
-
-    // Parse length and optional bytes
-    size_t expectedLength = 0;
-    size_t expectedBytes  = 0;
-    const char* lengthPos = strstr(constant.properties, "length=");
-    if (lengthPos) {
-        sscanf(lengthPos, "length=%zu", &expectedLength);
-    }
-
-    const char* bytesPos = strstr(constant.properties, "bytes=");
-    if (bytesPos) {
-        sscanf(bytesPos, "bytes=%zu", &expectedBytes);
-    } else {
-        expectedBytes = expectedText.length();  // Default to text length if not specified
-    }
+    // Get expected values from parsed data
+    const char* expectedText = constant.parsedValue.as.stringValue.text;
+    size_t expectedLength    = constant.parsedValue.as.stringValue.length;
 
     // Get actual string data
     const char* actualText;
-    size_t actualLength, actualBytes;
+    size_t actualLength;
 
     if (IS_INLINE_STRING(value)) {
         InlineString str = AS_INLINE_STRING(value);
         actualText       = str.c;
         actualLength     = str.length;
-        actualBytes      = str.length;  // InlineString bytes = length
     } else {
         ObjectString* str = AS_OBJECT_STRING(value);
         actualText        = str->str;
         actualLength      = str->length;
-        actualBytes       = str->length;  // For now, assuming UTF-8 length stored in bytes
     }
 
     // Verify length (character count)
@@ -1014,15 +1161,8 @@ void Verifier::verifyConstantString(const Value* value, const ParsedConstant& co
                       << "  Actual:   length=" << actualLength;
     }
 
-    // Verify bytes (byte count)
-    if (actualBytes != expectedBytes) {
-        ADD_FAILURE() << "String bytes mismatch at [Constants].(" << constant.index << "):\n"
-                      << "  Expected: bytes=" << expectedBytes << "\n"
-                      << "  Actual:   bytes=" << actualBytes;
-    }
-
     // Verify text content
-    std::string actualTextStr(actualText, actualBytes);
+    std::string actualTextStr(actualText, actualLength);
     if (actualTextStr != expectedText) {
         ADD_FAILURE() << "String text mismatch at [Constants].(" << constant.index << "):\n"
                       << "  Expected: \"" << expectedText << "\"\n"
@@ -1039,9 +1179,10 @@ void Verifier::verifyConstantRange(const Value* value, const ParsedConstant& con
         return;
     }
 
-    // Parse expected properties: "start=X end=Y step=Z"
-    int64_t expectedStart = 0, expectedEnd = 0, expectedStep = 0;
-    sscanf(constant.properties, "start=%lld end=%lld step=%lld", &expectedStart, &expectedEnd, &expectedStep);
+    // Get expected values from parsed data
+    int64_t expectedStart = constant.parsedValue.as.rangeValue.start;
+    int64_t expectedEnd   = constant.parsedValue.as.rangeValue.end;
+    int64_t expectedStep  = constant.parsedValue.as.rangeValue.step;
 
     int64_t actualStart, actualEnd, actualStep;
 
@@ -1082,9 +1223,14 @@ void Verifier::verifyConstantRange(const Value* value, const ParsedConstant& con
 void Verifier::verifyConstants(SemiModule* module) {
     for (const auto& constant : spec.constants) {
         if (constant.index >= semiConstantTableSize(&module->constantTable)) {
+            // Format properties map for display
+            std::string propsStr;
+            for (const auto& [key, value] : constant.properties) {
+                if (!propsStr.empty()) propsStr += " ";
+                propsStr += key + "=" + value;
+            }
             ADD_FAILURE() << "Missing entry at [Constants].(" << constant.index << "):\n"
-                          << "  Expected: K[" << constant.index << "]: " << constant.typeName << " "
-                          << constant.properties << "\n"
+                          << "  Expected: K[" << constant.index << "]: " << constant.typeName << " " << propsStr << "\n"
                           << "  Actual:   (not found)";
             continue;
         }
@@ -1146,10 +1292,253 @@ void Verifier::verifyUpvalues(FunctionProto* func, const std::vector<ParsedUpval
         }
     }
 }
+#pragma endregion
+
+/*
+ │ ModuleBuilder Implementation
+─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
+#pragma region ModuleBuilder Implementation
+
+ModuleBuilder::ModuleBuilder(const ParsedSpec& spec, SemiVM* vm) : spec(spec), vm(vm), module(nullptr) {}
+
+SemiModule* ModuleBuilder::build() {
+    module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    if (!module) error("Failed to create module");
+
+    buildFunctions();
+    buildConstants();
+    buildExports();
+    buildGlobals();
+    buildTypes();
+    applyPreDefines();
+
+    return module;
+}
+
+void ModuleBuilder::buildConstants() {
+    for (const auto& constant : spec.constants) {
+        Value value = createConstantValue(constant);
+        semiConstantTableInsert(&module->constantTable, value);
+    }
+}
+
+void ModuleBuilder::buildFunctions() {
+    // Build main function if it exists
+    auto mainIt = spec.functions.find("");
+    if (mainIt != spec.functions.end()) {
+        buildMainFunction();
+    }
+
+    // Build named functions
+    for (const auto& [label, parsedFunc] : spec.functions) {
+        if (!label.empty()) {
+            buildNamedFunction(label, parsedFunc);
+        }
+    }
+}
+
+void ModuleBuilder::buildMainFunction() {
+    const auto& parsedFunc = spec.functions.at("");
+
+    uint8_t arity        = parsedFunc.arity;
+    uint8_t coarity      = parsedFunc.coarity;
+    uint8_t maxStackSize = parsedFunc.maxStackSize;
+    uint8_t upvalueCount = (uint8_t)parsedFunc.upvalues.size();
+    uint32_t codeSize    = (uint32_t)parsedFunc.instructions.size();
+
+    FunctionProto* func = semiFunctionProtoCreate(&vm->gc, upvalueCount);
+    func->moduleId      = SEMI_REPL_MODULE_ID;
+    func->arity         = arity;
+    func->coarity       = coarity;
+    func->maxStackSize  = maxStackSize;
+
+    // Encode instructions
+    Instruction* code = (Instruction*)semiMalloc(&vm->gc, sizeof(Instruction) * codeSize);
+    for (size_t i = 0; i < parsedFunc.instructions.size(); i++) {
+        code[i] = encodeInstruction(parsedFunc.instructions[i]);
+    }
+
+    func->chunk.data     = code;
+    func->chunk.size     = codeSize;
+    func->chunk.capacity = codeSize;
+
+    // Setup upvalues
+    setupUpvalues(func, parsedFunc.upvalues);
+
+    module->moduleInit = func;
+    functionMap[""]    = func;
+}
+
+void ModuleBuilder::buildNamedFunction(const std::string& label, const ParsedFunction& parsedFunc) {
+    uint8_t arity        = parsedFunc.arity;
+    uint8_t coarity      = parsedFunc.coarity;
+    uint8_t maxStackSize = parsedFunc.maxStackSize;
+    uint8_t upvalueCount = (uint8_t)parsedFunc.upvalues.size();
+    uint32_t codeSize    = (uint32_t)parsedFunc.instructions.size();
+
+    FunctionProto* func = semiFunctionProtoCreate(&vm->gc, upvalueCount);
+    func->moduleId      = SEMI_REPL_MODULE_ID;
+    func->arity         = arity;
+    func->coarity       = coarity;
+    func->maxStackSize  = maxStackSize;
+
+    // Encode instructions
+    Instruction* code = (Instruction*)semiMalloc(&vm->gc, sizeof(Instruction) * codeSize);
+    for (size_t i = 0; i < parsedFunc.instructions.size(); i++) {
+        code[i] = encodeInstruction(parsedFunc.instructions[i]);
+    }
+
+    func->chunk.data     = code;
+    func->chunk.size     = codeSize;
+    func->chunk.capacity = codeSize;
+
+    // Setup upvalues
+    setupUpvalues(func, parsedFunc.upvalues);
+
+    functionMap[label] = func;
+}
+
+void ModuleBuilder::buildExports() {
+    for (const auto& exp : spec.exports) {
+        InternedChar* name  = semiSymbolTableInsert(&vm->symbolTable, exp.identifier, strlen(exp.identifier));
+        IdentifierId nameId = semiSymbolTableGetId(name);
+        semiDictSet(&vm->gc, &module->exports, semiValueNewInt(exp.index), semiValueNewInt(nameId));
+    }
+}
+
+void ModuleBuilder::buildGlobals() {
+    for (const auto& glob : spec.globals) {
+        InternedChar* name  = semiSymbolTableInsert(&vm->symbolTable, glob.identifier, strlen(glob.identifier));
+        IdentifierId nameId = semiSymbolTableGetId(name);
+        semiDictSet(&vm->gc, &module->globals, semiValueNewInt(glob.index), semiValueNewInt(nameId));
+    }
+}
+
+void ModuleBuilder::buildTypes() {
+    for (const auto& type : spec.types) {
+        InternedChar* name  = semiSymbolTableInsert(&vm->symbolTable, type.typeName, strlen(type.typeName));
+        IdentifierId nameId = semiSymbolTableGetId(name);
+        // Register type with module
+        semiDictSet(&vm->gc, &module->types, semiValueNewInt(type.typeId), semiValueNewInt(nameId));
+    }
+}
+
+void ModuleBuilder::applyPreDefines() {
+    // Apply register predefines
+    for (const auto& reg : spec.predefineRegisters) {
+        if (reg.index >= MAX_LOCAL_REGISTER_ID) {
+            errorFmt("Register index %d out of range", reg.index);
+        }
+
+        vm->values[reg.index] = createValue(reg.value);
+    }
+
+    // Apply module variable predefines
+    for (const auto& var : spec.predefineModuleVars) {
+        InternedChar* name  = semiSymbolTableInsert(&vm->symbolTable, var.identifier, strlen(var.identifier));
+        IdentifierId nameId = semiSymbolTableGetId(name);
+
+        Value value = createValue(var.value);
+
+        semiDictSet(&vm->gc, &module->exports, semiValueNewInt(nameId), value);
+    }
+
+    // Apply global variable predefines
+    for (const auto& var : spec.predefineGlobalVars) {
+        ErrorId result = semiVMAddGlobalVariable(vm, var.identifier, strlen(var.identifier), semiValueNewInt(0));
+        if (result != 0) {
+            errorFmt("Failed to add global variable: %s", var.identifier);
+        }
+    }
+}
+
+Instruction ModuleBuilder::encodeInstruction(const ParsedInstruction& parsed) {
+    switch (parsed.type) {
+        case ParsedInstruction::K_TYPE:
+            return ((((Instruction)(parsed.opcode)) & OPCODE_MASK) | (((Instruction)(parsed.k.A)) << 24) |
+                    (((Instruction)(parsed.k.K) & 0xFFFF) << 8) | (((Instruction)(bool)(parsed.k.i)) << 7) |
+                    (((Instruction)(bool)(parsed.k.s)) << 6));
+
+        case ParsedInstruction::T_TYPE:
+            return ((((Instruction)(parsed.opcode)) & OPCODE_MASK) | (((Instruction)(parsed.t.A)) << 24) |
+                    (((Instruction)(parsed.t.B) & 0xFF) << 16) | (((Instruction)(parsed.t.C) & 0xFF) << 8) |
+                    (((Instruction)(bool)(parsed.t.kb)) << 7) | (((Instruction)(bool)(parsed.t.kc)) << 6));
+
+        case ParsedInstruction::J_TYPE:
+            return ((((Instruction)(parsed.opcode)) & OPCODE_MASK) | (((Instruction)(parsed.j.J)) << 8) |
+                    (((Instruction)(bool)(parsed.j.s)) << 7));
+
+        default:
+            error("Unknown instruction type");
+    }
+}
+
+Value ModuleBuilder::createValue(const ParsedValue& parsedValue) {
+    switch (parsedValue.type) {
+        case ParsedValue::TYPE_INT:
+            return semiValueNewInt(parsedValue.as.intValue.value);
+
+        case ParsedValue::TYPE_FLOAT:
+            return semiValueNewFloat(parsedValue.as.floatValue.value);
+
+        case ParsedValue::TYPE_BOOL:
+            return semiValueNewBool(parsedValue.as.boolValue.value);
+
+        case ParsedValue::TYPE_STRING:
+            return semiValueStringCreate(&vm->gc, parsedValue.as.stringValue.text, parsedValue.as.stringValue.length);
+
+        case ParsedValue::TYPE_RANGE:
+            return semiValueRangeCreate(&vm->gc,
+                                        semiValueNewInt(parsedValue.as.rangeValue.start),
+                                        semiValueNewInt(parsedValue.as.rangeValue.end),
+                                        semiValueNewInt(parsedValue.as.rangeValue.step));
+
+        case ParsedValue::TYPE_FUNCTION_REF: {
+            const char* label = parsedValue.label;
+            auto it           = functionMap.find(label);
+            if (it == functionMap.end()) {
+                errorFmt("Function label @%s not found", label);
+            }
+            return semiValueNewPtr(it->second, VALUE_TYPE_FUNCTION_PROTO);
+        }
+
+        default:
+            error("Unsupported parsed value type");
+    }
+}
+
+Value ModuleBuilder::createConstantValue(const ParsedConstant& constant) {
+    return createValue(constant.parsedValue);
+}
+
+void ModuleBuilder::setupUpvalues(FunctionProto* func, const std::vector<ParsedUpvalue>& upvalues) {
+    for (const auto& upval : upvalues) {
+        if (upval.slot >= func->upvalueCount) {
+            errorFmt("Upvalue slot %d out of range (max: %d)", upval.slot, func->upvalueCount);
+        }
+        func->upvalues[upval.slot].index   = upval.index;
+        func->upvalues[upval.slot].isLocal = upval.isLocal;
+    }
+}
+
+void ModuleBuilder::error(const char* msg) {
+    throw std::runtime_error(msg);
+}
+
+void ModuleBuilder::errorFmt(const char* fmt, ...) {
+    char buffer[512];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+    throw std::runtime_error(buffer);
+}
+#pragma endregion
 
 /*
  │ Public API
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
+#pragma region Public API
 
 void VerifyCompilation(SemiModule* module, const char* spec) {
     try {
@@ -1174,5 +1563,40 @@ void VerifyCompilation(Compiler* compiler, const char* spec) {
         ADD_FAILURE() << "Failed to parse DSL spec: " << e.what();
     }
 }
+
+SemiModule* BuildModule(SemiVM* vm, const char* spec) {
+    try {
+        SpecParser parser(spec);
+        ParsedSpec parsed = parser.parse();
+
+        ModuleBuilder builder(parsed, vm);
+        return builder.build();
+    } catch (const std::exception& e) {
+        ADD_FAILURE() << "Failed to build module from DSL spec: " << e.what();
+        return nullptr;
+    }
+}
+
+ErrorId BuildAndRunModule(SemiVM* vm, const char* spec, SemiModule** outModule) {
+    SemiModule* module = BuildModule(vm, spec);
+    if (!module) {
+        return SEMI_ERROR_INTERNAL_ERROR;
+    }
+
+    if (outModule) {
+        *outModule = module;
+    }
+
+    const char* moduleName   = "test_module";
+    uint8_t moduleNameLength = (uint8_t)strlen(moduleName);
+
+    InternedChar* moduleNameInterned = semiSymbolTableInsert(&vm->symbolTable, moduleName, moduleNameLength);
+    IdentifierId moduleNameId        = semiSymbolTableGetId(moduleNameInterned);
+
+    semiDictSet(&vm->gc, &vm->modules, semiValueNewInt(moduleNameId), semiValueNewPtr(module, VALUE_TYPE_UNSET));
+
+    return semiRunModule(vm, moduleName, moduleNameLength);
+}
+#pragma endregion
 
 }  // namespace InstructionVerifier

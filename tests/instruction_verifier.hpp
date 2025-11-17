@@ -55,12 +55,58 @@ struct ParsedInstruction {
     } j;
 };
 
+// Individual parsed value types
+struct ParsedIntValue {
+    int64_t value;
+};
+
+struct ParsedFloatValue {
+    double value;
+};
+
+struct ParsedBoolValue {
+    bool value;
+};
+
+struct ParsedStringValue {
+    char text[128];
+    size_t length;
+};
+
+struct ParsedRangeValue {
+    int64_t start;
+    int64_t end;
+    int64_t step;
+};
+
+struct ParsedFunctionValue {
+    uint8_t arity;
+    uint8_t coarity;
+    size_t size;
+};
+
+// Unified parsed value representation
+struct ParsedValue {
+    enum Type { TYPE_INT, TYPE_FLOAT, TYPE_BOOL, TYPE_STRING, TYPE_RANGE, TYPE_FUNCTION_REF, TYPE_UNKNOWN } type;
+
+    union {
+        ParsedIntValue intValue;
+        ParsedFloatValue floatValue;
+        ParsedBoolValue boolValue;
+        ParsedStringValue stringValue;
+        ParsedRangeValue rangeValue;
+        ParsedFunctionValue functionValue;
+    } as;
+
+    char label[64];  // Optional label for FunctionProto (e.g., @testFunc)
+};
+
 // Parsed constant representation
 struct ParsedConstant {
     size_t index;
     char typeName[32];
-    char properties[256];
-    char label[64];  // Optional label for FunctionProto (e.g., @testFunc)
+    std::map<std::string, std::string> properties;  // Raw properties for extensibility
+    ParsedValue parsedValue;                        // Pre-parsed structured data
 };
 
 // Parsed upvalue description
@@ -93,19 +139,28 @@ struct ParsedFunction {
     char label[64];
     std::vector<ParsedInstruction> instructions;
     std::vector<ParsedUpvalue> upvalues;
+    uint8_t arity;
+    uint8_t coarity;
+    uint8_t maxStackSize;
 };
 
 // PreDefine variable
 struct PreDefineVariable {
     char identifier[64];
-    char typeName[32];
-    char value[128];
+    ParsedValue value;
+};
+
+// PreDefine register
+struct PreDefineRegister {
+    uint8_t index;
+    ParsedValue value;
 };
 
 // Complete parsed specification
 struct ParsedSpec {
     std::vector<PreDefineVariable> predefineModuleVars;
     std::vector<PreDefineVariable> predefineGlobalVars;
+    std::vector<PreDefineRegister> predefineRegisters;
 
     std::map<std::string, ParsedFunction> functions;  // Key: label (empty string for main)
     std::vector<ParsedConstant> constants;
@@ -134,16 +189,19 @@ class SpecParser {
         SECTION_NONE,
         SECTION_PREDEFINE_MODULE_VARS,
         SECTION_PREDEFINE_GLOBAL_VARS,
+        SECTION_PREDEFINE_REGISTERS,
         SECTION_INSTRUCTIONS,
         SECTION_CONSTANTS,
         SECTION_EXPORTS,
         SECTION_GLOBALS,
         SECTION_TYPES,
-        SECTION_UPVALUE_DESCRIPTION
+        SECTION_UPVALUE_DESCRIPTION,
+        SECTION_MODULE_INIT
     };
 
     SectionType currentSection;
     std::string currentFunctionLabel;
+    ParsedSpec* currentSpec;
 
     // Parsing helpers
     void skipWhitespace();
@@ -163,6 +221,8 @@ class SpecParser {
     ParsedGlobal parseGlobal();
     ParsedType parseType();
     PreDefineVariable parsePreDefineVariable();
+    PreDefineRegister parsePreDefineRegister();
+    void parseModuleInitMetadata();
 
     // Field parsing
     bool parseRowHeader(char expectedKey, size_t& outIndex);
@@ -175,6 +235,9 @@ class SpecParser {
     void parseString(char* buffer, size_t bufferSize);
     void parseIdentifier(char* buffer, size_t bufferSize);
     void parseLabel(char* buffer, size_t bufferSize);
+
+    // Value parsing
+    ParsedValue parseValueFromProperties(const char* typeName, std::map<std::string, std::string>& propsMap);
 
     // Error reporting
     [[noreturn]] void error(const char* msg);
@@ -218,11 +281,48 @@ class Verifier {
 };
 
 /*
+ │ Module Builder
+─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
+
+class ModuleBuilder {
+   public:
+    explicit ModuleBuilder(const ParsedSpec& spec, SemiVM* vm);
+
+    SemiModule* build();
+
+   private:
+    const ParsedSpec& spec;
+    SemiVM* vm;
+    SemiModule* module;
+    std::map<std::string, FunctionProto*> functionMap;
+
+    void buildConstants();
+    void buildFunctions();
+    void buildMainFunction();
+    void buildNamedFunction(const std::string& label, const ParsedFunction& parsedFunc);
+    void buildExports();
+    void buildGlobals();
+    void buildTypes();
+    void applyPreDefines();
+
+    Instruction encodeInstruction(const ParsedInstruction& parsed);
+    Value createConstantValue(const ParsedConstant& constant);
+    Value createValue(const ParsedValue& parsedValue);
+    void setupUpvalues(FunctionProto* func, const std::vector<ParsedUpvalue>& upvalues);
+
+    [[noreturn]] void error(const char* msg);
+    [[noreturn]] void errorFmt(const char* fmt, ...);
+};
+
+/*
  │ Public API
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
 
 void VerifyCompilation(SemiModule* module, const char* spec);
 void VerifyCompilation(Compiler* compiler, const char* spec);
+
+SemiModule* BuildModule(SemiVM* vm, const char* spec);
+ErrorId BuildAndRunModule(SemiVM* vm, const char* spec, SemiModule** outModule = nullptr);
 
 }  // namespace InstructionVerifier
 

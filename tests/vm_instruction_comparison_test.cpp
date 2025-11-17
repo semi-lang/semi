@@ -14,20 +14,18 @@ class VMInstructionComparisonTest : public VMTest {};
 // OP_GT Tests: R[A] := RK(B, kb) > RK(C, kc)
 
 TEST_F(VMInstructionComparisonTest, OpGtIntegerRegistersTrue) {
-    Instruction code[2];
-    code[0] = INSTRUCTION_GT(0, 1, 2, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Int 10
+R[2]: Int 5
 
-    vm->values[1].header = VALUE_TYPE_INT;
-    vm->values[1].as.i   = 10;
-    vm->values[2].header = VALUE_TYPE_INT;
-    vm->values[2].as.i   = 5;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_GT   A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP A=0x00 K=0x0000 i=F s=F
+)");
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -35,20 +33,18 @@ TEST_F(VMInstructionComparisonTest, OpGtIntegerRegistersTrue) {
 }
 
 TEST_F(VMInstructionComparisonTest, OpGtIntegerRegistersFalse) {
-    Instruction code[2];
-    code[0] = INSTRUCTION_GT(0, 1, 2, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Int 3
+R[2]: Int 8
 
-    vm->values[1].header = VALUE_TYPE_INT;
-    vm->values[1].as.i   = 3;
-    vm->values[2].header = VALUE_TYPE_INT;
-    vm->values[2].as.i   = 8;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_GT   A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP A=0x00 K=0x0000 i=F s=F
+)");
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -56,20 +52,18 @@ TEST_F(VMInstructionComparisonTest, OpGtIntegerRegistersFalse) {
 }
 
 TEST_F(VMInstructionComparisonTest, OpGtFloatRegistersTrue) {
-    Instruction code[2];
-    code[0] = INSTRUCTION_GT(0, 1, 2, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Float 7.5
+R[2]: Float 3.2
 
-    vm->values[1].header = VALUE_TYPE_FLOAT;
-    vm->values[1].as.f   = 7.5;
-    vm->values[2].header = VALUE_TYPE_FLOAT;
-    vm->values[2].as.f   = 3.2;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_GT   A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP A=0x00 K=0x0000 i=F s=F
+)");
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -77,20 +71,18 @@ TEST_F(VMInstructionComparisonTest, OpGtFloatRegistersTrue) {
 }
 
 TEST_F(VMInstructionComparisonTest, OpGtMixedNumberTypes) {
-    Instruction code[2];
-    code[0] = INSTRUCTION_GT(0, 1, 2, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Int 10
+R[2]: Float 5.5
 
-    vm->values[1].header = VALUE_TYPE_INT;
-    vm->values[1].as.i   = 10;
-    vm->values[2].header = VALUE_TYPE_FLOAT;
-    vm->values[2].as.f   = 5.5;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_GT   A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP A=0x00 K=0x0000 i=F s=F
+)");
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -98,18 +90,17 @@ TEST_F(VMInstructionComparisonTest, OpGtMixedNumberTypes) {
 }
 
 TEST_F(VMInstructionComparisonTest, OpGtWithConstantLeft) {
-    Instruction code[2];
-    code[0] = INSTRUCTION_GT(0, 10, 1, true, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Int -120
 
-    vm->values[1].header = VALUE_TYPE_INT;
-    vm->values[1].as.i   = -120;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_GT   A=0x00 B=0x0A C=0x01 kb=T kc=F
+1: OP_TRAP A=0x00 K=0x0000 i=F s=F
+)");
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -117,18 +108,17 @@ TEST_F(VMInstructionComparisonTest, OpGtWithConstantLeft) {
 }
 
 TEST_F(VMInstructionComparisonTest, OpGtWithConstantRight) {
-    Instruction code[2];
-    code[0] = INSTRUCTION_GT(0, 1, 200, false, true);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Int 100
 
-    vm->values[1].header = VALUE_TYPE_INT;
-    vm->values[1].as.i   = 100;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_GT   A=0x00 B=0x01 C=0xC8 kb=F kc=T
+1: OP_TRAP A=0x00 K=0x0000 i=F s=F
+)");
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -138,20 +128,18 @@ TEST_F(VMInstructionComparisonTest, OpGtWithConstantRight) {
 // OP_GE Tests: R[A] := RK(B, kb) >= RK(C, kc)
 
 TEST_F(VMInstructionComparisonTest, OpGeIntegerRegistersTrue) {
-    Instruction code[2];
-    code[0] = INSTRUCTION_GE(0, 1, 2, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Int 10
+R[2]: Int 10
 
-    vm->values[1].header = VALUE_TYPE_INT;
-    vm->values[1].as.i   = 10;
-    vm->values[2].header = VALUE_TYPE_INT;
-    vm->values[2].as.i   = 10;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_GE   A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP A=0x00 K=0x0000 i=F s=F
+)");
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -159,20 +147,18 @@ TEST_F(VMInstructionComparisonTest, OpGeIntegerRegistersTrue) {
 }
 
 TEST_F(VMInstructionComparisonTest, OpGeIntegerRegistersGreater) {
-    Instruction code[2];
-    code[0] = INSTRUCTION_GE(0, 1, 2, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Int 15
+R[2]: Int 10
 
-    vm->values[1].header = VALUE_TYPE_INT;
-    vm->values[1].as.i   = 15;
-    vm->values[2].header = VALUE_TYPE_INT;
-    vm->values[2].as.i   = 10;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_GE   A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP A=0x00 K=0x0000 i=F s=F
+)");
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -180,20 +166,18 @@ TEST_F(VMInstructionComparisonTest, OpGeIntegerRegistersGreater) {
 }
 
 TEST_F(VMInstructionComparisonTest, OpGeIntegerRegistersFalse) {
-    Instruction code[2];
-    code[0] = INSTRUCTION_GE(0, 1, 2, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Int 5
+R[2]: Int 10
 
-    vm->values[1].header = VALUE_TYPE_INT;
-    vm->values[1].as.i   = 5;
-    vm->values[2].header = VALUE_TYPE_INT;
-    vm->values[2].as.i   = 10;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_GE   A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP A=0x00 K=0x0000 i=F s=F
+)");
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -201,20 +185,18 @@ TEST_F(VMInstructionComparisonTest, OpGeIntegerRegistersFalse) {
 }
 
 TEST_F(VMInstructionComparisonTest, OpGeFloatRegisters) {
-    Instruction code[2];
-    code[0] = INSTRUCTION_GE(0, 1, 2, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Float 3.14
+R[2]: Float 3.14
 
-    vm->values[1].header = VALUE_TYPE_FLOAT;
-    vm->values[1].as.f   = 3.14;
-    vm->values[2].header = VALUE_TYPE_FLOAT;
-    vm->values[2].as.f   = 3.14;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_GE   A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP A=0x00 K=0x0000 i=F s=F
+)");
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -224,20 +206,18 @@ TEST_F(VMInstructionComparisonTest, OpGeFloatRegisters) {
 // OP_EQ Tests: R[A] := RK(B, kb) == RK(C, kc)
 
 TEST_F(VMInstructionComparisonTest, OpEqIntegerRegistersTrue) {
-    Instruction code[2];
-    code[0] = INSTRUCTION_EQ(0, 1, 2, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Int 42
+R[2]: Int 42
 
-    vm->values[1].header = VALUE_TYPE_INT;
-    vm->values[1].as.i   = 42;
-    vm->values[2].header = VALUE_TYPE_INT;
-    vm->values[2].as.i   = 42;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_EQ   A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP A=0x00 K=0x0000 i=F s=F
+)");
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -245,20 +225,18 @@ TEST_F(VMInstructionComparisonTest, OpEqIntegerRegistersTrue) {
 }
 
 TEST_F(VMInstructionComparisonTest, OpEqIntegerRegistersFalse) {
-    Instruction code[2];
-    code[0] = INSTRUCTION_EQ(0, 1, 2, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Int 42
+R[2]: Int 13
 
-    vm->values[1].header = VALUE_TYPE_INT;
-    vm->values[1].as.i   = 42;
-    vm->values[2].header = VALUE_TYPE_INT;
-    vm->values[2].as.i   = 13;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_EQ   A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP A=0x00 K=0x0000 i=F s=F
+)");
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -266,20 +244,18 @@ TEST_F(VMInstructionComparisonTest, OpEqIntegerRegistersFalse) {
 }
 
 TEST_F(VMInstructionComparisonTest, OpEqBooleanRegistersTrue) {
-    Instruction code[2];
-    code[0] = INSTRUCTION_EQ(0, 1, 2, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Bool true
+R[2]: Bool true
 
-    vm->values[1].header = VALUE_TYPE_BOOL;
-    vm->values[1].as.b   = true;
-    vm->values[2].header = VALUE_TYPE_BOOL;
-    vm->values[2].as.b   = true;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_EQ   A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP A=0x00 K=0x0000 i=F s=F
+)");
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -287,20 +263,18 @@ TEST_F(VMInstructionComparisonTest, OpEqBooleanRegistersTrue) {
 }
 
 TEST_F(VMInstructionComparisonTest, OpEqBooleanRegistersFalse) {
-    Instruction code[2];
-    code[0] = INSTRUCTION_EQ(0, 1, 2, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Bool true
+R[2]: Bool false
 
-    vm->values[1].header = VALUE_TYPE_BOOL;
-    vm->values[1].as.b   = true;
-    vm->values[2].header = VALUE_TYPE_BOOL;
-    vm->values[2].as.b   = false;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_EQ   A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP A=0x00 K=0x0000 i=F s=F
+)");
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -308,20 +282,18 @@ TEST_F(VMInstructionComparisonTest, OpEqBooleanRegistersFalse) {
 }
 
 TEST_F(VMInstructionComparisonTest, OpEqFloatRegisters) {
-    Instruction code[2];
-    code[0] = INSTRUCTION_EQ(0, 1, 2, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Float 2.5
+R[2]: Float 2.5
 
-    vm->values[1].header = VALUE_TYPE_FLOAT;
-    vm->values[1].as.f   = 2.5;
-    vm->values[2].header = VALUE_TYPE_FLOAT;
-    vm->values[2].as.f   = 2.5;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_EQ   A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP A=0x00 K=0x0000 i=F s=F
+)");
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -329,20 +301,18 @@ TEST_F(VMInstructionComparisonTest, OpEqFloatRegisters) {
 }
 
 TEST_F(VMInstructionComparisonTest, OpEqMixedNumberTypes) {
-    Instruction code[2];
-    code[0] = INSTRUCTION_EQ(0, 1, 2, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Int 5
+R[2]: Float 5.0
 
-    vm->values[1].header = VALUE_TYPE_INT;
-    vm->values[1].as.i   = 5;
-    vm->values[2].header = VALUE_TYPE_FLOAT;
-    vm->values[2].as.f   = 5.0;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_EQ   A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP A=0x00 K=0x0000 i=F s=F
+)");
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -352,20 +322,18 @@ TEST_F(VMInstructionComparisonTest, OpEqMixedNumberTypes) {
 // OP_NEQ Tests: R[A] := RK(B, kb) != RK(C, kc)
 
 TEST_F(VMInstructionComparisonTest, OpNeqIntegerRegistersTrue) {
-    Instruction code[2];
-    code[0] = INSTRUCTION_NEQ(0, 1, 2, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Int 42
+R[2]: Int 13
 
-    vm->values[1].header = VALUE_TYPE_INT;
-    vm->values[1].as.i   = 42;
-    vm->values[2].header = VALUE_TYPE_INT;
-    vm->values[2].as.i   = 13;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_NEQ  A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP A=0x00 K=0x0000 i=F s=F
+)");
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -373,20 +341,18 @@ TEST_F(VMInstructionComparisonTest, OpNeqIntegerRegistersTrue) {
 }
 
 TEST_F(VMInstructionComparisonTest, OpNeqIntegerRegistersFalse) {
-    Instruction code[2];
-    code[0] = INSTRUCTION_NEQ(0, 1, 2, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Int 42
+R[2]: Int 42
 
-    vm->values[1].header = VALUE_TYPE_INT;
-    vm->values[1].as.i   = 42;
-    vm->values[2].header = VALUE_TYPE_INT;
-    vm->values[2].as.i   = 42;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_NEQ  A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP A=0x00 K=0x0000 i=F s=F
+)");
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -394,20 +360,18 @@ TEST_F(VMInstructionComparisonTest, OpNeqIntegerRegistersFalse) {
 }
 
 TEST_F(VMInstructionComparisonTest, OpNeqBooleanRegisters) {
-    Instruction code[2];
-    code[0] = INSTRUCTION_NEQ(0, 1, 2, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Bool true
+R[2]: Bool false
 
-    vm->values[1].header = VALUE_TYPE_BOOL;
-    vm->values[1].as.b   = true;
-    vm->values[2].header = VALUE_TYPE_BOOL;
-    vm->values[2].as.b   = false;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_NEQ  A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP A=0x00 K=0x0000 i=F s=F
+)");
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";
@@ -415,20 +379,18 @@ TEST_F(VMInstructionComparisonTest, OpNeqBooleanRegisters) {
 }
 
 TEST_F(VMInstructionComparisonTest, OpNeqFloatRegisters) {
-    Instruction code[2];
-    code[0] = INSTRUCTION_NEQ(0, 1, 2, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Float 2.5
+R[2]: Float 3.7
 
-    vm->values[1].header = VALUE_TYPE_FLOAT;
-    vm->values[1].as.f   = 2.5;
-    vm->values[2].header = VALUE_TYPE_FLOAT;
-    vm->values[2].as.f   = 3.7;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_NEQ  A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP A=0x00 K=0x0000 i=F s=F
+)");
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Result should be boolean type";

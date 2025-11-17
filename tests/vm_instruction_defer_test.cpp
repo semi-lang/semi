@@ -83,34 +83,32 @@ int VMInstructionDeferTest::execution_count         = 0;
 //   testFunction()
 //
 TEST_F(VMInstructionDeferTest, SingleDeferBlock) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=3
 
-    // Create defer function that calls track(2)
-    Instruction deferCode[4];
-    deferCode[0] = INSTRUCTION_LOAD_CONSTANT(1, 0, false, true);        // Load track function (global constant 0)
-    deferCode[1] = INSTRUCTION_LOAD_INLINE_INTEGER(2, 2, false, true);  // Load argument 2 (positive)
-    deferCode[2] = INSTRUCTION_CALL(1, 1, 0, false, false);             // Call track(2)
-    deferCode[3] = INSTRUCTION_RETURN(UINT8_MAX, 0, 0, false, false);   // Return
+[Instructions]
+0: OP_LOAD_CONSTANT         A=0x01 K=0x0000 i=F s=T
+1: OP_LOAD_INLINE_INTEGER   A=0x02 K=0x0001 i=T s=T
+2: OP_CALL                  A=0x01 B=0x01 C=0x00 kb=F kc=F
+3: OP_DEFER_CALL            A=0x00 K=0x0000 i=F s=F
+4: OP_LOAD_CONSTANT         A=0x01 K=0x0000 i=F s=T
+5: OP_LOAD_INLINE_INTEGER   A=0x02 K=0x0003 i=T s=T
+6: OP_CALL                  A=0x01 B=0x01 C=0x00 kb=F kc=F
+7: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
-    FunctionProto* deferFn = CreateFunctionObject(0, deferCode, 4, 3, 0, 0);
+[Constants]
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=4 -> @deferFunc
 
-    // Add defer function to module's constant table
-    ConstantIndex deferIndex = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(deferFn));
-
-    // Create main function
-    Instruction mainCode[8];
-    mainCode[0] = INSTRUCTION_LOAD_CONSTANT(1, 0, false, true);         // Load track function (global constant 0)
-    mainCode[1] = INSTRUCTION_LOAD_INLINE_INTEGER(2, 1, false, true);   // Load argument 1 (positive)
-    mainCode[2] = INSTRUCTION_CALL(1, 1, 0, false, false);              // Call track(1) - function body start
-    mainCode[3] = INSTRUCTION_DEFER_CALL(0, deferIndex, false, false);  // Register defer block
-    mainCode[4] = INSTRUCTION_LOAD_CONSTANT(1, 0, false, true);         // Load track function again
-    mainCode[5] = INSTRUCTION_LOAD_INLINE_INTEGER(2, 3, false, true);   // Load argument 3 (positive)
-    mainCode[6] = INSTRUCTION_CALL(1, 1, 0, false, false);              // Call track(3) - function body end
-    mainCode[7] = INSTRUCTION_RETURN(UINT8_MAX, 0, 0, false, false);    // Return (triggers defer execution)
-
-    module->moduleInit = CreateFunctionObject(0, mainCode, 8, 3, 0, 0);
-
-    ErrorId result = RunModule(module);
+[Instructions:deferFunc]
+0: OP_LOAD_CONSTANT         A=0x01 K=0x0000 i=F s=T
+1: OP_LOAD_INLINE_INTEGER   A=0x02 K=0x0002 i=T s=T
+2: OP_CALL                  A=0x01 B=0x01 C=0x00 kb=F kc=F
+3: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should execute successfully";
 
@@ -133,59 +131,51 @@ TEST_F(VMInstructionDeferTest, SingleDeferBlock) {
 //   testFunction()
 //
 TEST_F(VMInstructionDeferTest, MultipleDeferBlocks) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=3
 
-    // Create first defer function that calls track(10)
-    Instruction defer1Code[4];
-    defer1Code[0] = INSTRUCTION_LOAD_CONSTANT(1, 0, false, true);         // Load track function (global constant 0)
-    defer1Code[1] = INSTRUCTION_LOAD_INLINE_INTEGER(2, 10, false, true);  // Load argument 10 (positive)
-    defer1Code[2] = INSTRUCTION_CALL(1, 1, 0, false, false);              // Call track(10)
-    defer1Code[3] = INSTRUCTION_RETURN(UINT8_MAX, 0, 0, false, false);    // Return
+[Instructions]
+0:  OP_LOAD_CONSTANT         A=0x01 K=0x0000 i=F s=T
+1:  OP_LOAD_INLINE_INTEGER   A=0x02 K=0x0001 i=T s=T
+2:  OP_CALL                  A=0x01 B=0x01 C=0x00 kb=F kc=F
+3:  OP_DEFER_CALL            A=0x00 K=0x0000 i=F s=F
+4:  OP_LOAD_CONSTANT         A=0x01 K=0x0000 i=F s=T
+5:  OP_LOAD_INLINE_INTEGER   A=0x02 K=0x0002 i=T s=T
+6:  OP_CALL                  A=0x01 B=0x01 C=0x00 kb=F kc=F
+7:  OP_DEFER_CALL            A=0x00 K=0x0001 i=F s=F
+8:  OP_DEFER_CALL            A=0x00 K=0x0002 i=F s=F
+9:  OP_LOAD_CONSTANT         A=0x01 K=0x0000 i=F s=T
+10: OP_LOAD_INLINE_INTEGER   A=0x02 K=0x0003 i=T s=T
+11: OP_CALL                  A=0x01 B=0x01 C=0x00 kb=F kc=F
+12: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
-    FunctionProto* defer1Fn   = CreateFunctionObject(0, defer1Code, 4, 3, 0, 0);
-    ConstantIndex defer1Index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(defer1Fn));
+[Constants]
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=4 -> @defer1
+K[1]: FunctionProto arity=0 coarity=0 maxStackSize=4 -> @defer2
+K[2]: FunctionProto arity=0 coarity=0 maxStackSize=4 -> @defer3
 
-    // Create second defer function that calls track(20)
-    Instruction defer2Code[4];
-    defer2Code[0] = INSTRUCTION_LOAD_CONSTANT(1, 0, false, true);         // Load track function (global constant 0)
-    defer2Code[1] = INSTRUCTION_LOAD_INLINE_INTEGER(2, 20, false, true);  // Load argument 20 (positive)
-    defer2Code[2] = INSTRUCTION_CALL(1, 1, 0, false, false);              // Call track(20)
-    defer2Code[3] = INSTRUCTION_RETURN(UINT8_MAX, 0, 0, false, false);    // Return
+[Instructions:defer1]
+0: OP_LOAD_CONSTANT         A=0x01 K=0x0000 i=F s=T
+1: OP_LOAD_INLINE_INTEGER   A=0x02 K=0x000A i=T s=T
+2: OP_CALL                  A=0x01 B=0x01 C=0x00 kb=F kc=F
+3: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
-    FunctionProto* defer2Fn   = CreateFunctionObject(0, defer2Code, 4, 3, 0, 0);
-    ConstantIndex defer2Index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(defer2Fn));
+[Instructions:defer2]
+0: OP_LOAD_CONSTANT         A=0x01 K=0x0000 i=F s=T
+1: OP_LOAD_INLINE_INTEGER   A=0x02 K=0x0014 i=T s=T
+2: OP_CALL                  A=0x01 B=0x01 C=0x00 kb=F kc=F
+3: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
-    // Create third defer function that calls track(30)
-    Instruction defer3Code[4];
-    defer3Code[0] = INSTRUCTION_LOAD_CONSTANT(1, 0, false, true);         // Load track function (global constant 0)
-    defer3Code[1] = INSTRUCTION_LOAD_INLINE_INTEGER(2, 30, false, true);  // Load argument 30 (positive)
-    defer3Code[2] = INSTRUCTION_CALL(1, 1, 0, false, false);              // Call track(30)
-    defer3Code[3] = INSTRUCTION_RETURN(UINT8_MAX, 0, 0, false, false);    // Return
-
-    FunctionProto* defer3Fn   = CreateFunctionObject(0, defer3Code, 4, 3, 0, 0);
-    ConstantIndex defer3Index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(defer3Fn));
-
-    // Create main function
-    // track(3) }
-    Instruction mainCode[13];
-    mainCode[0]  = INSTRUCTION_LOAD_CONSTANT(1, 0, false, true);          // Load track function (global constant 0)
-    mainCode[1]  = INSTRUCTION_LOAD_INLINE_INTEGER(2, 1, false, true);    // Load argument 1 (positive)
-    mainCode[2]  = INSTRUCTION_CALL(1, 1, 0, false, false);               // Call track(1) - function body start
-    mainCode[3]  = INSTRUCTION_DEFER_CALL(0, defer1Index, false, false);  // Register first defer block
-    mainCode[4]  = INSTRUCTION_LOAD_CONSTANT(1, 0, false, true);          // Load track function again
-    mainCode[5]  = INSTRUCTION_LOAD_INLINE_INTEGER(2, 2, false, true);    // Load argument 2 (positive)
-    mainCode[6]  = INSTRUCTION_CALL(1, 1, 0, false, false);               // Call track(2) - function body middle
-    mainCode[7]  = INSTRUCTION_DEFER_CALL(0, defer2Index, false, false);  // Register second defer block
-    mainCode[8]  = INSTRUCTION_DEFER_CALL(0, defer3Index, false, false);  // Register third defer block
-    mainCode[9]  = INSTRUCTION_LOAD_CONSTANT(1, 0, false, true);          // Load track function again
-    mainCode[10] = INSTRUCTION_LOAD_INLINE_INTEGER(2, 3, false, true);    // Load argument 3 (positive)
-    mainCode[11] = INSTRUCTION_CALL(1, 1, 0, false, false);               // Call track(3) - function body end
-    mainCode[12] =
-        INSTRUCTION_RETURN(UINT8_MAX, 0, 0, false, false);  // Return (triggers defer execution in LIFO order)
-
-    module->moduleInit = CreateFunctionObject(0, mainCode, 13, 3, 0, 0);
-
-    ErrorId result = RunModule(module);
+[Instructions:defer3]
+0: OP_LOAD_CONSTANT         A=0x01 K=0x0000 i=F s=T
+1: OP_LOAD_INLINE_INTEGER   A=0x02 K=0x001E i=T s=T
+2: OP_CALL                  A=0x01 B=0x01 C=0x00 kb=F kc=F
+3: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should execute successfully";
 
@@ -209,38 +199,38 @@ TEST_F(VMInstructionDeferTest, MultipleDeferBlocks) {
 //   testFunction()
 //
 TEST_F(VMInstructionDeferTest, DeferWithEarlyReturn) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=4
 
-    // Create defer function that calls track(100)
-    Instruction deferCode[4];
-    deferCode[0] = INSTRUCTION_LOAD_CONSTANT(1, 0, false, true);          // Load track function (global constant 0)
-    deferCode[1] = INSTRUCTION_LOAD_INLINE_INTEGER(2, 100, false, true);  // Load argument 100 (positive)
-    deferCode[2] = INSTRUCTION_CALL(1, 1, 0, false, false);               // Call track(100)
-    deferCode[3] = INSTRUCTION_RETURN(UINT8_MAX, 0, 0, false, false);     // Return
+[Instructions]
+0:  OP_LOAD_CONSTANT         A=0x01 K=0x0000 i=F s=T
+1:  OP_LOAD_INLINE_INTEGER   A=0x02 K=0x0001 i=T s=T
+2:  OP_CALL                  A=0x01 B=0x01 C=0x00 kb=F kc=F
+3:  OP_DEFER_CALL            A=0x00 K=0x0000 i=F s=F
+4:  OP_LOAD_CONSTANT         A=0x01 K=0x0000 i=F s=T
+5:  OP_LOAD_INLINE_INTEGER   A=0x02 K=0x0002 i=T s=T
+6:  OP_CALL                  A=0x01 B=0x01 C=0x00 kb=F kc=F
+7:  OP_LOAD_BOOL             A=0x03 B=0x00 C=0x00 kb=T kc=F
+8:  OP_C_JUMP                A=0x03 K=0x0004 i=T s=T
+9:  OP_LOAD_CONSTANT         A=0x01 K=0x0000 i=F s=T
+10: OP_LOAD_INLINE_INTEGER   A=0x02 K=0x03E7 i=T s=T
+11: OP_CALL                  A=0x01 B=0x01 C=0x00 kb=F kc=F
+12: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+13: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
-    FunctionProto* deferFn   = CreateFunctionObject(0, deferCode, 4, 3, 0, 0);
-    ConstantIndex deferIndex = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(deferFn));
+[Constants]
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=4 -> @deferFunc
 
-    // Create main function with conditional early return
-    Instruction mainCode[14];
-    mainCode[0]  = INSTRUCTION_LOAD_CONSTANT(1, 0, false, true);          // Load track function (global constant 0)
-    mainCode[1]  = INSTRUCTION_LOAD_INLINE_INTEGER(2, 1, false, true);    // Load argument 1 (positive)
-    mainCode[2]  = INSTRUCTION_CALL(1, 1, 0, false, false);               // Call track(1) - function body start
-    mainCode[3]  = INSTRUCTION_DEFER_CALL(0, deferIndex, false, false);   // Register defer block
-    mainCode[4]  = INSTRUCTION_LOAD_CONSTANT(1, 0, false, true);          // Load track function again
-    mainCode[5]  = INSTRUCTION_LOAD_INLINE_INTEGER(2, 2, false, true);    // Load argument 2 (positive)
-    mainCode[6]  = INSTRUCTION_CALL(1, 1, 0, false, false);               // Call track(2) - before condition
-    mainCode[7]  = INSTRUCTION_LOAD_BOOL(3, 0, true, false);              // Load true for condition
-    mainCode[8]  = INSTRUCTION_C_JUMP(3, 4, true, true);                  // Jump if true (skip next 4 instructions)
-    mainCode[9]  = INSTRUCTION_LOAD_CONSTANT(1, 0, false, true);          // This should be skipped
-    mainCode[10] = INSTRUCTION_LOAD_INLINE_INTEGER(2, 999, false, true);  // This should be skipped (positive)
-    mainCode[11] = INSTRUCTION_CALL(1, 1, 0, false, false);               // This should be skipped: track(999)
-    mainCode[12] = INSTRUCTION_RETURN(UINT8_MAX, 0, 0, false, false);     // This should be skipped
-    mainCode[13] = INSTRUCTION_RETURN(UINT8_MAX, 0, 0, false, false);     // Early return (triggers defer execution)
-
-    module->moduleInit = CreateFunctionObject(0, mainCode, 14, 4, 0, 0);
-
-    ErrorId result = RunModule(module);
+[Instructions:deferFunc]
+0: OP_LOAD_CONSTANT         A=0x01 K=0x0000 i=F s=T
+1: OP_LOAD_INLINE_INTEGER   A=0x02 K=0x0064 i=T s=T
+2: OP_CALL                  A=0x01 B=0x01 C=0x00 kb=F kc=F
+3: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should execute successfully";
 
@@ -271,61 +261,55 @@ TEST_F(VMInstructionDeferTest, DeferWithEarlyReturn) {
 // Expected execution: outer body → inner body → inner defer → outer body → outer defer
 //
 TEST_F(VMInstructionDeferTest, NestedFunctionCallsWithDefer) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=3
 
-    // Create defer function for inner function that calls track(200)
-    Instruction innerDeferCode[4];
-    innerDeferCode[0] = INSTRUCTION_LOAD_CONSTANT(1, 0, false, true);  // Load track function (global constant 0)
-    innerDeferCode[1] = INSTRUCTION_LOAD_INLINE_INTEGER(2, 200, false, true);  // Load argument 200 (positive)
-    innerDeferCode[2] = INSTRUCTION_CALL(1, 1, 0, false, false);               // Call track(200)
-    innerDeferCode[3] = INSTRUCTION_RETURN(UINT8_MAX, 0, 0, false, false);     // Return
+[Instructions]
+0:  OP_LOAD_CONSTANT         A=0x01 K=0x0000 i=F s=T
+1:  OP_LOAD_INLINE_INTEGER   A=0x02 K=0x0001 i=T s=T
+2:  OP_CALL                  A=0x01 B=0x01 C=0x00 kb=F kc=F
+3:  OP_DEFER_CALL            A=0x00 K=0x0000 i=F s=F
+4:  OP_LOAD_CONSTANT         A=0x01 K=0x0000 i=F s=T
+5:  OP_LOAD_INLINE_INTEGER   A=0x02 K=0x0002 i=T s=T
+6:  OP_CALL                  A=0x01 B=0x01 C=0x00 kb=F kc=F
+7:  OP_LOAD_CONSTANT         A=0x01 K=0x0002 i=F s=F
+8:  OP_CALL                  A=0x01 B=0x00 C=0x00 kb=F kc=F
+9:  OP_LOAD_CONSTANT         A=0x01 K=0x0000 i=F s=T
+10: OP_LOAD_INLINE_INTEGER   A=0x02 K=0x0003 i=T s=T
+11: OP_CALL                  A=0x01 B=0x01 C=0x00 kb=F kc=F
+12: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
-    FunctionProto* innerDeferFn   = CreateFunctionObject(0, innerDeferCode, 4, 3, 0, 0);
-    ConstantIndex innerDeferIndex = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(innerDeferFn));
+[Constants]
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=4 -> @outerDefer
+K[1]: FunctionProto arity=0 coarity=0 maxStackSize=4 -> @innerDefer
+K[2]: FunctionProto arity=0 coarity=0 maxStackSize=8 -> @innerFunc
 
-    // Create defer function for outer function that calls track(400)
-    Instruction outerDeferCode[4];
-    outerDeferCode[0] = INSTRUCTION_LOAD_CONSTANT(1, 0, false, true);  // Load track function (global constant 0)
-    outerDeferCode[1] = INSTRUCTION_LOAD_INLINE_INTEGER(2, 400, false, true);  // Load argument 400 (positive)
-    outerDeferCode[2] = INSTRUCTION_CALL(1, 1, 0, false, false);               // Call track(400)
-    outerDeferCode[3] = INSTRUCTION_RETURN(UINT8_MAX, 0, 0, false, false);     // Return
+[Instructions:outerDefer]
+0: OP_LOAD_CONSTANT         A=0x01 K=0x0000 i=F s=T
+1: OP_LOAD_INLINE_INTEGER   A=0x02 K=0x0190 i=T s=T
+2: OP_CALL                  A=0x01 B=0x01 C=0x00 kb=F kc=F
+3: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
-    FunctionProto* outerDeferFn   = CreateFunctionObject(0, outerDeferCode, 4, 3, 0, 0);
-    ConstantIndex outerDeferIndex = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(outerDeferFn));
+[Instructions:innerDefer]
+0: OP_LOAD_CONSTANT         A=0x01 K=0x0000 i=F s=T
+1: OP_LOAD_INLINE_INTEGER   A=0x02 K=0x00C8 i=T s=T
+2: OP_CALL                  A=0x01 B=0x01 C=0x00 kb=F kc=F
+3: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
-    // Create inner function (called by outer function)
-    Instruction innerCode[8];
-    innerCode[0] = INSTRUCTION_LOAD_CONSTANT(1, 0, false, true);              // Load track function (global constant 0)
-    innerCode[1] = INSTRUCTION_LOAD_INLINE_INTEGER(2, 10, false, true);       // Load argument 10 (positive)
-    innerCode[2] = INSTRUCTION_CALL(1, 1, 0, false, false);                   // Call track(10) - inner function start
-    innerCode[3] = INSTRUCTION_DEFER_CALL(0, innerDeferIndex, false, false);  // Register inner defer block
-    innerCode[4] = INSTRUCTION_LOAD_CONSTANT(1, 0, false, true);              // Load track function again
-    innerCode[5] = INSTRUCTION_LOAD_INLINE_INTEGER(2, 20, false, true);       // Load argument 20 (positive)
-    innerCode[6] = INSTRUCTION_CALL(1, 1, 0, false, false);                   // Call track(20) - inner function end
-    innerCode[7] = INSTRUCTION_RETURN(UINT8_MAX, 0, 0, false, false);         // Return (triggers inner defer)
-
-    FunctionProto* innerFn     = CreateFunctionObject(0, innerCode, 8, 3, 0, 0);
-    ConstantIndex innerFnIndex = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(innerFn));
-
-    // Create outer function (main function)
-    Instruction outerCode[13];
-    outerCode[0]  = INSTRUCTION_LOAD_CONSTANT(1, 0, false, true);        // Load track function (global constant 0)
-    outerCode[1]  = INSTRUCTION_LOAD_INLINE_INTEGER(2, 1, false, true);  // Load argument 1 (positive)
-    outerCode[2]  = INSTRUCTION_CALL(1, 1, 0, false, false);             // Call track(1) - outer function start
-    outerCode[3]  = INSTRUCTION_DEFER_CALL(0, outerDeferIndex, false, false);  // Register outer defer block
-    outerCode[4]  = INSTRUCTION_LOAD_CONSTANT(1, 0, false, true);              // Load track function again
-    outerCode[5]  = INSTRUCTION_LOAD_INLINE_INTEGER(2, 2, false, true);        // Load argument 2 (positive)
-    outerCode[6]  = INSTRUCTION_CALL(1, 1, 0, false, false);                   // Call track(2) - before inner call
-    outerCode[7]  = INSTRUCTION_LOAD_CONSTANT(1, innerFnIndex, false, false);  // Load inner function
-    outerCode[8]  = INSTRUCTION_CALL(1, 0, 0, false, false);                   // Call inner function
-    outerCode[9]  = INSTRUCTION_LOAD_CONSTANT(1, 0, false, true);              // Load track function again
-    outerCode[10] = INSTRUCTION_LOAD_INLINE_INTEGER(2, 3, false, true);        // Load argument 3 (positive)
-    outerCode[11] = INSTRUCTION_CALL(1, 1, 0, false, false);                   // Call track(3) - outer function end
-    outerCode[12] = INSTRUCTION_RETURN(UINT8_MAX, 0, 0, false, false);         // Return (triggers outer defer)
-
-    module->moduleInit = CreateFunctionObject(0, outerCode, 13, 3, 0, 0);
-
-    ErrorId result = RunModule(module);
+[Instructions:innerFunc]
+0: OP_LOAD_CONSTANT         A=0x01 K=0x0000 i=F s=T
+1: OP_LOAD_INLINE_INTEGER   A=0x02 K=0x000A i=T s=T
+2: OP_CALL                  A=0x01 B=0x01 C=0x00 kb=F kc=F
+3: OP_DEFER_CALL            A=0x00 K=0x0001 i=F s=F
+4: OP_LOAD_CONSTANT         A=0x01 K=0x0000 i=F s=T
+5: OP_LOAD_INLINE_INTEGER   A=0x02 K=0x0014 i=T s=T
+6: OP_CALL                  A=0x01 B=0x01 C=0x00 kb=F kc=F
+7: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should execute successfully";
 

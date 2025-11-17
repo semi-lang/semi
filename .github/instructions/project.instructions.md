@@ -34,7 +34,8 @@ Guidelines to follow at all times:
   ```sh
   ./build/test_runner
   ```
-  This is a googletest runner. Use flags like `--gtest_filter` to run specific tests. For example:
+  IMPORTANT: Always build the tests before running them to ensure you are testing the latest code.
+- The test binary is a googletest runner. Use flags like `--gtest_filter` to run specific tests. For example:
   ```sh
   ./build/test_runner --gtest_filter="VMInstructionFunctionCallTest.*"
   ```

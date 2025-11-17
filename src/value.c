@@ -510,6 +510,7 @@ FunctionProto* semiFunctionProtoCreate(GC* gc, uint8_t upvalueCount) {
 
     o->arity        = 0;
     o->coarity      = 0;
+    o->maxStackSize = 0;
     o->upvalueCount = upvalueCount;
     ChunkInit(&o->chunk);
     memset(o->upvalues, 0, sizeof(UpvalueDescription) * upvalueCount);

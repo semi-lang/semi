@@ -31,7 +31,7 @@ TEST_F(CompilerReturnTest, FirstReturnWithoutValue) {
 2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
 [Constants]
-K[0]: FunctionProto arity=0 coarity=0 size=2 -> @test
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=0 -> @test
 
 [Instructions:test]
 0: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -57,7 +57,7 @@ TEST_F(CompilerReturnTest, FirstReturnWithValue) {
 2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
 [Constants]
-K[0]: FunctionProto arity=0 coarity=1 size=3 -> @test
+K[0]: FunctionProto arity=0 coarity=1 maxStackSize=1 -> @test
 
 [Instructions:test]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x002A i=T s=T
@@ -87,7 +87,7 @@ TEST_F(CompilerReturnTest, ConsistentZeroValueReturns) {
 2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
 [Constants]
-K[0]: FunctionProto arity=0 coarity=0 size=6 -> @test
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=1 -> @test
 
 [Instructions:test]
 0: OP_LOAD_BOOL             A=0x00 K=0x0000 i=T s=F
@@ -120,7 +120,7 @@ TEST_F(CompilerReturnTest, ConsistentOneValueReturns) {
 2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
 [Constants]
-K[0]: FunctionProto arity=0 coarity=1 size=8 -> @test
+K[0]: FunctionProto arity=0 coarity=1 maxStackSize=1 -> @test
 
 [Instructions:test]
 0: OP_LOAD_BOOL             A=0x00 K=0x0000 i=T s=F
@@ -196,8 +196,8 @@ TEST_F(CompilerReturnTest, NestedFunctionReturns) {
 2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
 [Constants]
-K[0]: FunctionProto arity=0 coarity=1 size=3 -> @inner
-K[1]: FunctionProto arity=0 coarity=1 size=4 -> @outer
+K[0]: FunctionProto arity=0 coarity=1 maxStackSize=1 -> @inner
+K[1]: FunctionProto arity=0 coarity=1 maxStackSize=2 -> @outer
 
 [Instructions:outer]
 0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
@@ -255,7 +255,7 @@ TEST_F(CompilerReturnTest, ReturnWithDifferentExpressionTypes) {
 [Constants]
 K[0]: String "hello" length=5
 K[1]: Float 3.14
-K[2]: FunctionProto arity=0 coarity=1 size=8 -> @test
+K[2]: FunctionProto arity=0 coarity=1 maxStackSize=1 -> @test
 
 [Instructions:test]
 0: OP_LOAD_BOOL             A=0x00 K=0x0000 i=T s=F
@@ -293,7 +293,7 @@ TEST_F(CompilerReturnTest, ReturnInForLoop) {
 
 [Constants]
 K[0]: Range start=1 end=10 step=1
-K[1]: FunctionProto arity=0 coarity=1 size=12 -> @test
+K[1]: FunctionProto arity=0 coarity=1 maxStackSize=3 -> @test
 
 [Instructions:test]
 0:  OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
@@ -344,7 +344,7 @@ TEST_F(CompilerReturnTest, ReturnWithComplexExpression) {
 2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
 [Constants]
-K[0]: FunctionProto arity=0 coarity=1 size=6 -> @test
+K[0]: FunctionProto arity=0 coarity=1 maxStackSize=3 -> @test
 
 [Instructions:test]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0005 i=T s=T
@@ -373,7 +373,7 @@ TEST_F(CompilerReturnTest, EmptyFunction) {
 2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
 [Constants]
-K[0]: FunctionProto arity=0 coarity=0 size=1 -> @test
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=0 -> @test
 
 [Instructions:test]
 0: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -399,7 +399,7 @@ TEST_F(CompilerReturnTest, ExplicitVoidReturn) {
 2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
 [Constants]
-K[0]: FunctionProto arity=0 coarity=0 size=3 -> @test
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=1 -> @test
 
 [Instructions:test]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x002A i=T s=T

@@ -55,17 +55,17 @@ TEST_F(VMInstructionIterTest, OpMakeRangeBasicInteger) {
         vm->values[1] = semiValueNewInt(test_case.end);
         vm->values[2] = semiValueNewInt(test_case.step);
 
-        Instruction code[2];
-        code[0] = INSTRUCTION_MAKE_RANGE(0, 1, 2, false, false);
-        code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+        SemiModule* module;
+        ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                                R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-        vm->error = 0;
-
-        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit  = func;
-
-        int result = RunModule(module);
+[Instructions]
+0: OP_MAKE_RANGE  A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP        A=0x00 K=0x0000 i=F s=F
+)",
+                                                                &module);
 
         if (test_case.expect_error) {
             ASSERT_EQ(result, test_case.expected_error_code) << "Test case: " << test_case.name;
@@ -113,17 +113,17 @@ TEST_F(VMInstructionIterTest, OpMakeRangeFloatValues) {
         vm->values[1] = semiValueNewFloat(test_case.end);
         vm->values[2] = semiValueNewFloat(test_case.step);
 
-        Instruction code[2];
-        code[0] = INSTRUCTION_MAKE_RANGE(0, 1, 2, false, false);
-        code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+        SemiModule* module;
+        ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                                R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-        vm->error = 0;
-
-        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit  = func;
-
-        int result = RunModule(module);
+[Instructions]
+0: OP_MAKE_RANGE  A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP        A=0x00 K=0x0000 i=F s=F
+)",
+                                                                &module);
 
         if (test_case.expect_error) {
             ASSERT_EQ(result, test_case.expected_error_code) << "Test case: " << test_case.name;
@@ -163,17 +163,17 @@ TEST_F(VMInstructionIterTest, OpMakeRangeMixedTypes) {
         vm->values[1] = test_case.end;
         vm->values[2] = test_case.step;
 
-        Instruction code[2];
-        code[0] = INSTRUCTION_MAKE_RANGE(0, 1, 2, false, false);
-        code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+        SemiModule* module;
+        ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                                R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-        vm->error = 0;
-
-        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit  = func;
-
-        int result = RunModule(module);
+[Instructions]
+0: OP_MAKE_RANGE  A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP        A=0x00 K=0x0000 i=F s=F
+)",
+                                                                &module);
 
         ASSERT_EQ(result, 0) << "Test case: " << test_case.name;
 
@@ -195,18 +195,17 @@ TEST_F(VMInstructionIterTest, OpMakeRangeWithConstants) {
     // INT8_MIN)
     vm->values[0] = semiValueNewInt(1);  // start
 
-    Instruction code[2];
-    // Use kb=true, kc=true to test inline constants (B+INT8_MIN, C+INT8_MIN)
-    code[0] = INSTRUCTION_MAKE_RANGE(0, 129, 133, true, true);  // start=1, end=1, step=5
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    vm->error = 0;
-
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_MAKE_RANGE  A=0x00 B=0x81 C=0x85 kb=T kc=T
+1: OP_TRAP        A=0x00 K=0x0000 i=F s=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "Should handle inline constants";
 
@@ -230,17 +229,17 @@ TEST_F(VMInstructionIterTest, OpMakeRangeTypeErrors) {
         vm->values[1] = test_case.end;
         vm->values[2] = test_case.step;
 
-        Instruction code[2];
-        code[0] = INSTRUCTION_MAKE_RANGE(0, 1, 2, false, false);
-        code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+        SemiModule* module;
+        ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                                R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-        vm->error = 0;
-
-        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit  = func;
-
-        int result = RunModule(module);
+[Instructions]
+0: OP_MAKE_RANGE  A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP        A=0x00 K=0x0000 i=F s=F
+)",
+                                                                &module);
 
         ASSERT_EQ(result, SEMI_ERROR_UNEXPECTED_TYPE) << "Should error for " << test_case.name;
         ASSERT_EQ(vm->error, SEMI_ERROR_UNEXPECTED_TYPE) << "VM error should be UNEXPECTED_TYPE for " << test_case.name;
@@ -278,24 +277,28 @@ TEST_F(VMInstructionIterTest, OpIterNextInlineRange) {
         vm->values[0] = semiValueNewInt(0);  // Counter
         vm->values[1] = semiValueNewInt(0);  // Current value
 
-        Instruction code[4];
         uint8_t reg_a = test_case.test_no_assign ? 255 : 0;
-        code[0]       = INSTRUCTION_ITER_NEXT(reg_a, 1, 2, false, false);
-        code[1]       = INSTRUCTION_TRAP(0, 99, false, false);  // Should be reached when iteration ends
-        code[2]       = INSTRUCTION_TRAP(0, 0, false, false);   // Target when iteration continues
-        code[3]       = INSTRUCTION_TRAP(0, 88, false, false);  // Should not be reached
+        char dsl_spec[512];
+        snprintf(dsl_spec,
+                 sizeof(dsl_spec),
+                 R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-        vm->error = 0;
+[Instructions]
+0: OP_ITER_NEXT  A=0x%02X B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP       A=0x00 K=0x0063 i=F s=F
+2: OP_TRAP       A=0x00 K=0x0000 i=F s=F
+3: OP_TRAP       A=0x00 K=0x0058 i=F s=F
+)",
+                 reg_a);
 
         int iterations = 0;
         int result;
 
         while (iterations < 10) {  // Safety limit
-            SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-            FunctionProto* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
-            module->moduleInit  = func;
-
-            result = RunModule(module);
+            SemiModule* module;
+            result = InstructionVerifier::BuildAndRunModule(vm, dsl_spec, &module);
 
             if (result == 99) {
                 // Iteration ended
@@ -335,17 +338,17 @@ TEST_F(VMInstructionIterTest, OpIterNextObjectRange) {
     vm->values[2] = semiValueNewInt(2);   // step
 
     // First create the range
-    Instruction create_range[2];
-    create_range[0] = INSTRUCTION_MAKE_RANGE(0, 1, 2, false, false);
-    create_range[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    vm->error = 0;
-
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, create_range, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_MAKE_RANGE  A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP        A=0x00 K=0x0000 i=F s=F
+)",
+                                                            &module);
     ASSERT_EQ(result, 0) << "Should create ObjectRange successfully";
 
     // Now test iteration
@@ -354,23 +357,23 @@ TEST_F(VMInstructionIterTest, OpIterNextObjectRange) {
     vm->values[0]   = semiValueNewInt(0);  // Counter
     vm->values[1]   = semiValueNewInt(0);  // Current value
 
-    Instruction code[4];
-    code[0] = INSTRUCTION_ITER_NEXT(0, 1, 2, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 99, false, false);  // Should be skipped if iteration continues
-    code[2] = INSTRUCTION_TRAP(0, 0, false, false);   // Target when iteration continues
-    code[3] = INSTRUCTION_TRAP(0, 88, false, false);  // Should not be reached
-
     int iterations        = 0;
     int expected_values[] = {1, 3, 5, 7, 9};  // step=2 from 1 to 10
 
     while (iterations < 10) {  // Safety limit
-        vm->error = 0;
+        SemiModule* module;
+        result = InstructionVerifier::BuildAndRunModule(vm,
+                                                        R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionProto* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
-        module->moduleInit  = func;
-
-        result = RunModule(module);
+[Instructions]
+0: OP_ITER_NEXT  A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP       A=0x00 K=0x0063 i=F s=F
+2: OP_TRAP       A=0x00 K=0x0000 i=F s=F
+3: OP_TRAP       A=0x00 K=0x0058 i=F s=F
+)",
+                                                        &module);
 
         if (result == 99) {
             // Iteration ended
@@ -405,17 +408,17 @@ TEST_F(VMInstructionIterTest, OpIterNextFloatRange) {
     vm->values[2] = semiValueNewFloat(1.5);  // step
 
     // Create the range
-    Instruction create_range[2];
-    create_range[0] = INSTRUCTION_MAKE_RANGE(0, 1, 2, false, false);
-    create_range[1] = INSTRUCTION_TRAP(0, 0, false, false);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    vm->error = 0;
-
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, create_range, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    int result = RunModule(module);
+[Instructions]
+0: OP_MAKE_RANGE  A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP        A=0x00 K=0x0000 i=F s=F
+)",
+                                                            &module);
     ASSERT_EQ(result, 0) << "Should create float ObjectRange successfully";
 
     // Test iteration
@@ -424,23 +427,23 @@ TEST_F(VMInstructionIterTest, OpIterNextFloatRange) {
     vm->values[0]   = semiValueNewInt(0);      // Counter
     vm->values[1]   = semiValueNewFloat(0.0);  // Current value
 
-    Instruction code[4];
-    code[0] = INSTRUCTION_ITER_NEXT(0, 1, 2, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 99, false, false);
-    code[2] = INSTRUCTION_TRAP(0, 0, false, false);
-    code[3] = INSTRUCTION_TRAP(0, 88, false, false);
-
     int iterations           = 0;
     double expected_values[] = {1.0, 2.5, 4.0};  // step=1.5 from 1.0 to 5.0
 
     while (iterations < 10) {
-        vm->error = 0;
+        SemiModule* module;
+        result = InstructionVerifier::BuildAndRunModule(vm,
+                                                        R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionProto* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
-        module->moduleInit  = func;
-
-        result = RunModule(module);
+[Instructions]
+0: OP_ITER_NEXT  A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP       A=0x00 K=0x0063 i=F s=F
+2: OP_TRAP       A=0x00 K=0x0000 i=F s=F
+3: OP_TRAP       A=0x00 K=0x0058 i=F s=F
+)",
+                                                        &module);
 
         if (result == 99) {
             // Iteration ended

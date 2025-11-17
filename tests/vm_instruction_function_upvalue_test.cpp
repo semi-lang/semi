@@ -14,29 +14,30 @@ extern "C" {
 class VMInstructionFunctionUpvalueTest : public VMTest {};
 
 TEST_F(VMInstructionFunctionUpvalueTest, BasicUpvalueCreation) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=3
 
-    Instruction fnCode[2];
-    fnCode[0] = INSTRUCTION_GET_UPVALUE(0, 0, 0, false, false);  // R[0] := Upvalue[0] (captured value 42)
-    fnCode[1] = INSTRUCTION_RETURN(0, 0, 0, false, false);       // Function returns
+[Instructions]
+0: OP_LOAD_INLINE_INTEGER  A=0x01 K=0x002A i=T s=T
+1: OP_LOAD_CONSTANT        A=0x02 K=0x0000 i=F s=F
+2: OP_CALL                 A=0x02 B=0x00 C=0x00 kb=F kc=F
+3: OP_TRAP                 A=0x00 B=0x00 C=0x00 kb=F kc=F
+4: OP_TRAP                 A=0x00 B=0x01 C=0x00 kb=F kc=F
 
-    // Create a function that captures one local variable as an upvalue
-    FunctionProto* func       = CreateFunctionObject(0, fnCode, 2, 2, 1, 0);  // 1 upvalue
-    func->upvalues[0].index   = 1;                                            // Capture local at index 1
-    func->upvalues[0].isLocal = true;
+[Constants]
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=2 -> @testFunc
 
-    ConstantIndex index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
+[Instructions:testFunc]
+0: OP_GET_UPVALUE  A=0x00 B=0x00 C=0x00 kb=F kc=F
+1: OP_RETURN       A=0x00 B=0x00 C=0x00 kb=F kc=F
 
-    Instruction code[5];
-    code[0] = INSTRUCTION_LOAD_INLINE_INTEGER(1, 42, true, true);  // Set local[1] = 42
-    code[1] = INSTRUCTION_LOAD_CONSTANT(2, index, false, false);   // Create function, captures local[1]
-    code[2] = INSTRUCTION_CALL(2, 0, 0, false, false);             // Call function
-    code[3] = INSTRUCTION_TRAP(0, 0, false, false);                // Exit
-    code[4] = INSTRUCTION_TRAP(0, 1, false, false);                // Should not reach
-
-    module->moduleInit = CreateFunctionObject(0, code, 5, 3, 0, 0);
-
-    ErrorId result = RunModule(module);
+[UpvalueDescription:testFunc]
+U[0]: index=1 isLocal=T
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should execute successfully";
     ASSERT_NE(vm->openUpvalues, nullptr) << "Open upvalues should not be closed after function returns";
@@ -44,41 +45,38 @@ TEST_F(VMInstructionFunctionUpvalueTest, BasicUpvalueCreation) {
 }
 
 TEST_F(VMInstructionFunctionUpvalueTest, MultipleUpvalueCreation) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=5
 
-    // Step 1: Create function
-    Instruction fnCode[6];
-    fnCode[0] = INSTRUCTION_GET_UPVALUE(0, 0, 0, false, false);  // R[0] := Upvalue[0] (10)
-    fnCode[1] = INSTRUCTION_GET_UPVALUE(1, 1, 0, false, false);  // R[1] := Upvalue[1] (20)
-    fnCode[2] = INSTRUCTION_GET_UPVALUE(2, 2, 0, false, false);  // R[2] := Upvalue[2] (30)
-    fnCode[3] = INSTRUCTION_ADD(0, 0, 1, false, false);          // R[0] += R[1] (30)
-    fnCode[4] = INSTRUCTION_ADD(0, 0, 2, false, false);          // R[0] += R[2] (60)
-    fnCode[5] = INSTRUCTION_RETURN(0, 0, 0, false, false);       // Function returns
+[Instructions]
+0: OP_LOAD_INLINE_INTEGER  A=0x00 K=0x000A i=T s=T
+1: OP_LOAD_INLINE_INTEGER  A=0x01 K=0x0014 i=T s=T
+2: OP_LOAD_INLINE_INTEGER  A=0x02 K=0x001E i=T s=T
+3: OP_LOAD_CONSTANT        A=0x03 K=0x0000 i=F s=F
+4: OP_CALL                 A=0x03 B=0x00 C=0x00 kb=F kc=F
+5: OP_TRAP                 A=0x00 B=0x00 C=0x00 kb=F kc=F
+6: OP_TRAP                 A=0x00 B=0x01 C=0x00 kb=F kc=F
 
-    // Step 2: Create function object and store in constant table
-    FunctionProto* func       = CreateFunctionObject(0, fnCode, 6, 3, 3, 0);  // 3 upvalues
-    func->upvalues[0].index   = 0;
-    func->upvalues[0].isLocal = true;
-    func->upvalues[1].index   = 1;
-    func->upvalues[1].isLocal = true;
-    func->upvalues[2].index   = 2;
-    func->upvalues[2].isLocal = true;
+[Constants]
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=3 -> @testFunc
 
-    ConstantIndex funcIndex = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
+[Instructions:testFunc]
+0: OP_GET_UPVALUE  A=0x00 B=0x00 C=0x00 kb=F kc=F
+1: OP_GET_UPVALUE  A=0x01 B=0x01 C=0x00 kb=F kc=F
+2: OP_GET_UPVALUE  A=0x02 B=0x02 C=0x00 kb=F kc=F
+3: OP_ADD          A=0x00 B=0x00 C=0x01 kb=F kc=F
+4: OP_ADD          A=0x00 B=0x00 C=0x02 kb=F kc=F
+5: OP_RETURN       A=0x00 B=0x00 C=0x00 kb=F kc=F
 
-    // Step 3: Create main code using the actual constant table index
-    Instruction code[7];
-    code[0] = INSTRUCTION_LOAD_INLINE_INTEGER(0, 10, true, true);     // local[0] = 10
-    code[1] = INSTRUCTION_LOAD_INLINE_INTEGER(1, 20, true, true);     // local[1] = 20
-    code[2] = INSTRUCTION_LOAD_INLINE_INTEGER(2, 30, true, true);     // local[2] = 30
-    code[3] = INSTRUCTION_LOAD_CONSTANT(3, funcIndex, false, false);  // Create function
-    code[4] = INSTRUCTION_CALL(3, 0, 0, false, false);                // Call function
-    code[5] = INSTRUCTION_TRAP(0, 0, false, false);                   // Exit
-    code[6] = INSTRUCTION_TRAP(0, 1, false, false);                   // Should not reach
-
-    module->moduleInit = CreateFunctionObject(0, code, 7, 5, 0, 0);
-
-    ErrorId result = RunModule(module);
+[UpvalueDescription:testFunc]
+U[0]: index=0 isLocal=T
+U[1]: index=1 isLocal=T
+U[2]: index=2 isLocal=T
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should execute successfully";
     ASSERT_NE(vm->openUpvalues, nullptr) << "Open upvalues should not be closed after function returns";
@@ -86,8 +84,6 @@ TEST_F(VMInstructionFunctionUpvalueTest, MultipleUpvalueCreation) {
 }
 
 TEST_F(VMInstructionFunctionUpvalueTest, NestedFunctionsWithUpvalues) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-
     // Test upvalue behavior with nested function calls. Here's the pseudo-code for the test:
     /*
         fn outer() {
@@ -104,64 +100,56 @@ TEST_F(VMInstructionFunctionUpvalueTest, NestedFunctionsWithUpvalues) {
         result := outer()()();  // result should be 6
     */
 
-    // Step 1: Create inner function first (no dependencies)
-    Instruction innerCode[3];
-    innerCode[0] = INSTRUCTION_GET_UPVALUE(0, 0, 0, false, false);  // R[0] := Upvalue[0]
-    innerCode[1] = INSTRUCTION_ADD(0, 0, 3 + 128, false, true);     // R[0] += 3
-    innerCode[2] = INSTRUCTION_RETURN(0, 0, 0, false, false);       // Inner function returns R[0]
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=2
 
-    FunctionProto* innerFunc       = CreateFunctionObject(0, innerCode, 3, 2, 1, 0);  // 1 upvalue
-    innerFunc->upvalues[0].index   = 0;
-    innerFunc->upvalues[0].isLocal = false;
+[Instructions]
+0: OP_LOAD_CONSTANT  A=0x00 K=0x0002 i=F s=F
+1: OP_CALL           A=0x00 B=0x00 C=0x00 kb=F kc=F
+2: OP_CALL           A=0x00 B=0x00 C=0x00 kb=F kc=F
+3: OP_CALL           A=0x00 B=0x00 C=0x00 kb=F kc=F
+4: OP_TRAP           A=0x00 B=0x00 C=0x00 kb=F kc=F
+5: OP_TRAP           A=0x00 B=0x01 C=0x00 kb=F kc=F
 
-    ConstantIndex innerIndex = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(innerFunc));
+[Constants]
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=2 -> @innerFunc
+K[1]: FunctionProto arity=0 coarity=0 maxStackSize=2 -> @middleFunc
+K[2]: FunctionProto arity=0 coarity=0 maxStackSize=2 -> @outerFunc
 
-    // Step 2: Create middle function (depends on inner)
-    Instruction middleCode[5];
-    middleCode[0] = INSTRUCTION_LOAD_CONSTANT(0, innerIndex, false, false);  // R[0] := inner function
-    middleCode[1] = INSTRUCTION_GET_UPVALUE(1, 0, 0, false, false);          // R[1] := Upvalue[0]
-    middleCode[2] = INSTRUCTION_ADD(1, 1, 2 + 128, false, true);             // R[1] += 2
-    middleCode[3] = INSTRUCTION_SET_UPVALUE(0, 1, 0, false, false);          // Upvalue[0] := R[1]
-    middleCode[4] = INSTRUCTION_RETURN(0, 0, 0, false, false);               // Middle function returns R[0]
+[Instructions:innerFunc]
+0: OP_GET_UPVALUE  A=0x00 B=0x00 C=0x00 kb=F kc=F
+1: OP_ADD          A=0x00 B=0x00 C=0x83 kb=F kc=T
+2: OP_RETURN       A=0x00 B=0x00 C=0x00 kb=F kc=F
 
-    FunctionProto* middleFunc       = CreateFunctionObject(0, middleCode, 5, 2, 1, 0);  // 1 upvalue
-    middleFunc->upvalues[0].index   = 0;
-    middleFunc->upvalues[0].isLocal = true;
+[UpvalueDescription:innerFunc]
+U[0]: index=0 isLocal=F
 
-    ConstantIndex middleIndex = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(middleFunc));
+[Instructions:middleFunc]
+0: OP_LOAD_CONSTANT  A=0x00 K=0x0000 i=F s=F
+1: OP_GET_UPVALUE    A=0x01 B=0x00 C=0x00 kb=F kc=F
+2: OP_ADD            A=0x01 B=0x01 C=0x82 kb=F kc=T
+3: OP_SET_UPVALUE    A=0x00 B=0x01 C=0x00 kb=F kc=F
+4: OP_RETURN         A=0x00 B=0x00 C=0x00 kb=F kc=F
 
-    // Step 3: Create outer function (depends on middle)
-    Instruction outerCode[3];
-    outerCode[0] = INSTRUCTION_LOAD_INLINE_INTEGER(0, 1, true, true);        // outer R[0] = 1
-    outerCode[1] = INSTRUCTION_LOAD_CONSTANT(1, middleIndex, false, false);  // R[1] := middle function
-    outerCode[2] = INSTRUCTION_RETURN(1, 0, 0, false, false);                // Outer function returns R[1]
+[UpvalueDescription:middleFunc]
+U[0]: index=0 isLocal=T
 
-    FunctionProto* outerFunc = CreateFunctionObject(0, outerCode, 3, 2, 0, 0);  // 0 upvalue
-
-    ConstantIndex outerIndex = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(outerFunc));
-
-    // Step 4: Create main code using the actual constant table indices
-    Instruction code[6];
-    code[0] = INSTRUCTION_LOAD_CONSTANT(0, outerIndex, false, false);  // Create outer function
-    code[1] = INSTRUCTION_CALL(0, 0, 0, false, false);                 // Call outer function
-    code[2] = INSTRUCTION_CALL(0, 0, 0, false, false);                 // Call middle function
-    code[3] = INSTRUCTION_CALL(0, 0, 0, false, false);                 // Call inner function
-    code[4] = INSTRUCTION_TRAP(0, 0, false, false);                    // Exit
-    code[5] = INSTRUCTION_TRAP(0, 1, false, false);                    // Should not reach
-
-    module->moduleInit = CreateFunctionObject(0, code, 6, 2, 0, 0);
-
-    ErrorId result = RunModule(module);
+[Instructions:outerFunc]
+0: OP_LOAD_INLINE_INTEGER  A=0x00 K=0x0001 i=T s=T
+1: OP_LOAD_CONSTANT        A=0x01 K=0x0001 i=F s=F
+2: OP_RETURN               A=0x01 B=0x00 C=0x00 kb=F kc=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should execute nested calls successfully";
     ASSERT_EQ(vm->openUpvalues, nullptr) << "All upvalues should be closed after nested functions return";
-    // The original local variable should be modified by the SET_UPVALUE instruction
     ASSERT_EQ(AS_INT(&vm->values[0]), 6) << "The closed captured variable should be 6 (1 + 2 + 3)";
 }
 
 TEST_F(VMInstructionFunctionUpvalueTest, UpvalueReuse) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-
     // Test that existing upvalues are reused when multiple functions capture the same local. Here's
     // the pseudo-code for the test:
     /*
@@ -180,59 +168,52 @@ TEST_F(VMInstructionFunctionUpvalueTest, UpvalueReuse) {
         result := outer()();  // result should be 7
     */
 
-    // Step 1: Create first function
-    Instruction firstCode[4];
-    firstCode[0] = INSTRUCTION_GET_UPVALUE(0, 0, 0, false, false);  // R[0] := Upvalue[0]
-    firstCode[1] = INSTRUCTION_ADD(0, 0, 2 + 128, false, true);     // R[0] += 2
-    firstCode[2] = INSTRUCTION_SET_UPVALUE(0, 0, 0, false, false);  // Upvalue[0] := R[0]
-    firstCode[3] = INSTRUCTION_RETURN(255, 0, 0, false, false);     // First function returns
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=2
 
-    FunctionProto* first       = CreateFunctionObject(0, firstCode, 4, 3, 1, 0);  // 1 upvalue
-    first->upvalues[0].index   = 0;
-    first->upvalues[0].isLocal = true;
+[Instructions]
+0: OP_LOAD_CONSTANT  A=0x00 K=0x0002 i=F s=F
+1: OP_CALL           A=0x00 B=0x00 C=0x00 kb=F kc=F
+2: OP_CALL           A=0x00 B=0x00 C=0x00 kb=F kc=F
+3: OP_TRAP           A=0x00 B=0x00 C=0x00 kb=F kc=F
+4: OP_TRAP           A=0x00 B=0x01 C=0x00 kb=F kc=F
 
-    ConstantIndex firstIndex = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(first));
+[Constants]
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=3 -> @firstFunc
+K[1]: FunctionProto arity=0 coarity=0 maxStackSize=2 -> @secondFunc
+K[2]: FunctionProto arity=0 coarity=0 maxStackSize=4 -> @outerFunc
 
-    // Step 2: Create second function
-    Instruction secondCode[3];
-    secondCode[0] = INSTRUCTION_GET_UPVALUE(0, 0, 0, false, false);  // R[0] := Upvalue[0]
-    secondCode[1] = INSTRUCTION_ADD(0, 0, 4 + 128, false, true);     // R[0] += 4
-    secondCode[2] = INSTRUCTION_RETURN(0, 0, 0, false, false);       // Second function returns R[0]
+[Instructions:firstFunc]
+0: OP_GET_UPVALUE  A=0x00 B=0x00 C=0x00 kb=F kc=F
+1: OP_ADD          A=0x00 B=0x00 C=0x82 kb=F kc=T
+2: OP_SET_UPVALUE  A=0x00 B=0x00 C=0x00 kb=F kc=F
+3: OP_RETURN       A=0xFF B=0x00 C=0x00 kb=F kc=F
 
-    FunctionProto* second       = CreateFunctionObject(0, secondCode, 3, 2, 1, 0);  // 1 upvalue
-    second->upvalues[0].index   = 0;
-    second->upvalues[0].isLocal = true;
+[UpvalueDescription:firstFunc]
+U[0]: index=0 isLocal=T
 
-    ConstantIndex secondIndex = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(second));
+[Instructions:secondFunc]
+0: OP_GET_UPVALUE  A=0x00 B=0x00 C=0x00 kb=F kc=F
+1: OP_ADD          A=0x00 B=0x00 C=0x84 kb=F kc=T
+2: OP_RETURN       A=0x00 B=0x00 C=0x00 kb=F kc=F
 
-    // Step 3: Create outer function (depends on first and second)
-    Instruction outerCode[6];
-    outerCode[0] = INSTRUCTION_LOAD_INLINE_INTEGER(0, 1, true, true);        // local[0] = 1
-    outerCode[1] = INSTRUCTION_LOAD_CONSTANT(1, firstIndex, false, false);   // Create function first
-    outerCode[2] = INSTRUCTION_LOAD_CONSTANT(2, secondIndex, false, false);  // Create function second
-    outerCode[3] = INSTRUCTION_MOVE(3, 1, 0, false, false);                  // Copy first to R[3]
-    outerCode[4] = INSTRUCTION_CALL(3, 0, 0, false, false);                  // Call function first
-    outerCode[5] = INSTRUCTION_RETURN(2, 0, 0, false, false);                // Outer function returns R[2]
+[UpvalueDescription:secondFunc]
+U[0]: index=0 isLocal=T
 
-    FunctionProto* outerFunc = CreateFunctionObject(0, outerCode, 6, 4, 0, 0);  // 0 upvalue
-
-    ConstantIndex outerIndex = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(outerFunc));
-
-    // Step 4: Create main code using the actual constant table indices
-    Instruction code[5];
-    code[0] = INSTRUCTION_LOAD_CONSTANT(0, outerIndex, false, false);  // Create outer function
-    code[1] = INSTRUCTION_CALL(0, 0, 0, false, false);                 // Call outer function
-    code[2] = INSTRUCTION_CALL(0, 0, 0, false, false);                 // Call second function
-    code[3] = INSTRUCTION_TRAP(0, 0, false, false);                    // Exit
-    code[4] = INSTRUCTION_TRAP(0, 1, false, false);                    // Should not reach
-
-    module->moduleInit = CreateFunctionObject(0, code, 5, 2, 0, 0);
-
-    ErrorId result = RunModule(module);
+[Instructions:outerFunc]
+0: OP_LOAD_INLINE_INTEGER  A=0x00 K=0x0001 i=T s=T
+1: OP_LOAD_CONSTANT        A=0x01 K=0x0000 i=F s=F
+2: OP_LOAD_CONSTANT        A=0x02 K=0x0001 i=F s=F
+3: OP_MOVE                 A=0x03 B=0x01 C=0x00 kb=F kc=F
+4: OP_CALL                 A=0x03 B=0x00 C=0x00 kb=F kc=F
+5: OP_RETURN               A=0x02 B=0x00 C=0x00 kb=F kc=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should execute successfully";
     ASSERT_EQ(vm->openUpvalues, nullptr) << "All upvalues should be closed after functions return";
-
-    // The shared upvalue should have been modified by function 1 and accessed by function 2
     ASSERT_EQ(AS_INT(&vm->values[0]), 7) << "Shared upvalue should reflect the modification";
 }

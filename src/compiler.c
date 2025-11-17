@@ -3194,8 +3194,9 @@ parsed_arguments:
         SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_MEMORY_ALLOCATION_FAILURE, "Failed to allocate function object");
     }
 
-    fn->arity   = paramCount;
-    fn->coarity = compiler->currentFunction->nReturns == UINT8_MAX ? 0 : compiler->currentFunction->nReturns;
+    fn->arity        = paramCount;
+    fn->coarity      = compiler->currentFunction->nReturns == UINT8_MAX ? 0 : compiler->currentFunction->nReturns;
+    fn->maxStackSize = compiler->currentFunction->maxUsedRegisterCount;
     memcpy(fn->upvalues,
            compiler->currentFunction->upvalues.data,
            sizeof(UpvalueDescription) * compiler->currentFunction->upvalues.size);
@@ -3361,8 +3362,9 @@ static void parseDefer(Compiler* compiler) {
         SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_MEMORY_ALLOCATION_FAILURE, "Failed to allocate function object");
     }
 
-    fn->arity   = 0;
-    fn->coarity = 0;
+    fn->arity        = 0;
+    fn->coarity      = 0;
+    fn->maxStackSize = compiler->currentFunction->maxUsedRegisterCount;
     memcpy(fn->upvalues,
            compiler->currentFunction->upvalues.data,
            sizeof(UpvalueDescription) * compiler->currentFunction->upvalues.size);

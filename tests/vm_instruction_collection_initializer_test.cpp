@@ -14,38 +14,32 @@ extern "C" {
 class VMInstructionCollectionInitializerTest : public VMTest {};
 
 TEST_F(VMInstructionCollectionInitializerTest, OpNewCollectionEmptyList) {
-    vm->error = 0;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    Instruction code[2];
-    code[0] = INSTRUCTION_NEW_COLLECTION(0, BASE_VALUE_TYPE_LIST, 0, true, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions]
+0: OP_NEW_COLLECTION A=0x00 B=0x06 C=0x00 kb=T kc=F
+1: OP_TRAP           A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    ErrorId result = RunModule(module);
     EXPECT_EQ(result, 0) << "NEW_COLLECTION for empty list should succeed";
-
     EXPECT_TRUE(IS_LIST(&vm->values[0])) << "Result should be a list";
     ObjectList* list = AS_LIST(&vm->values[0]);
     EXPECT_EQ(list->size, 0) << "List should be empty";
 }
 
 TEST_F(VMInstructionCollectionInitializerTest, OpNewCollectionEmptyDict) {
-    vm->error = 0;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    Instruction code[2];
-    code[0] = INSTRUCTION_NEW_COLLECTION(0, BASE_VALUE_TYPE_DICT, 0, true, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions]
+0: OP_NEW_COLLECTION A=0x00 B=0x07 C=0x00 kb=T kc=F
+1: OP_TRAP           A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    ErrorId result = RunModule(module);
     EXPECT_EQ(result, 0) << "NEW_COLLECTION for empty dict should succeed";
-
     EXPECT_TRUE(IS_DICT(&vm->values[0])) << "Result should be a dict";
     ObjectDict* dict = AS_DICT(&vm->values[0]);
     EXPECT_EQ(dict->len, 0) << "Dict should be empty";
@@ -65,17 +59,20 @@ TEST_F(VMInstructionCollectionInitializerTest, OpNewCollectionListWithCapacity) 
     for (const auto& test_case : test_cases) {
         SCOPED_TRACE(test_case.name);
 
-        vm->error = 0;
+        char spec[512];
+        snprintf(spec,
+                 sizeof(spec),
+                 R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-        Instruction code[2];
-        code[0] = INSTRUCTION_NEW_COLLECTION(0, BASE_VALUE_TYPE_LIST, test_case.capacity, true, false);
-        code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions]
+0: OP_NEW_COLLECTION A=0x00 B=0x06 C=0x%02X kb=T kc=F
+1: OP_TRAP           A=0x00 B=0x00 C=0x00 kb=F kc=F
+)",
+                 test_case.capacity);
 
-        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit  = func;
-
-        ErrorId result = RunModule(module);
+        ErrorId result = InstructionVerifier::BuildAndRunModule(vm, spec);
         EXPECT_EQ(result, 0) << "NEW_COLLECTION with capacity should succeed";
 
         EXPECT_TRUE(IS_LIST(&vm->values[0])) << "Result should be a list";
@@ -86,91 +83,82 @@ TEST_F(VMInstructionCollectionInitializerTest, OpNewCollectionListWithCapacity) 
 }
 
 TEST_F(VMInstructionCollectionInitializerTest, OpNewCollectionListTypeFromRegister) {
-    vm->error = 0;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Int 6
 
-    vm->values[1] = semiValueNewInt(BASE_VALUE_TYPE_LIST);
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    Instruction code[2];
-    code[0] = INSTRUCTION_NEW_COLLECTION(0, 1, 5, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions]
+0: OP_NEW_COLLECTION A=0x00 B=0x01 C=0x05 kb=F kc=F
+1: OP_TRAP           A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    ErrorId result = RunModule(module);
     EXPECT_EQ(result, 0) << "NEW_COLLECTION with type from register should succeed";
-
     EXPECT_TRUE(IS_LIST(&vm->values[0])) << "Result should be a list";
     ObjectList* list = AS_LIST(&vm->values[0]);
     EXPECT_EQ(list->size, 0) << "List should be empty";
 }
 
 TEST_F(VMInstructionCollectionInitializerTest, OpNewCollectionDictTypeFromRegister) {
-    vm->error = 0;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Int 7
 
-    vm->values[1] = semiValueNewInt(BASE_VALUE_TYPE_DICT);
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    Instruction code[2];
-    code[0] = INSTRUCTION_NEW_COLLECTION(0, 1, 0, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions]
+0: OP_NEW_COLLECTION A=0x00 B=0x01 C=0x00 kb=F kc=F
+1: OP_TRAP           A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    ErrorId result = RunModule(module);
     EXPECT_EQ(result, 0) << "NEW_COLLECTION with dict type from register should succeed";
-
     EXPECT_TRUE(IS_DICT(&vm->values[0])) << "Result should be a dict";
 }
 
 TEST_F(VMInstructionCollectionInitializerTest, OpNewCollectionInvalidTypeFromRegister) {
-    vm->error = 0;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Float 3.14
 
-    vm->values[1] = semiValueNewFloat(3.14f);
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    Instruction code[2];
-    code[0] = INSTRUCTION_NEW_COLLECTION(0, 1, 0, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions]
+0: OP_NEW_COLLECTION A=0x00 B=0x01 C=0x00 kb=F kc=F
+1: OP_TRAP           A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    ErrorId result = RunModule(module);
     EXPECT_EQ(result, SEMI_ERROR_UNEXPECTED_TYPE) << "NEW_COLLECTION with non-integer type should fail";
 }
 
 TEST_F(VMInstructionCollectionInitializerTest, OpNewCollectionUnsupportedType) {
-    vm->error = 0;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    Instruction code[2];
-    code[0] = INSTRUCTION_NEW_COLLECTION(0, 99, 0, true, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions]
+0: OP_NEW_COLLECTION A=0x00 B=0x63 C=0x00 kb=T kc=F
+1: OP_TRAP           A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    ErrorId result = RunModule(module);
     EXPECT_EQ(result, SEMI_ERROR_UNIMPLEMENTED_FEATURE) << "NEW_COLLECTION with unsupported type should fail";
 }
 
 TEST_F(VMInstructionCollectionInitializerTest, OpNewCollectionMultipleListsInDifferentRegisters) {
-    vm->error = 0;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    Instruction code[4];
-    code[0] = INSTRUCTION_NEW_COLLECTION(0, BASE_VALUE_TYPE_LIST, 2, true, false);
-    code[1] = INSTRUCTION_NEW_COLLECTION(1, BASE_VALUE_TYPE_LIST, 5, true, false);
-    code[2] = INSTRUCTION_NEW_COLLECTION(2, BASE_VALUE_TYPE_LIST, 10, true, false);
-    code[3] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions]
+0: OP_NEW_COLLECTION A=0x00 B=0x06 C=0x02 kb=T kc=F
+1: OP_NEW_COLLECTION A=0x01 B=0x06 C=0x05 kb=T kc=F
+2: OP_NEW_COLLECTION A=0x02 B=0x06 C=0x0A kb=T kc=F
+3: OP_TRAP           A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
-    module->moduleInit  = func;
-
-    ErrorId result = RunModule(module);
     EXPECT_EQ(result, 0) << "Multiple NEW_COLLECTION operations should succeed";
 
     EXPECT_TRUE(IS_LIST(&vm->values[0])) << "R[0] should be a list";
@@ -183,19 +171,17 @@ TEST_F(VMInstructionCollectionInitializerTest, OpNewCollectionMultipleListsInDif
 }
 
 TEST_F(VMInstructionCollectionInitializerTest, OpNewCollectionMixedTypes) {
-    vm->error = 0;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    Instruction code[4];
-    code[0] = INSTRUCTION_NEW_COLLECTION(0, BASE_VALUE_TYPE_LIST, 3, true, false);
-    code[1] = INSTRUCTION_NEW_COLLECTION(1, BASE_VALUE_TYPE_DICT, 0, true, false);
-    code[2] = INSTRUCTION_NEW_COLLECTION(2, BASE_VALUE_TYPE_LIST, 1, true, false);
-    code[3] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions]
+0: OP_NEW_COLLECTION A=0x00 B=0x06 C=0x03 kb=T kc=F
+1: OP_NEW_COLLECTION A=0x01 B=0x07 C=0x00 kb=T kc=F
+2: OP_NEW_COLLECTION A=0x02 B=0x06 C=0x01 kb=T kc=F
+3: OP_TRAP           A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 4, 8, 0, 0);
-    module->moduleInit  = func;
-
-    ErrorId result = RunModule(module);
     EXPECT_EQ(result, 0) << "Creating mixed collection types should succeed";
 
     EXPECT_TRUE(IS_LIST(&vm->values[0])) << "R[0] should be a list";
@@ -204,17 +190,15 @@ TEST_F(VMInstructionCollectionInitializerTest, OpNewCollectionMixedTypes) {
 }
 
 TEST_F(VMInstructionCollectionInitializerTest, OpNewCollectionListMaxCapacity) {
-    vm->error = 0;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    Instruction code[2];
-    code[0] = INSTRUCTION_NEW_COLLECTION(0, BASE_VALUE_TYPE_LIST, 254, true, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions]
+0: OP_NEW_COLLECTION A=0x00 B=0x06 C=0xFE kb=T kc=F
+1: OP_TRAP           A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    ErrorId result = RunModule(module);
     EXPECT_EQ(result, 0) << "NEW_COLLECTION with max capacity (254) should succeed";
 
     EXPECT_TRUE(IS_LIST(&vm->values[0])) << "Result should be a list";
@@ -223,17 +207,15 @@ TEST_F(VMInstructionCollectionInitializerTest, OpNewCollectionListMaxCapacity) {
 }
 
 TEST_F(VMInstructionCollectionInitializerTest, OpNewCollectionListInvalidRegisterCapacity) {
-    vm->error = 0;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    Instruction code[2];
-    code[0] = INSTRUCTION_NEW_COLLECTION(0, BASE_VALUE_TYPE_LIST, 255, true, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions]
+0: OP_NEW_COLLECTION A=0x00 B=0x06 C=0xFF kb=T kc=F
+1: OP_TRAP           A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    ErrorId result = RunModule(module);
     EXPECT_EQ(result, 0) << "NEW_COLLECTION with INVALID_LOCAL_REGISTER_ID as capacity should use default capacity";
 
     EXPECT_TRUE(IS_LIST(&vm->values[0])) << "Result should be a list";
@@ -242,17 +224,15 @@ TEST_F(VMInstructionCollectionInitializerTest, OpNewCollectionListInvalidRegiste
 }
 
 TEST_F(VMInstructionCollectionInitializerTest, OpNewCollectionListZeroCapacity) {
-    vm->error = 0;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    Instruction code[2];
-    code[0] = INSTRUCTION_NEW_COLLECTION(0, BASE_VALUE_TYPE_LIST, 0, true, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions]
+0: OP_NEW_COLLECTION A=0x00 B=0x06 C=0x00 kb=T kc=F
+1: OP_TRAP           A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    ErrorId result = RunModule(module);
     EXPECT_EQ(result, 0) << "NEW_COLLECTION with zero capacity should succeed";
 
     EXPECT_TRUE(IS_LIST(&vm->values[0])) << "Result should be a list";
@@ -261,21 +241,20 @@ TEST_F(VMInstructionCollectionInitializerTest, OpNewCollectionListZeroCapacity) 
 }
 
 TEST_F(VMInstructionCollectionInitializerTest, OpNewCollectionWithSubsequentAppend) {
-    vm->error = 0;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Int 42
+R[2]: Int 100
 
-    vm->values[1] = semiValueNewInt(42);
-    vm->values[2] = semiValueNewInt(100);
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    Instruction code[3];
-    code[0] = INSTRUCTION_NEW_COLLECTION(0, BASE_VALUE_TYPE_LIST, 2, true, false);
-    code[1] = INSTRUCTION_APPEND_LIST(0, 1, 2, false, false);
-    code[2] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions]
+0: OP_NEW_COLLECTION A=0x00 B=0x06 C=0x02 kb=T kc=F
+1: OP_APPEND_LIST    A=0x00 B=0x01 C=0x02 kb=F kc=F
+2: OP_TRAP           A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 3, 8, 0, 0);
-    module->moduleInit  = func;
-
-    ErrorId result = RunModule(module);
     EXPECT_EQ(result, 0) << "NEW_COLLECTION followed by APPEND should succeed";
 
     EXPECT_TRUE(IS_LIST(&vm->values[0])) << "Result should be a list";
@@ -286,21 +265,20 @@ TEST_F(VMInstructionCollectionInitializerTest, OpNewCollectionWithSubsequentAppe
 }
 
 TEST_F(VMInstructionCollectionInitializerTest, OpNewCollectionDictWithSubsequentSetItem) {
-    vm->error = 0;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: String "key"
+R[2]: Int 123
 
-    vm->values[1] = semiValueStringCreate(&vm->gc, "key", 3);
-    vm->values[2] = semiValueNewInt(123);
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    Instruction code[3];
-    code[0] = INSTRUCTION_NEW_COLLECTION(0, BASE_VALUE_TYPE_DICT, 0, true, false);
-    code[1] = INSTRUCTION_SET_ITEM(0, 1, 2, false, false);
-    code[2] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions]
+0: OP_NEW_COLLECTION A=0x00 B=0x07 C=0x00 kb=T kc=F
+1: OP_SET_ITEM       A=0x00 B=0x01 C=0x02 kb=F kc=F
+2: OP_TRAP           A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 3, 8, 0, 0);
-    module->moduleInit  = func;
-
-    ErrorId result = RunModule(module);
     EXPECT_EQ(result, 0) << "NEW_COLLECTION dict followed by SET_ITEM should succeed";
 
     EXPECT_TRUE(IS_DICT(&vm->values[0])) << "Result should be a dict";

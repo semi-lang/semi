@@ -14,97 +14,99 @@ extern "C" {
 class VMInstructionFunctionCallTest : public VMTest {};
 
 TEST_F(VMInstructionFunctionCallTest, CallZeroArgumentFunction) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    Instruction fnCode[1];
-    fnCode[0] = INSTRUCTION_RETURN(255, 0, 0, false, false);  // Function body: just return
+[Instructions]
+0: OP_LOAD_CONSTANT  A=0x00 K=0x0000 i=F s=F
+1: OP_CALL           A=0x00 B=0x00 C=0x00 kb=F kc=F
+2: OP_TRAP           A=0x00 K=0x0001 i=F s=F
 
-    FunctionProto* func = CreateFunctionObject(0, fnCode, 1, 1, 0, 0);  // no args, stack size 1
-    ConstantIndex index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
+[Constants]
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=1 -> @testFunc
 
-    Instruction code[3];
-    code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Create function from K[0]
-    code[1] = INSTRUCTION_CALL(0, 0, 0, false, false);            // Call function at R[0] with 0 args
-    code[2] = INSTRUCTION_TRAP(0, 1, false, false);               // Exit here
-
-    module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
-
-    ErrorId result = RunModule(module);
+[Instructions:testFunc]
+0: OP_RETURN  A=0xFF B=0x00 C=0x00 kb=F kc=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 1) << "VM should complete successfully";
-
     ASSERT_EQ(vm->frameCount, 1) << "Only root frame should remain";
 }
 
 TEST_F(VMInstructionFunctionCallTest, CallFunctionWithArguments) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[PreDefine:Registers]
+R[2]: Int 42
+R[3]: Int 84
 
-    Instruction fnCode[1];
-    fnCode[0] = INSTRUCTION_RETURN(255, 0, 0, false, false);  // Function body: just return
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    FunctionProto* func = CreateFunctionObject(2, fnCode, 1, 3, 0, 0);  // 2 args, stack size 3
-    ConstantIndex index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
+[Instructions]
+0: OP_LOAD_CONSTANT  A=0x00 K=0x0000 i=F s=F
+1: OP_CALL           A=0x00 B=0x02 C=0x00 kb=F kc=F
+2: OP_TRAP           A=0x00 K=0x0000 i=F s=F
 
-    Instruction code[3];
-    code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Create function from K[0]
-    code[1] = INSTRUCTION_CALL(0, 2, 0, false, false);            // Call function at R[0] with 2 args
-    code[2] = INSTRUCTION_TRAP(0, 1, false, false);               // Exit here
+[Constants]
+K[0]: FunctionProto arity=2 coarity=0 maxStackSize=3 -> @testFunc
 
-    vm->values[2] = semiValueNewInt(42);  // First argument
-    vm->values[3] = semiValueNewInt(84);  // Second argument
+[Instructions:testFunc]
+0: OP_RETURN  A=0xFF B=0x00 C=0x00 kb=F kc=F
+)",
+                                                            &module);
 
-    module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
-
-    ErrorId result = RunModule(module);
-
-    ASSERT_EQ(result, 1) << "VM should complete successfully";
-
+    ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->frameCount, 1) << "Only root frame should remain";
 }
 
 TEST_F(VMInstructionFunctionCallTest, NestedFunctionCalls) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    // Create inner function
-    Instruction innerCode[1];
-    innerCode[0] = INSTRUCTION_RETURN(255, 0, 0, false, false);  // Inner function returns
+[Instructions]
+0: OP_LOAD_CONSTANT  A=0x00 K=0x0000 i=F s=F
+1: OP_CALL           A=0x00 B=0x00 C=0x00 kb=F kc=F
+2: OP_TRAP           A=0x00 B=0x00 C=0x00 kb=F kc=F
 
-    FunctionProto* innerFunc = CreateFunctionObject(0, innerCode, 1, 1, 0, 0);
-    ConstantIndex innerIndex = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(innerFunc));
+[Constants]
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=2 -> @outerFunc
+K[1]: FunctionProto arity=0 coarity=0 maxStackSize=1 -> @innerFunc
 
-    // Create outer function
-    Instruction outerCode[3];
-    outerCode[0] = INSTRUCTION_LOAD_CONSTANT(1, innerIndex, false, false);  // Load inner function
-    outerCode[1] = INSTRUCTION_CALL(1, 0, 0, false, false);                 // Outer function calls inner
-    outerCode[2] = INSTRUCTION_RETURN(255, 0, 0, false, false);             // Outer function returns
+[Instructions:outerFunc]
+0: OP_LOAD_CONSTANT  A=0x01 K=0x0001 i=F s=F
+1: OP_CALL           A=0x01 B=0x00 C=0x00 kb=F kc=F
+2: OP_RETURN         A=0xFF B=0x00 C=0x00 kb=F kc=F
 
-    FunctionProto* outerFunc = CreateFunctionObject(0, outerCode, 3, 2, 0, 0);
-    ConstantIndex outerIndex = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(outerFunc));
-
-    Instruction code[3];
-    code[0] = INSTRUCTION_LOAD_CONSTANT(0, outerIndex, false, false);  // Load outer function
-    code[1] = INSTRUCTION_CALL(0, 0, 0, false, false);                 // Call outer function
-    code[2] = INSTRUCTION_TRAP(0, 0, false, false);                    // Success
-
-    module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
-
-    ErrorId result = RunModule(module);
+[Instructions:innerFunc]
+0: OP_RETURN  A=0xFF B=0x00 C=0x00 kb=F kc=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully with nested calls";
-
     ASSERT_EQ(vm->frameCount, 1) << "Only root frame should remain";
 }
 
 TEST_F(VMInstructionFunctionCallTest, ReturnValue) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    Instruction code[2];
-    code[0] = INSTRUCTION_LOAD_INLINE_INTEGER(0, 42, false, true);  // Load integer 42 into R[0]
-    code[1] = INSTRUCTION_RETURN(1, 0, 0, false, false);            // Return R[1] without any call
-
-    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
-
-    ErrorId result = RunModule(module);
+[Instructions]
+0: OP_LOAD_INLINE_INTEGER  A=0x00 K=0x002A i=T s=T
+1: OP_RETURN               A=0x01 B=0x00 C=0x00 kb=F kc=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "Should not return invalid error";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_INT) << "Returned value should be an integer";
@@ -114,40 +116,45 @@ TEST_F(VMInstructionFunctionCallTest, ReturnValue) {
 // Error Condition Tests for OP_CALL
 
 TEST_F(VMInstructionFunctionCallTest, CallNonFunctionObject) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    ConstantIndex index = semiConstantTableInsert(&module->constantTable, semiValueNewInt(42));
+[Instructions]
+0: OP_LOAD_CONSTANT  A=0x00 K=0x0000 i=F s=F
+1: OP_CALL           A=0x00 B=0x00 C=0x00 kb=F kc=F
+2: OP_TRAP           A=0x00 K=0x0000 i=F s=F
 
-    Instruction code[3];
-    code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Load non-function value
-    code[1] = INSTRUCTION_CALL(0, 0, 0, false, false);
-    code[2] = INSTRUCTION_TRAP(0, 0, false, false);
-
-    module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
-
-    ErrorId result = RunModule(module);
+[Constants]
+K[0]: Int 42
+)",
+                                                            &module);
 
     ASSERT_EQ(result, SEMI_ERROR_UNEXPECTED_TYPE) << "Should return type error";
     ASSERT_EQ(vm->error, SEMI_ERROR_UNEXPECTED_TYPE) << "VM error should be set";
 }
 
 TEST_F(VMInstructionFunctionCallTest, CallArityMismatch) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    Instruction fnCode[1];
-    fnCode[0] = INSTRUCTION_RETURN(255, 0, 0, false, false);
+[Instructions]
+0: OP_LOAD_CONSTANT  A=0x00 K=0x0000 i=F s=F
+1: OP_CALL           A=0x00 B=0x02 C=0x00 kb=F kc=F
+2: OP_TRAP           A=0x00 K=0x0000 i=F s=F
 
-    FunctionProto* func = CreateFunctionObject(1, fnCode, 1, 2, 0, 0);  // Function expects 1 arg, not 2
-    ConstantIndex index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
+[Constants]
+K[0]: FunctionProto arity=1 coarity=0 maxStackSize=2 -> @testFunc
 
-    Instruction code[3];
-    code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Create function from K[0]
-    code[1] = INSTRUCTION_CALL(0, 2, 0, false, false);            // Call with 2 args
-    code[2] = INSTRUCTION_TRAP(0, 0, false, false);
-
-    module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
-
-    ErrorId result = RunModule(module);
+[Instructions:testFunc]
+0: OP_RETURN  A=0xFF B=0x00 C=0x00 kb=F kc=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, SEMI_ERROR_ARGS_COUNT_MISMATCH) << "Should return arity mismatch error";
     ASSERT_EQ(vm->error, SEMI_ERROR_ARGS_COUNT_MISMATCH) << "VM error should be set";
@@ -156,55 +163,53 @@ TEST_F(VMInstructionFunctionCallTest, CallArityMismatch) {
 // Stack Management Tests
 
 TEST_F(VMInstructionFunctionCallTest, CallStackGrowth) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    // Create functions with large stack requirements
-    Instruction fnCode4[1];
-    fnCode4[0]           = INSTRUCTION_RETURN(255, 0, 0, false, false);
-    FunctionProto* func4 = CreateFunctionObject(0, fnCode4, 1, 254, 0, 0);  // Large stack requirement
-    ConstantIndex index4 = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func4));
+[Instructions]
+0: OP_LOAD_CONSTANT  A=0x00 K=0x0000 i=F s=F
+1: OP_CALL           A=0x00 B=0x00 C=0x00 kb=F kc=F
+2: OP_TRAP           A=0x00 K=0x0000 i=F s=F
 
-    Instruction fnCode3[3];
-    fnCode3[0]           = INSTRUCTION_LOAD_CONSTANT(0, index4, false, false);
-    fnCode3[1]           = INSTRUCTION_CALL(0, 0, 0, false, false);
-    fnCode3[2]           = INSTRUCTION_RETURN(255, 0, 0, false, false);
-    FunctionProto* func3 = CreateFunctionObject(0, fnCode3, 3, 254, 0, 0);  // Large stack requirement
-    ConstantIndex index3 = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func3));
+[Constants]
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=254 -> @func0
+K[1]: FunctionProto arity=0 coarity=0 maxStackSize=254 -> @func1
+K[2]: FunctionProto arity=0 coarity=0 maxStackSize=254 -> @func2
+K[3]: FunctionProto arity=0 coarity=0 maxStackSize=254 -> @func3
+K[4]: FunctionProto arity=0 coarity=0 maxStackSize=254 -> @func4
 
-    Instruction fnCode2[3];
-    fnCode2[0]           = INSTRUCTION_LOAD_CONSTANT(0, index3, false, false);
-    fnCode2[1]           = INSTRUCTION_CALL(0, 0, 0, false, false);
-    fnCode2[2]           = INSTRUCTION_RETURN(255, 0, 0, false, false);
-    FunctionProto* func2 = CreateFunctionObject(0, fnCode2, 3, 254, 0, 0);  // Large stack requirement
-    ConstantIndex index2 = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func2));
+[Instructions:func0]
+0: OP_LOAD_CONSTANT  A=0x00 K=0x0001 i=F s=F
+1: OP_CALL           A=0x00 B=0x00 C=0x00 kb=F kc=F
+2: OP_RETURN         A=0xFF B=0x00 C=0x00 kb=F kc=F
 
-    Instruction fnCode1[3];
-    fnCode1[0]           = INSTRUCTION_LOAD_CONSTANT(0, index2, false, false);
-    fnCode1[1]           = INSTRUCTION_CALL(0, 0, 0, false, false);
-    fnCode1[2]           = INSTRUCTION_RETURN(255, 0, 0, false, false);
-    FunctionProto* func1 = CreateFunctionObject(0, fnCode1, 3, 254, 0, 0);  // Large stack requirement
-    ConstantIndex index1 = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func1));
+[Instructions:func1]
+0: OP_LOAD_CONSTANT  A=0x00 K=0x0002 i=F s=F
+1: OP_CALL           A=0x00 B=0x00 C=0x00 kb=F kc=F
+2: OP_RETURN         A=0xFF B=0x00 C=0x00 kb=F kc=F
 
-    Instruction fnCode0[3];
-    fnCode0[0]           = INSTRUCTION_LOAD_CONSTANT(0, index1, false, false);
-    fnCode0[1]           = INSTRUCTION_CALL(0, 0, 0, false, false);
-    fnCode0[2]           = INSTRUCTION_RETURN(255, 0, 0, false, false);
-    FunctionProto* func0 = CreateFunctionObject(0, fnCode0, 3, 254, 0, 0);  // Large stack requirement
-    ConstantIndex index0 = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func0));
+[Instructions:func2]
+0: OP_LOAD_CONSTANT  A=0x00 K=0x0003 i=F s=F
+1: OP_CALL           A=0x00 B=0x00 C=0x00 kb=F kc=F
+2: OP_RETURN         A=0xFF B=0x00 C=0x00 kb=F kc=F
 
-    Instruction code[3];
-    code[0] = INSTRUCTION_LOAD_CONSTANT(0, index0, false, false);
-    code[1] = INSTRUCTION_CALL(0, 0, 0, false, false);
-    code[2] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions:func3]
+0: OP_LOAD_CONSTANT  A=0x00 K=0x0004 i=F s=F
+1: OP_CALL           A=0x00 B=0x00 C=0x00 kb=F kc=F
+2: OP_RETURN         A=0xFF B=0x00 C=0x00 kb=F kc=F
 
-    module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
-
-    ErrorId result = RunModule(module);
+[Instructions:func4]
+0: OP_RETURN  A=0xFF B=0x00 C=0x00 kb=F kc=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should handle stack growth successfully";
 
     //        base + maxStackSize
-    // root:  0 + 254 (specified in RunInstructions)
+    // root:  0 + 254 (specified in ModuleInit)
     // func0: 1 + 254
     // func1: 2 + 254
     // func2: 3 + 254
@@ -214,59 +219,63 @@ TEST_F(VMInstructionFunctionCallTest, CallStackGrowth) {
 }
 
 TEST_F(VMInstructionFunctionCallTest, ArgumentPositioning) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[PreDefine:Registers]
+R[1]: Int 10
+R[2]: Int 20
+R[3]: Int 30
 
-    Instruction fnCode[2];
-    fnCode[0] = INSTRUCTION_MOVE(0, 1, 0, false, false);    // Move R[7] to R[6] (arg2 to arg1)
-    fnCode[1] = INSTRUCTION_RETURN(0, 0, 0, false, false);  // Return R[6] (which is arg1)
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    FunctionProto* func = CreateFunctionObject(3, fnCode, 2, 4, 0, 0);  // 3 args, stack size 4
-    ConstantIndex index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
+[Instructions]
+0: OP_LOAD_CONSTANT  A=0x00 K=0x0000 i=F s=F
+1: OP_CALL           A=0x00 B=0x03 C=0x00 kb=F kc=F
+2: OP_TRAP           A=0x00 K=0x0000 i=F s=F
 
-    Instruction code[5];
-    code[0] = INSTRUCTION_LOAD_CONSTANT(5, index, false, false);  // Load function into R[5]
-    code[1] = INSTRUCTION_CALL(5, 3, 0, false, false);            // Call function at R[5] with 3 args
-    code[2] = INSTRUCTION_TRAP(0, 0, false, false);               // Success
-    code[3] = INSTRUCTION_MOVE(0, 1, 0, false, false);            // Move arg2 to result
-    code[4] = INSTRUCTION_RETURN(0, 0, 0, false, false);
+[Constants]
+K[0]: FunctionProto arity=3 coarity=0 maxStackSize=2 -> @testFunc
 
-    vm->values[6] = semiValueNewInt(10);  // First argument (at R[0] inside the function)
-    vm->values[7] = semiValueNewInt(20);  // Second argument
-    vm->values[8] = semiValueNewInt(30);  // Third argument
-
-    module->moduleInit = CreateFunctionObject(0, code, 5, 254, 0, 0);
-
-    ErrorId result = RunModule(module);
+[Instructions:testFunc]
+0: OP_MOVE    A=0x00 B=0x01 C=0x00 kb=F kc=F
+1: OP_RETURN  A=0x00 B=0x00 C=0x00 kb=F kc=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
-    ASSERT_EQ(vm->values[5].as.i, 20) << "Returned value should be copied to the function register";
+    ASSERT_EQ(vm->values[0].header, VALUE_TYPE_INT) << "Return value should be an integer";
+    ASSERT_EQ(AS_INT(&vm->values[0]), 20) << "Function should have received correct arguments at correct positions";
 }
 
 // Program Counter Management Tests
 
 TEST_F(VMInstructionFunctionCallTest, PCCorrectlyRestored) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[PreDefine:Registers]
+R[2]: Int 42
+R[5]: Int 84
 
-    Instruction fnCode[2];
-    fnCode[0] =
-        INSTRUCTION_MOVE(0, 1, 0, false, false);  // Function body: move from R[1] to R[0] (stack[5] to stack[4])
-    fnCode[1] = INSTRUCTION_RETURN(255, 0, 0, false, false);  // Return
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    FunctionProto* func = CreateFunctionObject(0, fnCode, 2, 2, 0, 0);  // Function starts at PC=4
-    ConstantIndex index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
+[Instructions]
+0: OP_LOAD_CONSTANT  A=0x03 K=0x0000 i=F s=F
+1: OP_CALL           A=0x03 B=0x00 C=0x00 kb=F kc=F
+2: OP_MOVE           A=0x01 B=0x02 C=0x00 kb=F kc=F
+3: OP_TRAP           A=0x00 K=0x0000 i=F s=F
 
-    Instruction code[4];
-    code[0] = INSTRUCTION_LOAD_CONSTANT(3, index, false, false);  // Load function
-    code[1] = INSTRUCTION_CALL(3, 0, 0, false, false);            // Call function, the new stack starts at R[4]
-    code[2] = INSTRUCTION_MOVE(1, 2, 0, false, false);            // Should execute after return
-    code[3] = INSTRUCTION_TRAP(0, 0, false, false);               // Success
+[Constants]
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=2 -> @testFunc
 
-    vm->values[2] = semiValueNewInt(42);  // For the instruction after return
-    vm->values[5] = semiValueNewInt(84);  // This will be available in the function's register space
-
-    module->moduleInit = CreateFunctionObject(0, code, 4, 254, 0, 0);
-
-    ErrorId result = RunModule(module);
+[Instructions:testFunc]
+0: OP_MOVE    A=0x00 B=0x01 C=0x00 kb=F kc=F
+1: OP_RETURN  A=0xFF B=0x00 C=0x00 kb=F kc=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
 
@@ -277,49 +286,52 @@ TEST_F(VMInstructionFunctionCallTest, PCCorrectlyRestored) {
 // Edge Cases
 
 TEST_F(VMInstructionFunctionCallTest, FunctionWithMaxArity) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-
-    Instruction fnCode[1];
-    fnCode[0] = INSTRUCTION_RETURN(255, 0, 0, false, false);
-
-    FunctionProto* func = CreateFunctionObject(253, fnCode, 1, 253, 0, 0);
-    ConstantIndex index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
-
-    Instruction code[4];
-    code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Load function
-    code[1] = INSTRUCTION_CALL(0, 253, 0, false, false);
-    code[2] = INSTRUCTION_TRAP(0, 0, false, false);
-    code[3] = INSTRUCTION_RETURN(255, 0, 0, false, false);
-
-    // Set up 15 arguments
-    for (int i = 0; i < 15; i++) {
-        vm->values[2 + i] = semiValueNewInt(i);
+    // Set up 253 arguments
+    for (int i = 0; i < 253; i++) {
+        vm->values[1 + i] = semiValueNewInt(i);
     }
 
-    module->moduleInit = CreateFunctionObject(0, code, 4, 254, 0, 0);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    ErrorId result = RunModule(module);
+[Instructions]
+0: OP_LOAD_CONSTANT  A=0x00 K=0x0000 i=F s=F
+1: OP_CALL           A=0x00 B=0xFD C=0x00 kb=F kc=F
+2: OP_TRAP           A=0x00 K=0x0000 i=F s=F
+
+[Constants]
+K[0]: FunctionProto arity=253 coarity=0 maxStackSize=1 -> @testFunc
+
+[Instructions:testFunc]
+0: OP_RETURN  A=0xFF B=0x00 C=0x00 kb=F kc=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should handle maximum arity successfully";
 }
 
 TEST_F(VMInstructionFunctionCallTest, ImmediateReturn) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    Instruction fnCode[1];
-    fnCode[0] = INSTRUCTION_RETURN(255, 0, 0, false, false);  // Function immediately returns
+[Instructions]
+0: OP_LOAD_CONSTANT  A=0x00 K=0x0000 i=F s=F
+1: OP_CALL           A=0x00 B=0x00 C=0x00 kb=F kc=F
+2: OP_TRAP           A=0x00 B=0x00 C=0x00 kb=F kc=F
 
-    FunctionProto* func = CreateFunctionObject(0, fnCode, 1, 1, 0, 0);
-    ConstantIndex index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
+[Constants]
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=1 -> @testFunc
 
-    Instruction code[3];
-    code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Load function
-    code[1] = INSTRUCTION_CALL(0, 0, 0, false, false);
-    code[2] = INSTRUCTION_TRAP(0, 0, false, false);
-
-    module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
-
-    ErrorId result = RunModule(module);
+[Instructions:testFunc]
+0: OP_RETURN  A=0xFF B=0x00 C=0x00 kb=F kc=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should handle immediate return";
     ASSERT_EQ(vm->frameCount, 1) << "Only root frame should remain";
@@ -510,23 +522,24 @@ TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionZeroReturnValue) {
 TEST_F(VMInstructionFunctionCallTest, FunctionReachesEndWithMatchingCoarity) {
     // Test case: Function with coarity=0 reaches end without explicit return
     // This should succeed as the implicit return matches the expected coarity
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    // Function that just ends without explicit return (coarity=0)
-    Instruction fnCode[1];
-    fnCode[0] = INSTRUCTION_RETURN(UINT8_MAX, 0, 0, false, false);  // Implicit return added by compiler
+[Instructions]
+0: OP_LOAD_CONSTANT  A=0x00 K=0x0000 i=F s=F
+1: OP_CALL           A=0x00 B=0x00 C=0x00 kb=F kc=F
+2: OP_TRAP           A=0x00 K=0x0000 i=F s=F
 
-    FunctionProto* func = CreateFunctionObject(0, fnCode, 1, 1, 0, 0);  // coarity=0
-    ConstantIndex index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
+[Constants]
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=1 -> @testFunc
 
-    Instruction code[3];
-    code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Load function
-    code[1] = INSTRUCTION_CALL(0, 0, 0, false, false);            // Call function with 0 args
-    code[2] = INSTRUCTION_TRAP(0, 0, false, false);               // Success
-
-    module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
-
-    ErrorId result = RunModule(module);
+[Instructions:testFunc]
+0: OP_RETURN  A=0xFF B=0x00 C=0x00 kb=F kc=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully when function reaches end with matching coarity";
     ASSERT_EQ(vm->frameCount, 1) << "Only root frame should remain";
@@ -535,23 +548,24 @@ TEST_F(VMInstructionFunctionCallTest, FunctionReachesEndWithMatchingCoarity) {
 TEST_F(VMInstructionFunctionCallTest, FunctionReachesEndWithMismatchedCoarity) {
     // Test case: Function with coarity=1 reaches end without explicit return
     // This should fail with SEMI_ERROR_MISSING_RETURN_VALUE
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    // Function that just ends without explicit return but expects to return a value (coarity=1)
-    Instruction fnCode[1];
-    fnCode[0] = INSTRUCTION_RETURN(UINT8_MAX, 0, 0, false, false);  // Implicit return added by compiler
+[Instructions]
+0: OP_LOAD_CONSTANT  A=0x00 K=0x0000 i=F s=F
+1: OP_CALL           A=0x00 B=0x00 C=0x00 kb=F kc=F
+2: OP_TRAP           A=0x00 K=0x0000 i=F s=F
 
-    FunctionProto* func = CreateFunctionObject(0, fnCode, 1, 1, 0, 1);  // coarity=1
-    ConstantIndex index = semiConstantTableInsert(&module->constantTable, FUNCTION_VALUE(func));
+[Constants]
+K[0]: FunctionProto arity=0 coarity=1 maxStackSize=1 -> @testFunc
 
-    Instruction code[3];
-    code[0] = INSTRUCTION_LOAD_CONSTANT(0, index, false, false);  // Load function
-    code[1] = INSTRUCTION_CALL(0, 0, 0, false, false);            // Call function with 0 args
-    code[2] = INSTRUCTION_TRAP(0, 0, false, false);               // Should not reach here
-
-    module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
-
-    ErrorId result = RunModule(module);
+[Instructions:testFunc]
+0: OP_RETURN  A=0xFF B=0x00 C=0x00 kb=F kc=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, SEMI_ERROR_MISSING_RETURN_VALUE) << "VM should return missing return value error";
     ASSERT_EQ(vm->error, SEMI_ERROR_MISSING_RETURN_VALUE) << "VM error should be set to missing return value";

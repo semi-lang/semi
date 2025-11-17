@@ -33,6 +33,7 @@ static inline void* defaultReallocFn(void* ptr, size_t newSize, void* reallocDat
 }
 
 #include "./debug.hpp"
+#include "./instruction_verifier.hpp"
 
 /*
  │ Expression Test Helpers

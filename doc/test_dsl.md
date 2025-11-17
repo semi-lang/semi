@@ -111,20 +111,19 @@ Type names form the first column and are aligned within the section. Properties 
 K[0]:  Int             42
 K[1]:  Float           3.14
 K[3]:  String          "hello" length=5
-K[4]:  String          "世界" length=2 bytes=6
+K[4]:  String          "世界" length=2
 K[5]:  Range           start=0 end=10 step=1
-K[6]:  FunctionProto   arity=2 coarity=1 size=5 -> @myFunc
-K[10]: InlineString    "hi" length=2
+K[6]:  FunctionProto   arity=2 coarity=1 maxStackSize=10 -> @myFunc
+K[7]:  String          "He said \"hello\"" length=14
 ```
 
 **Supported constant types:**
 
 - `Int <value>`: Integer constant
 - `Float <value>`: Floating-point constant
-- `String "<text>" length=<num> [bytes=<num>]`: String constant
+- `String "<text>" length=<num>`: String constant (use `\"` for embedded quotes)
 - `Range start=<num> end=<num> step=<num>`: Range object
-- `FunctionProto arity=<num> coarity=<num> size=<num> [-> @label]`: Function prototype
-- `InlineString "<text>" length=<num>`: Inline string
+- `FunctionProto arity=<num> coarity=<num> maxStackSize=<num> [-> @label]`: Function prototype (maxStackSize specifies the maximum stack size needed by the function)
 
 ### [UpvalueDescription:label]
 
@@ -234,6 +233,44 @@ PI:    Float 3.14159
 DEBUG: Bool true
 ```
 
+### [PreDefine:Registers]
+
+Pre-initialize VM registers before executing (used by Module Builder).
+
+**Row Format:**
+```
+R[<index>]: <Type> <value>
+```
+
+**Example:**
+```
+[PreDefine:Registers]
+R[0]: Int 42
+R[1]: Float 3.14
+R[2]: String "hello"
+```
+
+Supported types: `Int`, `Float`, `Bool`, `String`
+
+### [ModuleInit]
+
+Specify metadata for the module initialization function (used by Module Builder to configure the moduleInit FunctionProto fields).
+
+**Row Format:**
+```
+arity=<N> coarity=<N> maxStackSize=<N>
+```
+
+**Example:**
+```
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=10
+```
+
+**Notes:**
+- This section configures the metadata for the module's main/initialization function
+- For nested functions, their metadata (arity, coarity, maxStackSize) should be specified in the `[Constants]` section as part of their FunctionProto constant definition
+
 ## Complete Examples
 
 ### Example 1: Basic Defer Block
@@ -250,7 +287,7 @@ TEST_F(CompilerDeferTest, BasicDeferBlockExactInstructions) {
 1: OP_RETURN        A=0xFF B=0x00 C=0x00 kb=F kc=F
 
 [Constants]
-K[0]: FunctionProto arity=0 coarity=0 size=2 -> @deferFunc
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=10 -> @deferFunc
 
 [Instructions:deferFunc]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
@@ -282,7 +319,7 @@ TEST_F(CompilerTest, ModuleWithExportsAndTypes) {
 4: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
 [Constants]
-K[0]: FunctionProto arity=0 coarity=1 size=2 -> @testFunc
+K[0]: FunctionProto arity=0 coarity=1 maxStackSize=5 -> @testFunc
 
 [Instructions:testFunc]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0005 i=T s=T
@@ -319,8 +356,8 @@ TEST_F(CompilerTest, FunctionWithUpvalues) {
 2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
 [Constants]
-K[0]: FunctionProto arity=1 coarity=1 size=5 -> @outerFunc
-K[1]: FunctionProto arity=0 coarity=1 size=4 -> @innerFunc
+K[0]: FunctionProto arity=1 coarity=1 maxStackSize=10 -> @outerFunc
+K[1]: FunctionProto arity=0 coarity=1 maxStackSize=8 -> @innerFunc
 
 [Instructions:outerFunc]
 0: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x000A i=T s=T
@@ -424,7 +461,43 @@ Extra entry at [Globals].(3):
   Actual:   G[3]: _unexpected
 ```
 
+## Module Builder
+
+The DSL can now be used in reverse: instead of verifying compiled modules, you can build modules from DSL specifications. This is useful for VM instruction tests where you want to set up specific bytecode scenarios without going through the compiler.
+
+### API Functions
+
+```cpp
+// Build a module from DSL spec
+SemiModule* BuildModule(SemiVM* vm, const char* spec);
+
+// Build and run module in one call (for simple tests)
+ErrorId BuildAndRunModule(SemiVM* vm, const char* spec, SemiModule** outModule = nullptr);
+```
+
+### Example: VM Instruction Test with Builder
+
+```cpp
+TEST_F(VMInstructionArithmeticTest, OpAddUsingBuilder) {
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: Int 5
+R[2]: Int 3
+
+[FunctionMetadata]
+arity=0 coarity=0 maxStackSize=3
+
+[Instructions]
+0: OP_ADD    A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP   A=0x00 B=0x00 C=0x00 kb=F kc=F
+)");
+
+    ASSERT_EQ(result, 0);
+    ASSERT_EQ(vm->values[0].as.i, 8);
+}
+```
+
 ## TODO
 
-- [ ] Apply PreDefine sections before parsing
-- [ ] Integration with test helpers
+- [ ] Support for more complex constant types (nested functions, etc.)
+- [ ] Round-trip validation (compile → DSL → build → verify)

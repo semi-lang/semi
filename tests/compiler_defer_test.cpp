@@ -27,7 +27,7 @@ TEST_F(CompilerDeferTest, BasicDeferBlockExactInstructions) {
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
 [Constants]
-K[0]: FunctionProto arity=0 coarity=0 size=2 -> @deferFunc
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=1 -> @deferFunc
 
 [Instructions:deferFunc]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
@@ -49,8 +49,8 @@ TEST_F(CompilerDeferTest, MultipleDeferBlocksExactInstructions) {
 2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
 [Constants]
-K[0]: FunctionProto arity=0 coarity=0 size=2 -> @deferFunc0
-K[1]: FunctionProto arity=0 coarity=0 size=2 -> @deferFunc1
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=1 -> @deferFunc0
+K[1]: FunctionProto arity=0 coarity=0 maxStackSize=1 -> @deferFunc1
 
 [Instructions:deferFunc0]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
@@ -76,8 +76,8 @@ TEST_F(CompilerDeferTest, DeferInFunctionExactInstructions) {
 2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
 [Constants]
-K[0]: FunctionProto arity=0 coarity=0 size=2 -> @deferFunc
-K[1]: FunctionProto arity=0 coarity=0 size=2 -> @testFunc
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=1 -> @deferFunc
+K[1]: FunctionProto arity=0 coarity=0 maxStackSize=0 -> @testFunc
 
 [Instructions:testFunc]
 0: OP_DEFER_CALL            A=0x00 K=0x0000 i=F s=F
@@ -120,8 +120,8 @@ TEST_F(CompilerDeferTest, ReturnWithoutValueInDeferExactInstructions) {
 2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
 [Constants]
-K[0]: FunctionProto arity=0 coarity=0 size=3 -> @deferFunc
-K[1]: FunctionProto arity=0 coarity=0 size=2 -> @testFunc
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=1 -> @deferFunc
+K[1]: FunctionProto arity=0 coarity=0 maxStackSize=0 -> @testFunc
 
 [Instructions:testFunc]
 0: OP_DEFER_CALL            A=0x00 K=0x0000 i=F s=F
@@ -147,7 +147,7 @@ TEST_F(CompilerDeferTest, EmptyDeferBlockExactInstructions) {
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
 [Constants]
-K[0]: FunctionProto arity=0 coarity=0 size=1 -> @deferFunc
+K[0]: FunctionProto arity=0 coarity=0 maxStackSize=0 -> @deferFunc
 
 [Instructions:deferFunc]
 0: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F

@@ -18,17 +18,17 @@ class VMInstructionLoadConstantTest : public VMTest {};
 
 // OP_LOAD_BOOL Tests
 TEST_F(VMInstructionLoadConstantTest, OpLoadBoolInlineTrue) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    Instruction code[2];
-    code[0] = INSTRUCTION_LOAD_BOOL(0, 0, true, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
-
-    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
-
-    vm->error = 0;
-
-    ErrorId result = RunModule(module);
+[Instructions]
+0: OP_LOAD_BOOL  A=0x00 K=0x0000 i=T s=F
+1: OP_TRAP       A=0x00 K=0x0000 i=F s=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_BOOL) << "Register 0 should have bool type";
@@ -36,17 +36,17 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadBoolInlineTrue) {
 }
 
 TEST_F(VMInstructionLoadConstantTest, OpLoadBoolInlineFalse) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    Instruction code[2];
-    code[0] = INSTRUCTION_LOAD_BOOL(1, 0, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
-
-    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
-
-    vm->error = 0;
-
-    ErrorId result = RunModule(module);
+[Instructions]
+0: OP_LOAD_BOOL  A=0x01 K=0x0000 i=F s=F
+1: OP_TRAP       A=0x00 K=0x0000 i=F s=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[1].header, VALUE_TYPE_BOOL) << "Register 1 should have bool type";
@@ -55,17 +55,17 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadBoolInlineFalse) {
 
 // OP_LOAD_INLINE_INTEGER Tests
 TEST_F(VMInstructionLoadConstantTest, OpLoadIntegerInline) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    Instruction code[2];
-    code[0] = INSTRUCTION_LOAD_INLINE_INTEGER(0, 42, true, true);  // s=true means positive
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
-
-    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
-
-    vm->error = 0;
-
-    ErrorId result = RunModule(module);
+[Instructions]
+0: OP_LOAD_INLINE_INTEGER  A=0x00 K=0x002A i=T s=T
+1: OP_TRAP                 A=0x00 K=0x0000 i=F s=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_INT) << "Register 0 should have int type";
@@ -73,17 +73,17 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadIntegerInline) {
 }
 
 TEST_F(VMInstructionLoadConstantTest, OpLoadIntegerInlineZero) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    Instruction code[2];
-    code[0] = INSTRUCTION_LOAD_INLINE_INTEGER(1, 0, true, true);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
-
-    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
-
-    vm->error = 0;
-
-    ErrorId result = RunModule(module);
+[Instructions]
+0: OP_LOAD_INLINE_INTEGER  A=0x01 K=0x0000 i=T s=T
+1: OP_TRAP                 A=0x00 K=0x0000 i=F s=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[1].header, VALUE_TYPE_INT) << "Register 1 should have int type";
@@ -91,17 +91,17 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadIntegerInlineZero) {
 }
 
 TEST_F(VMInstructionLoadConstantTest, OpLoadIntegerInlineMaxValue) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    Instruction code[2];
-    code[0] = INSTRUCTION_LOAD_INLINE_INTEGER(2, 65535, true, true);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
-
-    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
-
-    vm->error = 0;
-
-    ErrorId result = RunModule(module);
+[Instructions]
+0: OP_LOAD_INLINE_INTEGER  A=0x02 K=0xFFFF i=T s=T
+1: OP_TRAP                 A=0x00 K=0x0000 i=F s=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[2].header, VALUE_TYPE_INT) << "Register 2 should have int type";
@@ -109,17 +109,17 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadIntegerInlineMaxValue) {
 }
 
 TEST_F(VMInstructionLoadConstantTest, OpLoadIntegerInlineNegative) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    Instruction code[2];
-    code[0] = INSTRUCTION_LOAD_INLINE_INTEGER(0, 42, true, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
-
-    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
-
-    vm->error = 0;
-
-    ErrorId result = RunModule(module);
+[Instructions]
+0: OP_LOAD_INLINE_INTEGER  A=0x00 K=0x002A i=T s=F
+1: OP_TRAP                 A=0x00 K=0x0000 i=F s=F
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_INT) << "Register 0 should have int type";
@@ -128,20 +128,20 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadIntegerInlineNegative) {
 
 // OP_LOAD_CONST Tests
 TEST_F(VMInstructionLoadConstantTest, OpLoadIntegerFromConstantTable) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    ConstantIndex idx = semiConstantTableInsert(&module->constantTable, semiValueNewInt(123456));
-    ASSERT_NE(idx, CONST_INDEX_INVALID) << "Failed to insert constant";
+[Instructions]
+0: OP_LOAD_CONSTANT  A=0x00 K=0x0000 i=F s=F
+1: OP_TRAP           A=0x00 K=0x0000 i=F s=F
 
-    Instruction code[2];
-    code[0] = INSTRUCTION_LOAD_CONSTANT(0, idx, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
-
-    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
-
-    vm->error = 0;
-
-    ErrorId result = RunModule(module);
+[Constants]
+K[0]: Int 123456
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_INT) << "Register 0 should have int type";
@@ -149,20 +149,20 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadIntegerFromConstantTable) {
 }
 
 TEST_F(VMInstructionLoadConstantTest, LoadFloatFromConstantTable) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    ConstantIndex idx = semiConstantTableInsert(&module->constantTable, semiValueNewFloat(3.14159));
-    ASSERT_NE(idx, CONST_INDEX_INVALID) << "Failed to insert constant";
+[Instructions]
+0: OP_LOAD_CONSTANT  A=0x00 K=0x0000 i=F s=F
+1: OP_TRAP           A=0x00 K=0x0000 i=F s=F
 
-    Instruction code[2];
-    code[0] = INSTRUCTION_LOAD_CONSTANT(0, idx, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
-
-    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
-
-    vm->error = 0;
-
-    ErrorId result = RunModule(module);
+[Constants]
+K[0]: Float 3.14159
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[0].header, VALUE_TYPE_FLOAT) << "Register 0 should have float type";
@@ -170,20 +170,20 @@ TEST_F(VMInstructionLoadConstantTest, LoadFloatFromConstantTable) {
 }
 
 TEST_F(VMInstructionLoadConstantTest, LoadFloatNegativeValue) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    ConstantIndex idx = semiConstantTableInsert(&module->constantTable, semiValueNewFloat(-2.718));
-    ASSERT_NE(idx, CONST_INDEX_INVALID) << "Failed to insert constant";
+[Instructions]
+0: OP_LOAD_CONSTANT  A=0x01 K=0x0000 i=F s=F
+1: OP_TRAP           A=0x00 K=0x0000 i=F s=F
 
-    Instruction code[2];
-    code[0] = INSTRUCTION_LOAD_CONSTANT(1, idx, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
-
-    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
-
-    vm->error = 0;
-
-    ErrorId result = RunModule(module);
+[Constants]
+K[0]: Float -2.718
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[1].header, VALUE_TYPE_FLOAT) << "Register 1 should have float type";
@@ -191,20 +191,20 @@ TEST_F(VMInstructionLoadConstantTest, LoadFloatNegativeValue) {
 }
 
 TEST_F(VMInstructionLoadConstantTest, LoadFloatZero) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    ConstantIndex idx = semiConstantTableInsert(&module->constantTable, semiValueNewFloat(0.0));
-    ASSERT_NE(idx, CONST_INDEX_INVALID) << "Failed to insert constant";
+[Instructions]
+0: OP_LOAD_CONSTANT  A=0x02 K=0x0000 i=F s=F
+1: OP_TRAP           A=0x00 K=0x0000 i=F s=F
 
-    Instruction code[2];
-    code[0] = INSTRUCTION_LOAD_CONSTANT(2, idx, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
-
-    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
-
-    vm->error = 0;
-
-    ErrorId result = RunModule(module);
+[Constants]
+K[0]: Float 0.0
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(vm->values[2].header, VALUE_TYPE_FLOAT) << "Register 2 should have float type";
@@ -212,21 +212,20 @@ TEST_F(VMInstructionLoadConstantTest, LoadFloatZero) {
 }
 
 TEST_F(VMInstructionLoadConstantTest, OpLoadStringFromConstantTable) {
-    SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    SemiModule* module;
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
+                                                            R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=254
 
-    Value s           = semiValueStringCreate(&vm->gc, "Hello, World!", 13);
-    ConstantIndex idx = semiConstantTableInsert(&module->constantTable, s);
-    ASSERT_NE(idx, CONST_INDEX_INVALID) << "Failed to insert string constant";
+[Instructions]
+0: OP_LOAD_CONSTANT  A=0x01 K=0x0000 i=F s=F
+1: OP_TRAP           A=0x00 K=0x0000 i=F s=F
 
-    Instruction code[2];
-    code[0] = INSTRUCTION_LOAD_CONSTANT(1, idx, false, false);
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
-
-    module->moduleInit = CreateFunctionObject(0, code, 2, 254, 0, 0);
-
-    vm->error = 0;
-
-    ErrorId result = RunModule(module);
+[Constants]
+K[0]: String "Hello, World!" length=13
+)",
+                                                            &module);
 
     ASSERT_EQ(result, 0) << "VM should complete successfully";
     ASSERT_EQ(VALUE_TYPE(&vm->values[1]), VALUE_TYPE_OBJECT_STRING) << "Register 0 should have allocated string type";

@@ -41,35 +41,25 @@ TEST_F(VMInstructionCollectionTest, OpGetItemStringIndexing) {
     for (const auto& test_case : test_cases) {
         SCOPED_TRACE(test_case.name);
 
-        // Reset VM state
+        char spec[512];
+        snprintf(spec,
+                 sizeof(spec),
+                 R"(
+[PreDefine:Registers]
+R[1]: String "%s"
+R[2]: Int %d
 
-        vm->error = 0;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-        // Setup: R[1] = string, R[2] = index, R[0] = result
-        if (test_case.use_object_string) {
-            vm->values[1] = semiValueStringCreate(&vm->gc, test_case.str, strlen(test_case.str));
-        } else {
-            // Create inline string
-            Value str_val        = INLINE_STRING_VALUE_0();
-            str_val.as.is.length = (uint8_t)strlen(test_case.str);
-            for (size_t i = 0; i < strlen(test_case.str); i++) {
-                str_val.as.is.c[i] = test_case.str[i];
-            }
-            vm->values[1] = str_val;
-        }
+[Instructions]
+0: OP_GET_ITEM A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP     A=0x00 K=0x0000 i=F s=F
+)",
+                 test_case.str,
+                 test_case.index);
 
-        vm->values[2] = semiValueNewInt(test_case.index);
-
-        // Create instruction: GET_ITEM R[0], R[1], R[2]
-        Instruction code[2];
-        code[0] = INSTRUCTION_GET_ITEM(0, 1, 2, false, false);
-        code[1] = INSTRUCTION_TRAP(0, 0, false, false);
-
-        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit  = func;
-
-        ErrorId result = RunModule(module);
+        ErrorId result = InstructionVerifier::BuildAndRunModule(vm, spec);
 
         if (test_case.expect_error) {
             EXPECT_EQ(result, test_case.expected_error);
@@ -86,31 +76,35 @@ TEST_F(VMInstructionCollectionTest, OpGetItemUnsupportedTypes) {
     // Test GET_ITEM on unsupported types
     struct {
         const char* name;
-        Value test_value;
+        const char* value_spec;
         ErrorId expected_error;
     } test_cases[] = {
-        {"integer",      semiValueNewInt(42), SEMI_ERROR_UNEXPECTED_TYPE},
-        {  "float", semiValueNewFloat(3.14f), SEMI_ERROR_UNEXPECTED_TYPE},
-        {"boolean",   semiValueNewBool(true), SEMI_ERROR_UNEXPECTED_TYPE},
+        {"integer",     "Int 42", SEMI_ERROR_UNEXPECTED_TYPE},
+        {  "float", "Float 3.14", SEMI_ERROR_UNEXPECTED_TYPE},
+        {"boolean",  "Bool true", SEMI_ERROR_UNEXPECTED_TYPE},
     };
 
     for (const auto& test_case : test_cases) {
         SCOPED_TRACE(test_case.name);
 
-        vm->error = 0;
+        char spec[512];
+        snprintf(spec,
+                 sizeof(spec),
+                 R"(
+[PreDefine:Registers]
+R[1]: %s
+R[2]: Int 0
 
-        vm->values[1] = test_case.test_value;
-        vm->values[2] = semiValueNewInt(0);  // index
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-        Instruction code[2];
-        code[0] = INSTRUCTION_GET_ITEM(0, 1, 2, false, false);
-        code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions]
+0: OP_GET_ITEM A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP     A=0x00 K=0x0000 i=F s=F
+)",
+                 test_case.value_spec);
 
-        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit  = func;
-
-        ErrorId result = RunModule(module);
+        ErrorId result = InstructionVerifier::BuildAndRunModule(vm, spec);
         EXPECT_EQ(result, test_case.expected_error);
     }
 }
@@ -124,24 +118,23 @@ struct SetItemTestCase {
 };
 
 TEST_F(VMInstructionCollectionTest, OpSetItemDict) {
-    vm->error = 0;
+    // Create a dictionary and set key-value: R[1]["key"] = 42
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    // Create a dictionary: R[1] = {}
-    vm->values[1] = semiValueDictCreate(&vm->gc);
+[Instructions]
+0: OP_NEW_COLLECTION A=0x01 B=0x07 C=0x00 kb=T kc=F
+1: OP_LOAD_CONSTANT   A=0x02 K=0x0000 i=F s=F
+2: OP_LOAD_CONSTANT   A=0x03 K=0x0001 i=F s=F
+3: OP_SET_ITEM        A=0x01 B=0x02 C=0x03 kb=F kc=F
+4: OP_TRAP            A=0x00 K=0x0000 i=F s=F
 
-    // Set key-value: R[1]["key"] = 42
-    vm->values[2] = semiValueStringCreate(&vm->gc, "key", 3);  // key
-    vm->values[3] = semiValueNewInt(42);                       // value
+[Constants]
+K[0]: String "key" length=3
+K[1]: Int 42
+)");
 
-    Instruction code[2];
-    code[0] = INSTRUCTION_SET_ITEM(1, 2, 3, false, false);  // R[1][R[2]] = R[3]
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
-
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    ErrorId result = RunModule(module);
     EXPECT_EQ(result, 0) << "SET_ITEM on dict should succeed";
 
     // Verify the value was set by using dict's internal functions
@@ -151,68 +144,57 @@ TEST_F(VMInstructionCollectionTest, OpSetItemDict) {
 }
 
 TEST_F(VMInstructionCollectionTest, OpSetItemList) {
-    SetItemTestCase test_cases[] = {
-        {"valid_positive_index", false, false, 0},
-        {"valid_negative_index", false, false, 0},
+    struct {
+        const char* name;
+        int32_t index;
+        int32_t expected_final_value;
+    } test_cases[] = {
+        {"valid_positive_index",  1, 99},
+        {"valid_negative_index", -1, 88},
     };
 
     for (const auto& test_case : test_cases) {
         SCOPED_TRACE(test_case.name);
 
-        vm->error = 0;
+        char spec[1024];
+        snprintf(spec,
+                 sizeof(spec),
+                 R"(
+[PreDefine:Registers]
+R[4]: Int 10
+R[5]: Int 20
+R[6]: Int 30
 
-        // Create a list with some elements: R[1] = [10, 20, 30]
-        vm->values[1]    = semiValueListCreate(&vm->gc, 3);
-        ObjectList* list = AS_LIST(&vm->values[1]);
-        semiListAppend(&vm->gc, list, semiValueNewInt(10));
-        semiListAppend(&vm->gc, list, semiValueNewInt(20));
-        semiListAppend(&vm->gc, list, semiValueNewInt(30));
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-        // Test different indices
-        int32_t index;
-        int32_t expected_final_value;
-        if (strcmp(test_case.name, "valid_positive_index") == 0) {
-            index                = 1;
-            expected_final_value = 99;
-        } else {  // valid_negative_index
-            index                = -1;
-            expected_final_value = 88;
-        }
+[Instructions]
+0: OP_NEW_COLLECTION A=0x01 B=0x06 C=0x03 kb=T kc=F
+1: OP_APPEND_LIST    A=0x01 B=0x04 C=0x03 kb=F kc=F
+2: OP_LOAD_CONSTANT  A=0x02 K=0x0000 i=F s=F
+3: OP_LOAD_CONSTANT  A=0x03 K=0x0001 i=F s=F
+4: OP_SET_ITEM       A=0x01 B=0x02 C=0x03 kb=F kc=F
+5: OP_TRAP           A=0x00 K=0x0000 i=F s=F
 
-        vm->values[2] = semiValueNewInt(index);                 // index
-        vm->values[3] = semiValueNewInt(expected_final_value);  // new value
+[Constants]
+K[0]: Int %d
+K[1]: Int %d
+)",
+                 test_case.index,
+                 test_case.expected_final_value);
 
-        Instruction code[2];
-        code[0] = INSTRUCTION_SET_ITEM(1, 2, 3, false, false);
-        code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+        ErrorId result = InstructionVerifier::BuildAndRunModule(vm, spec);
 
-        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit  = func;
+        EXPECT_EQ(result, 0) << "SET_ITEM should succeed";
 
-        ErrorId result = RunModule(module);
-
-        if (test_case.expect_error) {
-            EXPECT_EQ(result, test_case.expected_error);
-        } else {
-            EXPECT_EQ(result, 0) << "SET_ITEM should succeed";
-
-            // Verify the value was set correctly
-            uint32_t actual_index = (index < 0) ? (list->size + index) : index;
-            EXPECT_EQ(AS_INT(&list->values[actual_index]), expected_final_value);
-        }
+        // Verify the value was set correctly
+        ObjectList* list      = AS_LIST(&vm->values[1]);
+        uint32_t actual_index = (test_case.index < 0) ? (list->size + test_case.index) : test_case.index;
+        EXPECT_EQ(AS_INT(&list->values[actual_index]), test_case.expected_final_value);
     }
 }
 
 TEST_F(VMInstructionCollectionTest, OpSetItemListErrors) {
-    vm->error = 0;
-
-    // Create a small list: R[1] = [10, 20]
-    vm->values[1]    = semiValueListCreate(&vm->gc, 2);
-    ObjectList* list = AS_LIST(&vm->values[1]);
-    semiListAppend(&vm->gc, list, semiValueNewInt(10));
-    semiListAppend(&vm->gc, list, semiValueNewInt(20));
-
     struct {
         const char* name;
         int32_t index;
@@ -225,20 +207,32 @@ TEST_F(VMInstructionCollectionTest, OpSetItemListErrors) {
     for (const auto& error_case : error_cases) {
         SCOPED_TRACE(error_case.name);
 
-        vm->error = 0;
+        char spec[1024];
+        snprintf(spec,
+                 sizeof(spec),
+                 R"(
+[PreDefine:Registers]
+R[4]: Int 10
+R[5]: Int 20
 
-        vm->values[2] = semiValueNewInt(error_case.index);
-        vm->values[3] = semiValueNewInt(999);
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-        Instruction code[2];
-        code[0] = INSTRUCTION_SET_ITEM(1, 2, 3, false, false);
-        code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions]
+0: OP_NEW_COLLECTION A=0x01 B=0x06 C=0x02 kb=T kc=F
+1: OP_APPEND_LIST    A=0x01 B=0x04 C=0x02 kb=F kc=F
+2: OP_LOAD_CONSTANT  A=0x02 K=0x0000 i=F s=F
+3: OP_LOAD_CONSTANT  A=0x03 K=0x0001 i=F s=F
+4: OP_SET_ITEM       A=0x01 B=0x02 C=0x03 kb=F kc=F
+5: OP_TRAP           A=0x00 K=0x0000 i=F s=F
 
-        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit  = func;
+[Constants]
+K[0]: Int %d
+K[1]: Int 999
+)",
+                 error_case.index);
 
-        ErrorId result = RunModule(module);
+        ErrorId result = InstructionVerifier::BuildAndRunModule(vm, spec);
         EXPECT_EQ(result, error_case.expected_error);
     }
 }
@@ -246,76 +240,86 @@ TEST_F(VMInstructionCollectionTest, OpSetItemListErrors) {
 TEST_F(VMInstructionCollectionTest, OpSetItemUnsupportedTypes) {
     struct {
         const char* name;
-        Value container;
+        const char* container_spec;
         ErrorId expected_error;
     } test_cases[] = {
-        {"string", semiValueStringCreate(&vm->gc, "test", 4), SEMI_ERROR_UNEXPECTED_TYPE},
-        {"integer", semiValueNewInt(42), SEMI_ERROR_UNEXPECTED_TYPE},
-        {"float", semiValueNewFloat(3.14f), SEMI_ERROR_UNEXPECTED_TYPE},
+        { "string", "String \"test\"", SEMI_ERROR_UNEXPECTED_TYPE},
+        {"integer",          "Int 42", SEMI_ERROR_UNEXPECTED_TYPE},
+        {  "float",      "Float 3.14", SEMI_ERROR_UNEXPECTED_TYPE},
     };
 
     for (const auto& test_case : test_cases) {
         SCOPED_TRACE(test_case.name);
 
-        vm->error = 0;
+        char spec[512];
+        snprintf(spec,
+                 sizeof(spec),
+                 R"(
+[PreDefine:Registers]
+R[1]: %s
+R[2]: Int 0
+R[3]: Int 123
 
-        vm->values[1] = test_case.container;
-        vm->values[2] = semiValueNewInt(0);    // index/key
-        vm->values[3] = semiValueNewInt(123);  // value
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-        Instruction code[2];
-        code[0] = INSTRUCTION_SET_ITEM(1, 2, 3, false, false);
-        code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions]
+0: OP_SET_ITEM A=0x01 B=0x02 C=0x03 kb=F kc=F
+1: OP_TRAP     A=0x00 K=0x0000 i=F s=F
+)",
+                 test_case.container_spec);
 
-        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit  = func;
-
-        ErrorId result = RunModule(module);
+        ErrorId result = InstructionVerifier::BuildAndRunModule(vm, spec);
         EXPECT_EQ(result, test_case.expected_error);
     }
 }
 
 // Test cases for OP_CONTAIN
 TEST_F(VMInstructionCollectionTest, OpContainDict) {
-    vm->error = 0;
-
-    // Create dictionary and add some values
-    vm->values[2]    = semiValueDictCreate(&vm->gc);
-    ObjectDict* dict = AS_DICT(&vm->values[2]);
-
-    Value key1 = semiValueStringCreate(&vm->gc, "key1", 4);
-    Value key2 = semiValueNewInt(42);
-    semiDictSet(&vm->gc, dict, key1, semiValueNewInt(100));
-    semiDictSet(&vm->gc, dict, key2, semiValueNewBool(true));
-
     struct {
         const char* name;
-        Value search_key;
+        const char* search_key_spec;
         bool expected_result;
     } test_cases[] = {
-        {"existing_string_key", semiValueStringCreate(&vm->gc, "key1", 4), true},
-        {"existing_int_key", semiValueNewInt(42), true},
-        {"nonexistent_key", semiValueStringCreate(&vm->gc, "missing", 7), false},
-        {"wrong_type_key", semiValueNewFloat(42.0f), false},
+        {"existing_string_key",    "String \"key1\"",  true},
+        {   "existing_int_key",             "Int 42",  true},
+        {    "nonexistent_key", "String \"missing\"", false},
+        {     "wrong_type_key",         "Float 42.0", false},
     };
 
     for (const auto& test_case : test_cases) {
         SCOPED_TRACE(test_case.name);
 
-        vm->error = 0;
+        char spec[1024];
+        snprintf(spec,
+                 sizeof(spec),
+                 R"(
+[PreDefine:Registers]
+R[1]: %s
 
-        vm->values[1] = test_case.search_key;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-        Instruction code[2];
-        code[0] = INSTRUCTION_CONTAIN(0, 1, 2, false, false);  // R[0] = R[1] in R[2]
-        code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions]
+0: OP_NEW_COLLECTION A=0x02 B=0x07 C=0x00 kb=T kc=F
+1: OP_LOAD_CONSTANT  A=0x03 K=0x0000 i=F s=F
+2: OP_LOAD_CONSTANT  A=0x04 K=0x0001 i=F s=F
+3: OP_SET_ITEM       A=0x02 B=0x03 C=0x04 kb=F kc=F
+4: OP_LOAD_CONSTANT  A=0x03 K=0x0002 i=F s=F
+5: OP_LOAD_CONSTANT  A=0x04 K=0x0003 i=F s=F
+6: OP_SET_ITEM       A=0x02 B=0x03 C=0x04 kb=F kc=F
+7: OP_CONTAIN        A=0x00 B=0x01 C=0x02 kb=F kc=F
+8: OP_TRAP           A=0x00 K=0x0000 i=F s=F
 
-        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit  = func;
+[Constants]
+K[0]: String "key1" length=4
+K[1]: Int 100
+K[2]: Int 42
+K[3]: Bool true
+)",
+                 test_case.search_key_spec);
 
-        ErrorId result = RunModule(module);
+        ErrorId result = InstructionVerifier::BuildAndRunModule(vm, spec);
         EXPECT_EQ(result, 0) << "CONTAIN should succeed";
         EXPECT_EQ(VALUE_TYPE(&vm->values[0]), VALUE_TYPE_BOOL) << "Result should be boolean";
         EXPECT_EQ(AS_BOOL(&vm->values[0]), test_case.expected_result);
@@ -323,46 +327,46 @@ TEST_F(VMInstructionCollectionTest, OpContainDict) {
 }
 
 TEST_F(VMInstructionCollectionTest, OpContainList) {
-    vm->error = 0;
-
-    // Create list with various values
-    vm->values[2]    = semiValueListCreate(&vm->gc, 4);
-    ObjectList* list = AS_LIST(&vm->values[2]);
-    semiListAppend(&vm->gc, list, semiValueNewInt(10));
-    semiListAppend(&vm->gc, list, semiValueStringCreate(&vm->gc, "hello", 5));
-    semiListAppend(&vm->gc, list, semiValueNewBool(true));
-    semiListAppend(&vm->gc, list, semiValueNewFloat(3.14f));
-
     struct {
         const char* name;
-        Value search_value;
+        const char* search_value_spec;
         bool expected_result;
     } test_cases[] = {
-        {"existing_int", semiValueNewInt(10), true},
-        {"existing_string", semiValueStringCreate(&vm->gc, "hello", 5), true},
-        {"existing_bool", semiValueNewBool(true), true},
-        {"existing_float", semiValueNewFloat(3.14f), true},
-        {"nonexistent_int", semiValueNewInt(99), false},
-        {"nonexistent_string", semiValueStringCreate(&vm->gc, "world", 5), false},
-        {"nonexistent_bool", semiValueNewBool(false), false},
+        {      "existing_int",           "Int 10",  true},
+        {   "existing_string", "String \"hello\"",  true},
+        {     "existing_bool",        "Bool true",  true},
+        {    "existing_float",       "Float 3.14",  true},
+        {   "nonexistent_int",           "Int 99", false},
+        {"nonexistent_string", "String \"world\"", false},
+        {  "nonexistent_bool",       "Bool false", false},
     };
 
     for (const auto& test_case : test_cases) {
         SCOPED_TRACE(test_case.name);
 
-        vm->error = 0;
+        char spec[1024];
+        snprintf(spec,
+                 sizeof(spec),
+                 R"(
+[PreDefine:Registers]
+R[1]: %s
+R[4]: Int 10
+R[5]: String "hello"
+R[6]: Bool true
+R[7]: Float 3.14
 
-        vm->values[1] = test_case.search_value;
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-        Instruction code[2];
-        code[0] = INSTRUCTION_CONTAIN(0, 1, 2, false, false);  // R[0] = R[1] in R[2]
-        code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions]
+0: OP_NEW_COLLECTION A=0x02 B=0x06 C=0x04 kb=T kc=F
+1: OP_APPEND_LIST    A=0x02 B=0x04 C=0x04 kb=F kc=F
+2: OP_CONTAIN        A=0x00 B=0x01 C=0x02 kb=F kc=F
+3: OP_TRAP           A=0x00 K=0x0000 i=F s=F
+)",
+                 test_case.search_value_spec);
 
-        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit  = func;
-
-        ErrorId result = RunModule(module);
+        ErrorId result = InstructionVerifier::BuildAndRunModule(vm, spec);
         EXPECT_EQ(result, 0) << "CONTAIN should succeed";
         EXPECT_EQ(VALUE_TYPE(&vm->values[0]), VALUE_TYPE_BOOL) << "Result should be boolean";
         EXPECT_EQ(AS_BOOL(&vm->values[0]), test_case.expected_result);
@@ -373,45 +377,37 @@ TEST_F(VMInstructionCollectionTest, OpContainString) {
     struct {
         const char* name;
         const char* str;
-        bool use_object_string;
         char search_char;
         bool expected_result;
     } test_cases[] = {
-        { "inline_string_char_exists", "hello", false, 'e',  true},
-        {"inline_string_char_missing", "hello", false, 'x', false},
-        { "object_string_char_exists", "world",  true, 'r',  true},
-        {"object_string_char_missing", "world",  true, 'z', false},
+        { "inline_string_char_exists", "hello", 'e',  true},
+        {"inline_string_char_missing", "hello", 'x', false},
+        { "object_string_char_exists", "world", 'r',  true},
+        {"object_string_char_missing", "world", 'z', false},
     };
 
     for (const auto& test_case : test_cases) {
         SCOPED_TRACE(test_case.name);
 
-        vm->error = 0;
+        char spec[512];
+        snprintf(spec,
+                 sizeof(spec),
+                 R"(
+[PreDefine:Registers]
+R[1]: String "%c"
+R[2]: String "%s"
 
-        // Setup string
-        if (test_case.use_object_string) {
-            vm->values[2] = semiValueStringCreate(&vm->gc, test_case.str, strlen(test_case.str));
-        } else {
-            Value str_val        = INLINE_STRING_VALUE_0();
-            str_val.as.is.length = (uint8_t)strlen(test_case.str);
-            for (size_t i = 0; i < strlen(test_case.str) && i < 7; i++) {
-                str_val.as.is.c[i] = test_case.str[i];
-            }
-            vm->values[2] = str_val;
-        }
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-        // Search for single character
-        vm->values[1] = INLINE_STRING_VALUE_1(test_case.search_char);
+[Instructions]
+0: OP_CONTAIN A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP    A=0x00 K=0x0000 i=F s=F
+)",
+                 test_case.search_char,
+                 test_case.str);
 
-        Instruction code[2];
-        code[0] = INSTRUCTION_CONTAIN(0, 1, 2, false, false);  // R[0] = R[1] in R[2]
-        code[1] = INSTRUCTION_TRAP(0, 0, false, false);
-
-        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit  = func;
-
-        ErrorId result = RunModule(module);
+        ErrorId result = InstructionVerifier::BuildAndRunModule(vm, spec);
         EXPECT_EQ(result, 0) << "CONTAIN should succeed";
         EXPECT_EQ(VALUE_TYPE(&vm->values[0]), VALUE_TYPE_BOOL) << "Result should be boolean";
         EXPECT_EQ(AS_BOOL(&vm->values[0]), test_case.expected_result);
@@ -437,20 +433,25 @@ TEST_F(VMInstructionCollectionTest, OpContainStringMultiChar) {
     for (const auto& test_case : test_cases) {
         SCOPED_TRACE(test_case.name);
 
-        vm->error = 0;
+        char spec[512];
+        snprintf(spec,
+                 sizeof(spec),
+                 R"(
+[PreDefine:Registers]
+R[1]: String "%s"
+R[2]: String "%s"
 
-        vm->values[2] = semiValueStringCreate(&vm->gc, test_case.str, strlen(test_case.str));
-        vm->values[1] = semiValueStringCreate(&vm->gc, test_case.search_str, strlen(test_case.search_str));
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-        Instruction code[2];
-        code[0] = INSTRUCTION_CONTAIN(0, 1, 2, false, false);
-        code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions]
+0: OP_CONTAIN A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP    A=0x00 K=0x0000 i=F s=F
+)",
+                 test_case.search_str,
+                 test_case.str);
 
-        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit  = func;
-
-        ErrorId result = RunModule(module);
+        ErrorId result = InstructionVerifier::BuildAndRunModule(vm, spec);
         EXPECT_EQ(result, 0) << "CONTAIN should succeed for multi-character search";
         EXPECT_EQ(VALUE_TYPE(&vm->values[0]), VALUE_TYPE_BOOL) << "Result should be boolean";
         EXPECT_EQ(AS_BOOL(&vm->values[0]), test_case.expected_result);
@@ -460,52 +461,55 @@ TEST_F(VMInstructionCollectionTest, OpContainStringMultiChar) {
 TEST_F(VMInstructionCollectionTest, OpContainUnsupportedTypes) {
     struct {
         const char* name;
-        Value container;
+        const char* container_spec;
         ErrorId expected_error;
     } test_cases[] = {
-        {"integer",      semiValueNewInt(42), SEMI_ERROR_UNEXPECTED_TYPE},
-        {  "float", semiValueNewFloat(3.14f), SEMI_ERROR_UNEXPECTED_TYPE},
-        {"boolean",   semiValueNewBool(true), SEMI_ERROR_UNEXPECTED_TYPE},
+        {"integer",     "Int 42", SEMI_ERROR_UNEXPECTED_TYPE},
+        {  "float", "Float 3.14", SEMI_ERROR_UNEXPECTED_TYPE},
+        {"boolean",  "Bool true", SEMI_ERROR_UNEXPECTED_TYPE},
     };
 
     for (const auto& test_case : test_cases) {
         SCOPED_TRACE(test_case.name);
 
-        vm->error = 0;
+        char spec[512];
+        snprintf(spec,
+                 sizeof(spec),
+                 R"(
+[PreDefine:Registers]
+R[1]: Int 123
+R[2]: %s
 
-        vm->values[2] = test_case.container;
-        vm->values[1] = semiValueNewInt(123);  // search value
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-        Instruction code[2];
-        code[0] = INSTRUCTION_CONTAIN(0, 1, 2, false, false);
-        code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions]
+0: OP_CONTAIN A=0x00 B=0x01 C=0x02 kb=F kc=F
+1: OP_TRAP    A=0x00 K=0x0000 i=F s=F
+)",
+                 test_case.container_spec);
 
-        SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-        FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-        module->moduleInit  = func;
-
-        ErrorId result = RunModule(module);
+        ErrorId result = InstructionVerifier::BuildAndRunModule(vm, spec);
         EXPECT_EQ(result, test_case.expected_error);
     }
 }
 
 // Test using constants vs registers (kb, kc flags)
 TEST_F(VMInstructionCollectionTest, OpCollectionInstructionsWithConstants) {
-    vm->error = 0;
+    // Test GET_ITEM with constant index using kc=true
+    // Note: Constant value 1 needs to be encoded as 1 - INT8_MIN = 129 to handle signed->unsigned conversion
+    ErrorId result = InstructionVerifier::BuildAndRunModule(vm, R"(
+[PreDefine:Registers]
+R[1]: String "hi"
 
-    // Test GET_ITEM with constant index
-    vm->values[1] = INLINE_STRING_VALUE_2('h', 'i');  // "hi"
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
 
-    // GET_ITEM R[0], R[1], constant(1) - using kb flag for constant index
-    Instruction code[2];
-    code[0] = INSTRUCTION_GET_ITEM(0, 1, 1 - INT8_MIN, false, true);  // kc=true for constant index
-    code[1] = INSTRUCTION_TRAP(0, 0, false, false);
+[Instructions]
+0: OP_GET_ITEM A=0x00 B=0x01 C=0x81 kb=F kc=T
+1: OP_TRAP     A=0x00 K=0x0000 i=F s=F
+)");
 
-    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
-    FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
-    module->moduleInit  = func;
-
-    ErrorId result = RunModule(module);
     EXPECT_EQ(result, 0) << "GET_ITEM with constant should succeed";
     EXPECT_TRUE(IS_INLINE_STRING(&vm->values[0])) << "Result should be inline string";
     EXPECT_EQ(AS_INLINE_STRING(&vm->values[0]).c[0], 'i') << "Should get second character";
