@@ -24,7 +24,7 @@ TEST_F(CompilerCollectionInitializerTest, EmptyListInitializer) {
 
     VerifyCompilation(&compiler, R"(
 [Instructions]
-0: OP_NEW_COLLECTION   A=0x00 B=0x86 C=0x00 kb=T kc=F
+0: OP_NEW_COLLECTION   A=0x00 B=0x06 C=0x00 kb=T kc=F
 )");
 }
 
@@ -38,7 +38,7 @@ TEST_F(CompilerCollectionInitializerTest, EmptyDictInitializer) {
 
     VerifyCompilation(&compiler, R"(
 [Instructions]
-0: OP_NEW_COLLECTION   A=0x00 B=0x87 C=0x00 kb=T kc=F
+0: OP_NEW_COLLECTION   A=0x00 B=0x07 C=0x00 kb=T kc=F
 )");
 }
 
@@ -52,9 +52,9 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializerSingleElement) {
 
     VerifyCompilation(&compiler, R"(
 [Instructions]
-0: OP_NEW_COLLECTION            A=0x00 B=0x86 C=0x01 kb=T kc=F
+0: OP_NEW_COLLECTION            A=0x00 B=0x06 C=0x01 kb=T kc=F
 1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
-2: OP_APPEND_LIST               A=0x00 B=0x01 C=0x00 kb=F kc=F
+2: OP_APPEND_LIST               A=0x00 B=0x01 C=0x01 kb=F kc=F
 )");
 }
 
@@ -68,11 +68,11 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializerMultipleElements) {
 
     VerifyCompilation(&compiler, R"(
 [Instructions]
-0: OP_NEW_COLLECTION            A=0x00 B=0x86 C=0x01 kb=T kc=F
+0: OP_NEW_COLLECTION            A=0x00 B=0x06 C=0x03 kb=T kc=F
 1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
 2: OP_LOAD_INLINE_INTEGER       A=0x02 K=0x0002 i=T s=T
 3: OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0003 i=T s=T
-4: OP_APPEND_LIST               A=0x00 B=0x03 C=0x00 kb=F kc=F
+4: OP_APPEND_LIST               A=0x00 B=0x01 C=0x03 kb=F kc=F
 )");
 }
 
@@ -86,11 +86,11 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializerWithTrailingComma) {
 
     VerifyCompilation(&compiler, R"(
 [Instructions]
-0: OP_NEW_COLLECTION            A=0x00 B=0x86 C=0x01 kb=T kc=F
+0: OP_NEW_COLLECTION            A=0x00 B=0x06 C=0x03 kb=T kc=F
 1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
 2: OP_LOAD_INLINE_INTEGER       A=0x02 K=0x0002 i=T s=T
 3: OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0003 i=T s=T
-4: OP_APPEND_LIST               A=0x00 B=0x03 C=0x00 kb=F kc=F
+4: OP_APPEND_LIST               A=0x00 B=0x01 C=0x03 kb=F kc=F
 )");
 }
 
@@ -104,7 +104,7 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializerExactly16Elements) {
 
     VerifyCompilation(&compiler, R"(
 [Instructions]
-0:  OP_NEW_COLLECTION            A=0x00 B=0x86 C=0x01 kb=T kc=F
+0:  OP_NEW_COLLECTION            A=0x00 B=0x06 C=0x10 kb=T kc=F
 1:  OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
 2:  OP_LOAD_INLINE_INTEGER       A=0x02 K=0x0002 i=T s=T
 3:  OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0003 i=T s=T
@@ -121,7 +121,7 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializerExactly16Elements) {
 14: OP_LOAD_INLINE_INTEGER       A=0x0E K=0x000E i=T s=T
 15: OP_LOAD_INLINE_INTEGER       A=0x0F K=0x000F i=T s=T
 16: OP_LOAD_INLINE_INTEGER       A=0x10 K=0x0010 i=T s=T
-17: OP_APPEND_LIST               A=0x00 B=0x10 C=0x00 kb=F kc=F
+17: OP_APPEND_LIST               A=0x00 B=0x01 C=0x10 kb=F kc=F
 )");
 }
 
@@ -135,7 +135,7 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializer17ElementsRequiresBatch
 
     VerifyCompilation(&compiler, R"(
 [Instructions]
-0:  OP_NEW_COLLECTION            A=0x00 B=0x86 C=0x01 kb=T kc=F
+0:  OP_NEW_COLLECTION            A=0x00 B=0x06 C=0x11 kb=T kc=F
 1:  OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
 2:  OP_LOAD_INLINE_INTEGER       A=0x02 K=0x0002 i=T s=T
 3:  OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0003 i=T s=T
@@ -152,9 +152,9 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializer17ElementsRequiresBatch
 14: OP_LOAD_INLINE_INTEGER       A=0x0E K=0x000E i=T s=T
 15: OP_LOAD_INLINE_INTEGER       A=0x0F K=0x000F i=T s=T
 16: OP_LOAD_INLINE_INTEGER       A=0x10 K=0x0010 i=T s=T
-17: OP_APPEND_LIST               A=0x00 B=0x10 C=0x00 kb=F kc=F
+17: OP_APPEND_LIST               A=0x00 B=0x01 C=0x10 kb=F kc=F
 18: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0011 i=T s=T
-19: OP_APPEND_LIST               A=0x00 B=0x01 C=0x00 kb=F kc=F
+19: OP_APPEND_LIST               A=0x00 B=0x01 C=0x01 kb=F kc=F
 )");
 }
 
@@ -170,7 +170,7 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializer32ElementsRequiresDoubl
 
     VerifyCompilation(&compiler, R"(
 [Instructions]
-0:  OP_NEW_COLLECTION            A=0x00 B=0x86 C=0x01 kb=T kc=F
+0:  OP_NEW_COLLECTION            A=0x00 B=0x06 C=0x20 kb=T kc=F
 1:  OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
 2:  OP_LOAD_INLINE_INTEGER       A=0x02 K=0x0002 i=T s=T
 3:  OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0003 i=T s=T
@@ -187,7 +187,7 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializer32ElementsRequiresDoubl
 14: OP_LOAD_INLINE_INTEGER       A=0x0E K=0x000E i=T s=T
 15: OP_LOAD_INLINE_INTEGER       A=0x0F K=0x000F i=T s=T
 16: OP_LOAD_INLINE_INTEGER       A=0x10 K=0x0010 i=T s=T
-17: OP_APPEND_LIST               A=0x00 B=0x10 C=0x00 kb=F kc=F
+17: OP_APPEND_LIST               A=0x00 B=0x01 C=0x10 kb=F kc=F
 18: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0011 i=T s=T
 19: OP_LOAD_INLINE_INTEGER       A=0x02 K=0x0012 i=T s=T
 20: OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0013 i=T s=T
@@ -204,7 +204,7 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializer32ElementsRequiresDoubl
 31: OP_LOAD_INLINE_INTEGER       A=0x0E K=0x001E i=T s=T
 32: OP_LOAD_INLINE_INTEGER       A=0x0F K=0x001F i=T s=T
 33: OP_LOAD_INLINE_INTEGER       A=0x10 K=0x0020 i=T s=T
-34: OP_APPEND_LIST               A=0x00 B=0x10 C=0x00 kb=F kc=F
+34: OP_APPEND_LIST               A=0x00 B=0x01 C=0x10 kb=F kc=F
 )");
 }
 
@@ -218,10 +218,10 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializerSinglePair) {
 
     VerifyCompilation(&compiler, R"(
 [Instructions]
-0: OP_NEW_COLLECTION            A=0x00 B=0x87 C=0x01 kb=T kc=F
+0: OP_NEW_COLLECTION            A=0x00 B=0x07 C=0x01 kb=T kc=F
 1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
 2: OP_LOAD_INLINE_INTEGER       A=0x02 K=0x000A i=T s=T
-3: OP_APPEND_MAP                A=0x00 B=0x01 C=0x00 kb=F kc=F
+3: OP_APPEND_MAP                A=0x00 B=0x01 C=0x01 kb=F kc=F
 )");
 }
 
@@ -235,14 +235,14 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializerMultiplePairs) {
 
     VerifyCompilation(&compiler, R"(
 [Instructions]
-0: OP_NEW_COLLECTION            A=0x00 B=0x87 C=0x01 kb=T kc=F
+0: OP_NEW_COLLECTION            A=0x00 B=0x07 C=0x03 kb=T kc=F
 1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
 2: OP_LOAD_INLINE_INTEGER       A=0x02 K=0x000A i=T s=T
 3: OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0002 i=T s=T
 4: OP_LOAD_INLINE_INTEGER       A=0x04 K=0x0014 i=T s=T
 5: OP_LOAD_INLINE_INTEGER       A=0x05 K=0x0003 i=T s=T
 6: OP_LOAD_INLINE_INTEGER       A=0x06 K=0x001E i=T s=T
-7: OP_APPEND_MAP                A=0x00 B=0x03 C=0x00 kb=F kc=F
+7: OP_APPEND_MAP                A=0x00 B=0x01 C=0x03 kb=F kc=F
 )");
 }
 
@@ -256,12 +256,12 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializerWithTrailingComma) {
 
     VerifyCompilation(&compiler, R"(
 [Instructions]
-0: OP_NEW_COLLECTION            A=0x00 B=0x87 C=0x01 kb=T kc=F
+0: OP_NEW_COLLECTION            A=0x00 B=0x07 C=0x02 kb=T kc=F
 1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
 2: OP_LOAD_INLINE_INTEGER       A=0x02 K=0x000A i=T s=T
 3: OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0002 i=T s=T
 4: OP_LOAD_INLINE_INTEGER       A=0x04 K=0x0014 i=T s=T
-5: OP_APPEND_MAP                A=0x00 B=0x02 C=0x00 kb=F kc=F
+5: OP_APPEND_MAP                A=0x00 B=0x01 C=0x02 kb=F kc=F
 )");
 }
 
@@ -275,7 +275,7 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializerExactly8Pairs) {
 
     VerifyCompilation(&compiler, R"(
 [Instructions]
-0:  OP_NEW_COLLECTION            A=0x00 B=0x87 C=0x01 kb=T kc=F
+0:  OP_NEW_COLLECTION            A=0x00 B=0x07 C=0x08 kb=T kc=F
 1:  OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
 2:  OP_LOAD_INLINE_INTEGER       A=0x02 K=0x000A i=T s=T
 3:  OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0002 i=T s=T
@@ -292,7 +292,7 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializerExactly8Pairs) {
 14: OP_LOAD_INLINE_INTEGER       A=0x0E K=0x0046 i=T s=T
 15: OP_LOAD_INLINE_INTEGER       A=0x0F K=0x0008 i=T s=T
 16: OP_LOAD_INLINE_INTEGER       A=0x10 K=0x0050 i=T s=T
-17: OP_APPEND_MAP                A=0x00 B=0x08 C=0x00 kb=F kc=F
+17: OP_APPEND_MAP                A=0x00 B=0x01 C=0x08 kb=F kc=F
 )");
 }
 
@@ -306,7 +306,7 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializer9PairsRequiresBatching)
 
     VerifyCompilation(&compiler, R"(
 [Instructions]
-0:  OP_NEW_COLLECTION            A=0x00 B=0x87 C=0x01 kb=T kc=F
+0:  OP_NEW_COLLECTION            A=0x00 B=0x07 C=0x09 kb=T kc=F
 1:  OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
 2:  OP_LOAD_INLINE_INTEGER       A=0x02 K=0x000A i=T s=T
 3:  OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0002 i=T s=T
@@ -323,10 +323,10 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializer9PairsRequiresBatching)
 14: OP_LOAD_INLINE_INTEGER       A=0x0E K=0x0046 i=T s=T
 15: OP_LOAD_INLINE_INTEGER       A=0x0F K=0x0008 i=T s=T
 16: OP_LOAD_INLINE_INTEGER       A=0x10 K=0x0050 i=T s=T
-17: OP_APPEND_MAP                A=0x00 B=0x08 C=0x00 kb=F kc=F
+17: OP_APPEND_MAP                A=0x00 B=0x01 C=0x08 kb=F kc=F
 18: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0009 i=T s=T
 19: OP_LOAD_INLINE_INTEGER       A=0x02 K=0x005A i=T s=T
-20: OP_APPEND_MAP                A=0x00 B=0x01 C=0x00 kb=F kc=F
+20: OP_APPEND_MAP                A=0x00 B=0x01 C=0x01 kb=F kc=F
 )");
 }
 
@@ -342,7 +342,7 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializer16PairsRequiresDoubleBa
 
     VerifyCompilation(&compiler, R"(
 [Instructions]
-0:  OP_NEW_COLLECTION            A=0x00 B=0x87 C=0x01 kb=T kc=F
+0:  OP_NEW_COLLECTION            A=0x00 B=0x07 C=0x10 kb=T kc=F
 1:  OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
 2:  OP_LOAD_INLINE_INTEGER       A=0x02 K=0x000A i=T s=T
 3:  OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0002 i=T s=T
@@ -359,7 +359,7 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializer16PairsRequiresDoubleBa
 14: OP_LOAD_INLINE_INTEGER       A=0x0E K=0x0046 i=T s=T
 15: OP_LOAD_INLINE_INTEGER       A=0x0F K=0x0008 i=T s=T
 16: OP_LOAD_INLINE_INTEGER       A=0x10 K=0x0050 i=T s=T
-17: OP_APPEND_MAP                A=0x00 B=0x08 C=0x00 kb=F kc=F
+17: OP_APPEND_MAP                A=0x00 B=0x01 C=0x08 kb=F kc=F
 18: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0009 i=T s=T
 19: OP_LOAD_INLINE_INTEGER       A=0x02 K=0x005A i=T s=T
 20: OP_LOAD_INLINE_INTEGER       A=0x03 K=0x000A i=T s=T
@@ -376,7 +376,7 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializer16PairsRequiresDoubleBa
 31: OP_LOAD_INLINE_INTEGER       A=0x0E K=0x0096 i=T s=T
 32: OP_LOAD_INLINE_INTEGER       A=0x0F K=0x0010 i=T s=T
 33: OP_LOAD_INLINE_INTEGER       A=0x10 K=0x00A0 i=T s=T
-34: OP_APPEND_MAP                A=0x00 B=0x08 C=0x00 kb=F kc=F
+34: OP_APPEND_MAP                A=0x00 B=0x01 C=0x08 kb=F kc=F
 )");
 }
 
@@ -422,11 +422,11 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializerWithComplexExpressions)
 
     VerifyCompilation(&compiler, R"(
 [Instructions]
-0: OP_NEW_COLLECTION            A=0x00 B=0x86 C=0x01 kb=T kc=F
+0: OP_NEW_COLLECTION            A=0x00 B=0x06 C=0x03 kb=T kc=F
 1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0003 i=T s=T
 2: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x000C i=T s=T
 3: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=F
-4: OP_APPEND_LIST               A=0x00 B=0x03 C=0x00 kb=F kc=F
+4: OP_APPEND_LIST               A=0x00 B=0x01 C=0x03 kb=F kc=F
 )");
 }
 
@@ -440,12 +440,12 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializerWithComplexExpressions)
 
     VerifyCompilation(&compiler, R"(
 [Instructions]
-0: OP_NEW_COLLECTION            A=0x00 B=0x87 C=0x01 kb=T kc=F
+0: OP_NEW_COLLECTION            A=0x00 B=0x07 C=0x02 kb=T kc=F
 1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0002 i=T s=T
 2: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0014 i=T s=T
 3: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
 4: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0019 i=T s=T
-5: OP_APPEND_MAP                A=0x00 B=0x02 C=0x00 kb=F kc=F
+5: OP_APPEND_MAP                A=0x00 B=0x01 C=0x02 kb=F kc=F
 )");
 }
 
@@ -459,16 +459,16 @@ TEST_F(CompilerCollectionInitializerTest, NestedListInitializers) {
 
     VerifyCompilation(&compiler, R"(
 [Instructions]
-0:  OP_NEW_COLLECTION            A=0x00 B=0x86 C=0x01 kb=T kc=F
-1:  OP_NEW_COLLECTION            A=0x01 B=0x86 C=0x01 kb=T kc=F
+0:  OP_NEW_COLLECTION            A=0x00 B=0x06 C=0x02 kb=T kc=F
+1:  OP_NEW_COLLECTION            A=0x01 B=0x06 C=0x02 kb=T kc=F
 2:  OP_LOAD_INLINE_INTEGER       A=0x02 K=0x0001 i=T s=T
 3:  OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0002 i=T s=T
-4:  OP_APPEND_LIST               A=0x01 B=0x02 C=0x00 kb=F kc=F
-5:  OP_NEW_COLLECTION            A=0x02 B=0x86 C=0x01 kb=T kc=F
+4:  OP_APPEND_LIST               A=0x01 B=0x02 C=0x02 kb=F kc=F
+5:  OP_NEW_COLLECTION            A=0x02 B=0x06 C=0x02 kb=T kc=F
 6:  OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0003 i=T s=T
 7:  OP_LOAD_INLINE_INTEGER       A=0x04 K=0x0004 i=T s=T
-8:  OP_APPEND_LIST               A=0x02 B=0x02 C=0x00 kb=F kc=F
-9:  OP_APPEND_LIST               A=0x00 B=0x02 C=0x00 kb=F kc=F
+8:  OP_APPEND_LIST               A=0x02 B=0x03 C=0x02 kb=F kc=F
+9:  OP_APPEND_LIST               A=0x00 B=0x01 C=0x02 kb=F kc=F
 )");
 }
 
@@ -482,17 +482,17 @@ TEST_F(CompilerCollectionInitializerTest, NestedDictInitializers) {
 
     VerifyCompilation(&compiler, R"(
 [Instructions]
-0:  OP_NEW_COLLECTION            A=0x00 B=0x87 C=0x01 kb=T kc=F
+0:  OP_NEW_COLLECTION            A=0x00 B=0x07 C=0x02 kb=T kc=F
 1:  OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
-2:  OP_NEW_COLLECTION            A=0x02 B=0x87 C=0x01 kb=T kc=F
+2:  OP_NEW_COLLECTION            A=0x02 B=0x07 C=0x01 kb=T kc=F
 3:  OP_LOAD_INLINE_INTEGER       A=0x03 K=0x000A i=T s=T
 4:  OP_LOAD_INLINE_INTEGER       A=0x04 K=0x0064 i=T s=T
-5:  OP_APPEND_MAP                A=0x02 B=0x01 C=0x00 kb=F kc=F
+5:  OP_APPEND_MAP                A=0x02 B=0x03 C=0x01 kb=F kc=F
 6:  OP_LOAD_INLINE_INTEGER       A=0x03 K=0x0002 i=T s=T
-7:  OP_NEW_COLLECTION            A=0x04 B=0x87 C=0x01 kb=T kc=F
+7:  OP_NEW_COLLECTION            A=0x04 B=0x07 C=0x01 kb=T kc=F
 8:  OP_LOAD_INLINE_INTEGER       A=0x05 K=0x0014 i=T s=T
 9:  OP_LOAD_INLINE_INTEGER       A=0x06 K=0x00C8 i=T s=T
-10: OP_APPEND_MAP                A=0x04 B=0x01 C=0x00 kb=F kc=F
-11: OP_APPEND_MAP                A=0x00 B=0x02 C=0x00 kb=F kc=F
+10: OP_APPEND_MAP                A=0x04 B=0x05 C=0x01 kb=F kc=F
+11: OP_APPEND_MAP                A=0x00 B=0x01 C=0x02 kb=F kc=F
 )");
 }

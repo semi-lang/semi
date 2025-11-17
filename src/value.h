@@ -369,6 +369,7 @@ static inline Value semiValueListCreate(GC* gc, uint32_t capacity) {
     return o ? (Value){.header = VALUE_TYPE_LIST, .as = {.obj = (Object*)o}} : INVALID_VALUE;
 }
 
+void semiListEnsureCapacity(GC* gc, ObjectList* list, uint32_t capacity);
 void semiListAppend(GC* gc, ObjectList* list, Value value);
 void semiListInsert(GC* gc, ObjectList* list, uint32_t index, Value value);
 void semiListShrink(GC* gc, ObjectList* list);

@@ -160,6 +160,43 @@ static void printValue(Value v) {
             std::cout << "<fnProto at " << func << ">";
             break;
         }
+        case VALUE_TYPE_LIST: {
+            ObjectList* list = AS_LIST(value);
+            std::cout << "List[";
+            for (uint32_t j = 0; j < list->size; j++) {
+                printValue(list->values[j]);
+                if (j + 1 < list->size) {
+                    std::cout << ", ";
+                }
+            }
+            std::cout << "]";
+            break;
+        }
+        case VALUE_TYPE_DICT: {
+            ObjectDict* dict = AS_DICT(value);
+            if (dict->len == 0) {
+                std::cout << "Dict[]";
+                break;
+            }
+
+            std::cout << "Dict[ ";
+            uint32_t j = 0;
+            for (;;) {
+                if (IS_VALID(&dict->keys[j].key)) {
+                    printValue(dict->keys[j].key);
+                    std::cout << ": ";
+                    printValue(dict->values[j]);
+                }
+                j++;
+                if (j < dict->len) {
+                    std::cout << ", ";
+                } else {
+                    break;
+                }
+            }
+            std::cout << " ]";
+            break;
+        }
         default:
             std::cout << "<unprintable value type " << (int)VALUE_TYPE(value) << ">";
             break;

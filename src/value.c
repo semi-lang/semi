@@ -127,13 +127,18 @@ ObjectList* semiObjectListCreate(GC* gc, uint32_t capacity) {
     return o;
 }
 
-void semiListAppend(GC* gc, ObjectList* list, Value value) {
-    if (list->size == list->capacity) {
-        // Resize the list
-        uint32_t newCapacity = nextPowerOfTwoCapacity(list->capacity + 1);
+void semiListEnsureCapacity(GC* gc, ObjectList* list, uint32_t capacity) {
+    if (list->capacity < capacity) {
+        uint32_t newCapacity = nextPowerOfTwoCapacity(capacity);
         list->values =
             (Value*)semiRealloc(gc, list->values, sizeof(Value) * list->capacity, sizeof(Value) * newCapacity);
         list->capacity = newCapacity;
+    }
+}
+
+void semiListAppend(GC* gc, ObjectList* list, Value value) {
+    if (list->size == list->capacity) {
+        semiListEnsureCapacity(gc, list, list->capacity + 1);
     }
 
     list->values[list->size++] = value;
@@ -141,11 +146,7 @@ void semiListAppend(GC* gc, ObjectList* list, Value value) {
 
 void semiListInsert(GC* gc, ObjectList* list, uint32_t index, Value value) {
     if (list->size == list->capacity) {
-        // Resize the list
-        uint32_t newCapacity = nextPowerOfTwoCapacity(list->capacity + 1);
-        list->values =
-            (Value*)semiRealloc(gc, list->values, sizeof(Value) * list->capacity, sizeof(Value) * newCapacity);
-        list->capacity = newCapacity;
+        semiListEnsureCapacity(gc, list, list->capacity + 1);
     }
 
     if (index >= list->size) {

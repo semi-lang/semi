@@ -1291,6 +1291,18 @@ static void saveExprToRegister(Compiler* compiler, PrattExpr* expr, LocalRegiste
     SEMI_UNREACHABLE();
 }
 
+static void saveURKOperand(Compiler* compiler, IntValue value, uint8_t* operand, bool* isInlineOperand) {
+    if (value <= UINT8_MAX) {
+        *operand         = (uint8_t)value;
+        *isInlineOperand = true;
+        return;
+    }
+
+    LocalRegisterId operandReg = reserveTempRegister(compiler);
+    saveConstantToRegister(compiler, semiValueNewInt(value), operandReg);
+    *isInlineOperand = false;
+}
+
 // First try to embed the constant in the instruction. If not, save it to a register and set
 // `allocatedReg` to the register ID to allow callers to free the register.
 static void saveConstantExprToOperand(Compiler* compiler, Value value, uint8_t* operand, bool* isInlineOperand) {
@@ -2129,7 +2141,7 @@ static void collectionInitializerLed(Compiler* compiler,
                                      PrattExpr* restrict retExpr) {
     uint8_t regb;
     bool kb;
-    saveConstantExprToOperand(compiler, semiValueNewInt(leftExpr->value.type), &regb, &kb);
+    saveURKOperand(compiler, leftExpr->value.type, &regb, &kb);
     PCLocation pcMakeCollection =
         emitCode(compiler, INSTRUCTION_NEW_COLLECTION(state.targetRegister, regb, 0, kb, false));
     restoreNextRegisterId(compiler, state.targetRegister + 1);
@@ -2198,8 +2210,10 @@ static void collectionInitializerLed(Compiler* compiler,
 
         if (unflushedCount == maxUnflushedCount) {
             emitCode(compiler,
-                     isMap ? INSTRUCTION_APPEND_MAP(state.targetRegister, unflushedCount, 0, false, false)
-                           : INSTRUCTION_APPEND_LIST(state.targetRegister, unflushedCount, 0, false, false));
+                     isMap ? INSTRUCTION_APPEND_MAP(
+                                 state.targetRegister, state.targetRegister + 1, unflushedCount, false, false)
+                           : INSTRUCTION_APPEND_LIST(
+                                 state.targetRegister, state.targetRegister + 1, unflushedCount, false, false));
             restoreNextRegisterId(compiler, state.targetRegister + 1);
             unflushedCount = 0;
         }
@@ -2230,6 +2244,7 @@ static void collectionInitializerLed(Compiler* compiler,
             semiParseExpression(compiler, valueState, &valueExpr);
             saveExprToRegister(compiler, &valueExpr, valueReg);
             unflushedCount++;
+            totalElementCount++;
         } else {
             if (t == TK_COLON) {
                 SEMI_COMPILE_ABORT(compiler,
@@ -2238,8 +2253,11 @@ static void collectionInitializerLed(Compiler* compiler,
             }
 
             unflushedCount++;
+            totalElementCount++;
             if (unflushedCount == maxUnflushedCount) {
-                emitCode(compiler, INSTRUCTION_APPEND_LIST(state.targetRegister, maxUnflushedCount, 0, false, false));
+                emitCode(compiler,
+                         INSTRUCTION_APPEND_LIST(
+                             state.targetRegister, state.targetRegister + 1, maxUnflushedCount, false, false));
                 restoreNextRegisterId(compiler, state.targetRegister + 1);
                 unflushedCount = 0;
             }
@@ -2254,9 +2272,11 @@ static void collectionInitializerLed(Compiler* compiler,
     updateBracketCount(compiler, TK_CLOSE_BRACKET);
 
     if (unflushedCount > 0) {
-        emitCode(compiler,
-                 isMap ? INSTRUCTION_APPEND_MAP(state.targetRegister, unflushedCount, 0, false, false)
-                       : INSTRUCTION_APPEND_LIST(state.targetRegister, unflushedCount, 0, false, false));
+        emitCode(
+            compiler,
+            isMap ? INSTRUCTION_APPEND_MAP(state.targetRegister, state.targetRegister + 1, unflushedCount, false, false)
+                  : INSTRUCTION_APPEND_LIST(
+                        state.targetRegister, state.targetRegister + 1, unflushedCount, false, false));
         restoreNextRegisterId(compiler, state.targetRegister + 1);
     }
 

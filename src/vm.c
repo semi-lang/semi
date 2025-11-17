@@ -396,6 +396,10 @@ static inline MagicMethodsTable* getMagicMethodsTable(SemiVM* vm, Value* value) 
     return type < vm->classes.classCount ? &vm->classes.classMethods[type] : &vm->classes.classMethods[0];
 }
 
+static inline MagicMethodsTable* getMagicMethodsTableByTypeId(SemiVM* vm, TypeId typeId) {
+    return typeId < vm->classes.classCount ? &vm->classes.classMethods[typeId] : &vm->classes.classMethods[0];
+}
+
 static void runMainLoop(SemiVM* vm) {
     register Frame* frame;
     register Value* stack;
@@ -811,6 +815,36 @@ static void runMainLoop(SemiVM* vm) {
                 TRAP_ON_ERROR(vm, SEMI_ERROR_UNIMPLEMENTED_FEATURE, "OP_GET_ATTR is not implemented yet");
                 break;
             }
+            case OP_NEW_COLLECTION: {
+                Value* ra  = stack + OPERAND_T_A(instruction);
+                TypeId b   = (TypeId)OPERAND_T_B(instruction);
+                uint8_t c  = OPERAND_T_C(instruction);
+                uint8_t kb = OPERAND_T_KB(instruction);
+                if (!kb) {
+                    Value rb = stack[(uint8_t)b];
+                    if (!IS_INT(&rb)) {
+                        TRAP_ON_ERROR(vm, SEMI_ERROR_UNEXPECTED_TYPE, "Expected integer for NEW_COLLECTION size");
+                    }
+                    b = (TypeId)AS_INT(&rb);
+                }
+
+                switch (b) {
+                    case BASE_VALUE_TYPE_LIST: {
+                        uint32_t capacity = c == INVALID_LOCAL_REGISTER_ID ? 0 : (uint32_t)c;
+                        *ra               = semiValueListCreate(&vm->gc, capacity);
+                        break;
+                    }
+                    case BASE_VALUE_TYPE_DICT: {
+                        *ra = semiValueDictCreate(&vm->gc);
+                        break;
+                    }
+                    default: {
+                        TRAP_ON_ERROR(
+                            vm, SEMI_ERROR_UNIMPLEMENTED_FEATURE, "Unsupported collection type for NEW_COLLECTION");
+                    }
+                }
+                break;
+            }
             case OP_SET_ATTR: {
                 TRAP_ON_ERROR(vm, SEMI_ERROR_UNIMPLEMENTED_FEATURE, "OP_SET_ATTR is not implemented yet");
                 break;
@@ -820,7 +854,7 @@ static void runMainLoop(SemiVM* vm) {
                 load_value_abc(vm, instruction, ra, rb, rc);
 
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
-                TRAP_ON_ERROR(vm, table->collectionMethods->getItem(&vm->gc, ra, rb, rc), "Arithmetic failed");
+                TRAP_ON_ERROR(vm, table->collectionMethods->getItem(&vm->gc, ra, rb, rc), "GetItem failed");
                 break;
             }
             case OP_SET_ITEM: {
@@ -828,7 +862,32 @@ static void runMainLoop(SemiVM* vm) {
                 load_value_abc(vm, instruction, ra, rb, rc);
 
                 MagicMethodsTable* table = getMagicMethodsTable(vm, ra);
-                TRAP_ON_ERROR(vm, table->collectionMethods->setItem(&vm->gc, ra, rb, rc), "Arithmetic failed");
+                TRAP_ON_ERROR(vm, table->collectionMethods->setItem(&vm->gc, ra, rb, rc), "SetItem failed");
+                break;
+            }
+            case OP_DEL_ITEM: {
+                Value *ra, *rb, *rc;
+                uint8_t c = OPERAND_T_C(instruction);
+                bool kc   = OPERAND_T_KC(instruction);
+                uint8_t a = OPERAND_T_A(instruction);
+                uint8_t b = OPERAND_T_B(instruction);
+                Value valueTempA, valueTempC;
+                if (a == INVALID_LOCAL_REGISTER_ID) {
+                    ra = &valueTempA;
+                } else {
+                    ra = &stack[a];
+                }
+                rb = &stack[b];
+                if (kc) {
+                    valueTempC.header = VALUE_TYPE_INT;
+                    valueTempC.as.i   = c + INT8_MIN;
+                    rc                = &valueTempC;
+                } else {
+                    rc = &stack[c];
+                }
+
+                MagicMethodsTable* table = getMagicMethodsTable(vm, ra);
+                TRAP_ON_ERROR(vm, table->collectionMethods->delItem(&vm->gc, ra, rb, rc), "DeleteItem failed");
                 break;
             }
             case OP_CONTAIN: {
@@ -837,6 +896,40 @@ static void runMainLoop(SemiVM* vm) {
 
                 MagicMethodsTable* table = getMagicMethodsTable(vm, rc);
                 TRAP_ON_ERROR(vm, table->collectionMethods->contain(&vm->gc, ra, rb, rc), "Arithmetic failed");
+                break;
+            }
+            case OP_APPEND_LIST: {
+                Value* ra        = stack + OPERAND_T_A(instruction);
+                uint8_t startReg = OPERAND_T_B(instruction);
+                uint8_t count    = OPERAND_T_C(instruction);
+
+                ObjectList stackList;
+                stackList.values = stack + startReg;
+                stackList.size   = count;
+
+                Value temp;
+                temp.header = VALUE_TYPE_LIST;
+                temp.as.obj = &stackList.obj;
+
+                MagicMethodsTable* table = getMagicMethodsTable(vm, ra);
+                TRAP_ON_ERROR(vm, table->collectionMethods->extend(&vm->gc, ra, &temp), "List append failed");
+                break;
+            }
+            case OP_APPEND_MAP: {
+                Value* ra          = stack + OPERAND_T_A(instruction);
+                uint8_t startReg   = OPERAND_T_B(instruction);
+                uint8_t count      = OPERAND_T_C(instruction);
+                Value* startValues = stack + startReg;
+
+                MagicMethodsTable* table = getMagicMethodsTable(vm, ra);
+
+                for (uint32_t i = 0; i < count; i++) {
+                    Value key   = startValues[i * 2];
+                    Value value = startValues[i * 2 + 1];
+
+                    TRAP_ON_ERROR(
+                        vm, table->collectionMethods->setItem(&vm->gc, ra, &key, &value), "Map insert failed");
+                }
                 break;
             }
             case OP_CALL: {

@@ -1361,10 +1361,26 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(LIST, append)(GC* gc, Value* collecti
 }
 
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(LIST, extend)(GC* gc, Value* collection, Value* iterable) {
-    (void)gc;
-    (void)collection;
-    (void)iterable;
-    return SEMI_ERROR_UNIMPLEMENTED_FEATURE;
+    ObjectList* list = AS_LIST(collection);
+    if (IS_LIST(iterable)) {
+        ObjectList* listIter = AS_LIST(iterable);
+        semiListEnsureCapacity(gc, list, list->size + listIter->size);
+        memcpy(&list->values[list->size], &listIter->values[0], listIter->size * sizeof(Value));
+        list->size += listIter->size;
+
+    } else if (IS_DICT(iterable)) {
+        ObjectDict* dictIter = AS_DICT(iterable);
+        semiListEnsureCapacity(gc, list, list->size + dictIter->len);
+        for (uint32_t i; i < dictIter->len; i++) {
+            list->values[i + list->size] = dictIter->keys[i].key;
+        }
+        list->size += dictIter->len;
+
+    } else {
+        return SEMI_ERROR_UNIMPLEMENTED_FEATURE;
+    }
+
+    return 0;
 }
 
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(LIST, pop)(GC* gc, Value* ret, Value* collection) {

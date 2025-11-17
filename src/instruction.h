@@ -202,13 +202,13 @@ typedef enum {
                               //            GET_ATTR(object, index, type_index_or_symbol_index)
     OP_SET_ATTR,              // |   T   |  SET_ATTR(R[A], uRK(B, kb), kc, R[C])
                               //            SET_ATTR(object, index, type_index_or_symbol_index, value)
-    OP_NEW_COLLECTION,        // |   T   |  R[A] := new collection of type RK(B, kb) with initial capacity C
+    OP_NEW_COLLECTION,        // |   T   |  R[A] := new collection of type uRK(B, kb) with initial capacity C
     OP_GET_ITEM,              // |   T   |  R[A] := R[B][RK(C, kc)]
     OP_SET_ITEM,              // |   T   |  R[A][RK(B, kb)] = R[C]
     OP_DEL_ITEM,              // |   T   |  R[A] = delete R[B][RK(C, kc)]
     OP_CONTAIN,               // |   T   |  R[A] := RK(B, kb)] in R[C]
-    OP_APPEND_LIST,           // |   T   |  append B elements to R[A], starting from R[A+1]
-    OP_APPEND_MAP,            // |   T   |  append B elements to R[A], starting from (R[A+1], R[A+2]) as key-value pairs
+    OP_APPEND_LIST,           // |   T   |  append C elements to R[A], starting from R[B]
+    OP_APPEND_MAP,            // |   T   |  append C pairs to R[A], starting from (R[B], R[B+1]) as key-value pairs
     OP_CALL,                  // |   T   |  R[A](R[A+1], R[A+2], ..., R[A+B]), B is the number of arguments.
                               //            The return value is stored in R[A].
     OP_RETURN,                // |   T   |  return from function; if A != 255, copy R[A] to the caller register.
@@ -216,7 +216,7 @@ typedef enum {
     // clang-format on
 } Opcode;
 
-#define MAX_OPCODE OP_CHECK_TYPE
+#define MAX_OPCODE ((uint8_t)OP_CHECK_TYPE)
 
 // Generate all instruction creation functions using OPCODE_X_MACRO
 // This automatically creates INSTRUCTION_* functions for all opcodes by using
