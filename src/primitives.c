@@ -1817,6 +1817,8 @@ ErrorId semiPrimitivesDispatch2Operands(MagicMethodsTable* table, GC* gc, Opcode
             return table->collectionMethods->setItem(gc, a, b, c);
         case OP_DEL_ITEM:
             return table->collectionMethods->delItem(gc, a, b, c);
+        case OP_CONTAIN:
+            return table->collectionMethods->contain(gc, a, b, c);
         default:
             return SEMI_ERROR_INTERNAL_ERROR;
     }

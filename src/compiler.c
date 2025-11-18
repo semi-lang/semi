@@ -1333,30 +1333,28 @@ static void saveConstantExprToOperand(Compiler* compiler, Value value, uint8_t* 
             SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_INTERNAL_ERROR, "Invalid constant type for operand");
     }
 
-    LocalRegisterId operandReg = reserveTempRegister(compiler);
-    saveConstantToRegister(compiler, value, operandReg);
+    *operand = reserveTempRegister(compiler);
+    saveConstantToRegister(compiler, value, *operand);
+    *isInlineOperand = false;
 }
 
-static void saveNonConstantExprToOperand(Compiler* compiler, PrattExpr* expr, LocalRegisterId* retReg) {
-    (void)compiler;
-    // If the expression is not a constant, we need to save it to a register and set the operand to
-    // the register ID.
+static void saveExprToOperand(Compiler* compiler, PrattExpr* expr, uint8_t* operand, bool* isInlineOperand) {
     switch (expr->type) {
-        case PRATT_EXPR_TYPE_REG:
-            *retReg = expr->value.reg;
-            return;
-
-        case PRATT_EXPR_TYPE_VAR: {
-            *retReg = expr->value.reg;
-            return;
+        case PRATT_EXPR_TYPE_CONSTANT: {
+            saveConstantExprToOperand(compiler, expr->value.constant, operand, isInlineOperand);
+            break;
         }
 
+        case PRATT_EXPR_TYPE_REG:
+        case PRATT_EXPR_TYPE_VAR:
+            *operand         = expr->value.reg;
+            *isInlineOperand = false;
+            break;
+
         default:
-            SEMI_COMPILE_ABORT(compiler,
-                               SEMI_ERROR_INTERNAL_ERROR,
-                               "Invalid expression type when saving non-constant expression to operand");
+            SEMI_COMPILE_ABORT(
+                compiler, SEMI_ERROR_INTERNAL_ERROR, "Invalid expression type when saving expression to operand");
     }
-    SEMI_UNREACHABLE();
 }
 
 #pragma endregion
@@ -1691,15 +1689,18 @@ static void ternaryLed(Compiler* compiler, const PrattState state, PrattExpr* co
                  └─ save to R[A]                            │
                  <──────────────────────────────────────────┘
      */
-    LocalRegisterId condReg;
-    saveNonConstantExprToOperand(compiler, condExpr, &condReg);
+    bool isInlineOperand;
+    LocalRegisterId condOperand;
+    saveExprToOperand(compiler, condExpr, &condOperand, &isInlineOperand);
+    ASSERT(!isInlineOperand, "Condition operand should not be inline");
+
     pcAfterCond = emitPlaceholder(compiler);
 
     PrattExpr truthyBranch;
     semiParseExpression(compiler, innerState, &truthyBranch);
     saveExprToRegister(compiler, &truthyBranch, innerState.targetRegister);
     PCLocation pcAfterTruthy = emitPlaceholder(compiler);
-    overrideConditionalJumpHere(compiler, pcAfterCond, condReg, false);
+    overrideConditionalJumpHere(compiler, pcAfterCond, condOperand, false);
 
     if (nextToken(&compiler->lexer) != TK_COLON) {
         SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNEXPECTED_TOKEN, "Expected colon after truthy branch");
@@ -1742,11 +1743,6 @@ static const BinaryLedTokenData binaryLedTokenData[] = {
 };
 
 static void constantFolding(Compiler* compiler, Value* left, Value* right, Value* result, Token token) {
-    if (IS_OBJECT_STRING(left) || IS_OBJECT_STRING(right)) {
-        SEMI_COMPILE_ABORT(
-            compiler, SEMI_ERROR_UNIMPLEMENTED_FEATURE, "Constant folding for strings is not implemented");
-    }
-
     MagicMethodsTable* table = getCompileTimeMagicMethodsTable(compiler, left);
 
     ErrorId errorId;
@@ -1854,32 +1850,12 @@ static void binaryLed(Compiler* compiler, const PrattState state, PrattExpr* lef
         SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNEXPECTED_TOKEN, "Invalid token for binary expression");
     }
 
-    LocalRegisterId regB, regC, rightTargetRegister;
-    bool kb, kc;
+    LocalRegisterId rightTargetRegister;
 
-    switch (leftExpr->type) {
-        case PRATT_EXPR_TYPE_CONSTANT: {
-            // We don't calculate regB and kb here because of possible constant folding.
-            rightTargetRegister = state.targetRegister;
-            break;
-        }
-
-        case PRATT_EXPR_TYPE_VAR: {
-            regB                = leftExpr->value.reg;
-            kb                  = false;
-            rightTargetRegister = state.targetRegister;
-            break;
-        }
-
-        case PRATT_EXPR_TYPE_REG: {
-            regB                = state.targetRegister;
-            kb                  = false;
-            rightTargetRegister = reserveTempRegister(compiler);
-            break;
-        }
-
-        default:
-            SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_INTERNAL_ERROR, "Unexpected expression type in binary expression");
+    if (leftExpr->type == PRATT_EXPR_TYPE_REG) {
+        rightTargetRegister = reserveTempRegister(compiler);
+    } else {
+        rightTargetRegister = state.targetRegister;
     }
 
     PrattState innerState = {
@@ -1898,34 +1874,15 @@ static void binaryLed(Compiler* compiler, const PrattState state, PrattExpr* lef
         return;
     }
 
-    // RHS is not a constant, so now it's the time we save the LHS to an insturction operand and populated regB and kb.
-    if (leftExpr->type == PRATT_EXPR_TYPE_CONSTANT) {
-        saveConstantExprToOperand(compiler, leftExpr->value.constant, &regB, &kb);
-    }
-    switch (rightExpr.type) {
-        case PRATT_EXPR_TYPE_CONSTANT: {
-            // We already handle constant folding above, so here it can only be
-            // the case for non-constant LHS.
-            saveConstantExprToOperand(compiler, rightExpr.value.constant, &regC, &kc);
-            break;
-        }
-
-        case PRATT_EXPR_TYPE_VAR: {
-            regC = rightExpr.value.reg;
-            kc   = false;
-            break;
-        }
-
-        case PRATT_EXPR_TYPE_REG: {
-            regC = rightTargetRegister;
-            kc   = false;
-            break;
-        }
-
-        default:
-            SEMI_COMPILE_ABORT(
-                compiler, SEMI_ERROR_INTERNAL_ERROR, "Unexpected RHS expression type in binary expression");
-    }
+    // | LHS            | RHS          | regB               | regC                   |
+    // |----------------|--------------|--------------------|------------------------|
+    // | constant       | not constant | state.targetReg+1  | state.targetRegister   |
+    // | not constant   | not constant | state.targetReg    | state.targetRegister+1 |
+    // | not constant   | constant     | state.targetReg    | state.targetRegister+1 |
+    bool kb, kc;
+    LocalRegisterId regB, regC;
+    saveExprToOperand(compiler, leftExpr, &regB, &kb);
+    saveExprToOperand(compiler, &rightExpr, &regC, &kc);
 
     if (token == TK_LT || token == TK_LTE) {
         emitCode(compiler, binaryLedTokenData[token].instFn(state.targetRegister, regC, regB, kc, kb));
@@ -1967,26 +1924,22 @@ static void typeCheckLed(Compiler* compiler, const PrattState state, PrattExpr* 
         SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNEXPECTED_TOKEN, "Expected type identifier or module path after 'is'");
     }
 
-    LocalRegisterId regB;
-    switch (leftExpr->type) {
-        case PRATT_EXPR_TYPE_CONSTANT: {
-            TypeId constantTypeId = (TypeId)BASE_TYPE(&leftExpr->value.constant);
-            *retExpr              = PRATT_EXPR_CONSTANT(semiValueNewBool(constantTypeId == targetTypeId));
-            return;
-        }
-
-        case PRATT_EXPR_TYPE_VAR:
-        case PRATT_EXPR_TYPE_REG:
-            regB = leftExpr->value.reg;
-            break;
-
-        default:
-            SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_INTERNAL_ERROR, "Unexpected expression type in 'is' expression");
+    if (leftExpr->type == PRATT_EXPR_TYPE_CONSTANT) {
+        // When LHS is a constant, we can directly evaluate the type check at compile time.
+        TypeId constantTypeId = (TypeId)BASE_TYPE(&leftExpr->value.constant);
+        *retExpr              = PRATT_EXPR_CONSTANT(semiValueNewBool(constantTypeId == targetTypeId));
+        return;
     }
+
+    bool kb;
+    LocalRegisterId regB;
+    saveExprToOperand(compiler, leftExpr, &regB, &kb);
+    ASSERT(!kb, "LHS operand should not be inline");
 
     LocalRegisterId regC;
     bool kc;
-    saveConstantExprToOperand(compiler, semiValueNewInt((int64_t)targetTypeId), &regC, &kc);
+    PrattExpr typeExpr = PRATT_EXPR_CONSTANT(semiValueNewInt((int64_t)targetTypeId));
+    saveExprToOperand(compiler, &typeExpr, &regC, &kc);
 
     emitCode(compiler, INSTRUCTION_CHECK_TYPE(state.targetRegister, regB, regC, false, kc));
     *retExpr = PRATT_EXPR_REG(state.targetRegister);
@@ -2035,15 +1988,10 @@ static void indexLed(Compiler* compiler, const PrattState state, PrattExpr* left
     PrattExpr indexExpr;
     semiParseExpression(compiler, innerState, &indexExpr);
 
-    if (indexExpr.type == PRATT_EXPR_TYPE_CONSTANT) {
-        uint8_t indexOperand;
-        bool isInlineOperand;
-        saveConstantExprToOperand(compiler, indexExpr.value.constant, &indexOperand, &isInlineOperand);
-        emitCode(compiler, INSTRUCTION_GET_ITEM(state.targetRegister, targetReg, indexOperand, false, isInlineOperand));
-    } else {
-        saveNonConstantExprToOperand(compiler, &indexExpr, &indexReg);
-        emitCode(compiler, INSTRUCTION_GET_ITEM(state.targetRegister, targetReg, indexReg, false, false));
-    }
+    uint8_t indexOperand;
+    bool isInlineOperand;
+    saveExprToOperand(compiler, &indexExpr, &indexOperand, &isInlineOperand);
+    emitCode(compiler, INSTRUCTION_GET_ITEM(state.targetRegister, targetReg, indexOperand, false, isInlineOperand));
 
     updateBracketCount(compiler, TK_CLOSE_BRACKET);
     MATCH_NEXT_TOKEN_OR_ABORT(compiler, TK_CLOSE_BRACKET, "Expected closing bracket for index expression");
@@ -2405,7 +2353,7 @@ void semiParseExpression(Compiler* compiler, const PrattState state, PrattExpr* 
     SEMI_UNREACHABLE();
 }
 
-static PrattExpr parseAndSaveLhsOperand(Compiler* compiler, const LhsExpr lhsExpr) {
+static void parseAndSaveRhs(Compiler* compiler, const LhsExpr lhsExpr) {
     LocalRegisterId targetRegister;
     ModuleVariableId moduleVarId;
     switch (lhsExpr.type) {
@@ -2468,8 +2416,6 @@ static PrattExpr parseAndSaveLhsOperand(Compiler* compiler, const LhsExpr lhsExp
         default:
             SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_INTERNAL_ERROR, "Unexpected lhs expression type");
     }
-
-    return expr;
 }
 
 static LocalRegisterId dereferenceLhsExpr(Compiler* compiler, LhsExpr* expr) {
@@ -2678,12 +2624,11 @@ parse_lhs:
     SEMI_UNREACHABLE();
 }
 
-static PrattExpr semiParseAssignmentOrExpr(Compiler* compiler, bool isModuleExport) {
+static void semiParseAssignmentOrExpr(Compiler* compiler, bool isModuleExport) {
     Token token;
     LocalRegisterId currentNextRegisterId = compiler->currentFunction->nextRegisterId;
     LocalRegisterId targetRegister;
     LhsExpr lhsExpr;
-    PrattExpr expr;
     parseLhsNud(compiler, &lhsExpr);
 
     if (isModuleExport && lhsExpr.type != LHS_EXPR_TYPE_UNINIT_VAR) {
@@ -2710,7 +2655,7 @@ static PrattExpr semiParseAssignmentOrExpr(Compiler* compiler, bool isModuleExpo
             }
         }
         // Now lhsExpr is not LHS_EXPR_TYPE_UNINIT_VAR.
-        expr = parseAndSaveLhsOperand(compiler, lhsExpr);
+        parseAndSaveRhs(compiler, lhsExpr);
 
         // Stop tokens for rvalue
         token = peekToken(&compiler->lexer);
@@ -2719,10 +2664,10 @@ static PrattExpr semiParseAssignmentOrExpr(Compiler* compiler, bool isModuleExpo
         }
 
         restoreNextRegisterId(compiler, currentNextRegisterId);
-        return expr;
+        return;
     }
 
-    expr = lhsExpr.value.rvalue;
+    PrattExpr expr = lhsExpr.value.rvalue;
     LedFn ledFn;
     Precedence leftBindingPower;
     PrattState state;
@@ -2795,7 +2740,6 @@ parse_unassignable_end:
         emitCode(compiler, INSTRUCTION_RETURN(targetRegister, 0, 0, false, false));
     }
     restoreNextRegisterId(compiler, currentNextRegisterId);
-    return expr;
 }
 
 static int structFieldCompare(const void* a, const void* b) {
@@ -2820,12 +2764,12 @@ static void parseIf(Compiler* compiler) {
         │       │                                         │
         │    if │                                         │
         │       └─                                        │
-        v          jump to end ────────────────────────── │ ─>┐  // pcJumpLocation_1
+        v          jump to end ────────────────────────── │ ─>┐  // patchHead_1
                    calculate the condition for elif      <┘   │
                 ┌─ c-jmp if the condition is falsy ────┐      │  // pcAfterCond
            elif │                                      │      │
                 └─                                     │      │
-                   jump to end ─────────────────────── │ ────>┤  // pcJumpLocation_2
+                   jump to end ─────────────────────── │ ────>┤  // patchHead_2
                 ┌─  <──────────────────────────────────┘      │
                 │                                             │
            else │                                             │
@@ -2833,7 +2777,11 @@ static void parseIf(Compiler* compiler) {
                    close_upvalues <───────────────────────────┘
     */
 
-    Token t;
+    // one of TK_IF, TK_ELIF, TK_ELSE
+    Token ifTypeToken;
+
+    // The location of the last instruction that jumps to the end of the if-elif-else chain. After
+    // parsing all branches, we will patch all these instructions to jump to the end of the chain.
     PCLocation patchHead = INVALID_PC_LOCATION;
 
     // If-blocks don't increase or decrease the number of variables and registers used, so we choose
@@ -2843,13 +2791,15 @@ static void parseIf(Compiler* compiler) {
     // stack semantics, their implementation should just work.
     LocalRegisterId currentNextRegisterId = getNextRegisterId(compiler);
 
-    // Track terminal coarity state across branches
-    uint8_t previousCoarity = UINT8_MAX;  // UINT8_MAX = not yet determined or inconsistent
-    bool isFirstBranch      = true;
-    bool hasElseBranch      = false;
+    // Track terminal coarity state across branches.  This is set in the first if branch. All
+    // subsequent branches must also be terminal (!= UINT8_MAX) to keep the terminal state.
+    //
+    // If there is an else-branch, and if the coarity is still terminal, we update the parent
+    // block's coarity.
+    uint8_t terminalCoarity = UINT8_MAX;
 
     do {
-        nextToken(&compiler->lexer);  // Consume if / elif
+        ifTypeToken = nextToken(&compiler->lexer);  // Consume if / elif
 
         LocalRegisterId condReg, targetReg;
         condReg              = reserveTempRegister(compiler);
@@ -2882,19 +2832,15 @@ static void parseIf(Compiler* compiler) {
             SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNEXPECTED_TOKEN, "Expected opening brace for if body");
         }
 
-        BlockScope blockScope;
-        enterBlockScope(compiler, &blockScope, BLOCK_SCOPE_TYPE_IF);
+        IfScope ifScope;
+        enterBlockScope(compiler, (BlockScope*)&ifScope, BLOCK_SCOPE_TYPE_IF);
         parseScopedStatements(compiler);
 
-        // Check this branch's terminal coarity and update chain state
-        uint8_t branchCoarity = blockScope.terminalCoarity;
-        if (isFirstBranch) {
-            // First branch sets the expected coarity
-            previousCoarity = branchCoarity;
-            isFirstBranch   = false;
-        } else if (branchCoarity != previousCoarity) {
-            // One of them is UINT8_MAX (not terminal)
-            previousCoarity = UINT8_MAX;
+        uint8_t branchCoarity = ifScope.base.terminalCoarity;
+        if (ifTypeToken == TK_IF) {
+            terminalCoarity = branchCoarity;
+        } else if (branchCoarity == UINT8_MAX) {
+            terminalCoarity = UINT8_MAX;
         }
 
         leaveBlockScope(compiler);
@@ -2902,31 +2848,29 @@ static void parseIf(Compiler* compiler) {
 
         // If it's not the end of the if-elif-else chain, we need to provide the jump-to-end
         // instruction.
-        t = peekToken(&compiler->lexer);
-        if (t == TK_ELIF || t == TK_ELSE) {
+        ifTypeToken = peekToken(&compiler->lexer);
+        if (ifTypeToken == TK_ELIF || ifTypeToken == TK_ELSE) {
             patchHead = emitCode(compiler, INSTRUCTION_JUMP(patchHead, false));
         }
 
         overrideConditionalJumpHere(compiler, pcAfterCond, targetReg, false);
-    } while (t == TK_ELIF);
+    } while (ifTypeToken == TK_ELIF);
 
-    if (t == TK_ELSE) {
+    if (ifTypeToken == TK_ELSE) {
         MATCH_NEXT_TOKEN_OR_ABORT(compiler, TK_ELSE, "Expected 'else' token");
 
         IfScope ifScope;
         enterBlockScope(compiler, (BlockScope*)&ifScope, BLOCK_SCOPE_TYPE_IF);
         parseScopedStatements(compiler);
 
-        // Check else branch's terminal coarity and update chain state
-        hasElseBranch         = true;
-        uint8_t branchCoarity = ifScope.base.terminalCoarity;
-        if (branchCoarity != previousCoarity) {
-            // One of them is UINT8_MAX (not terminal)
-            previousCoarity = UINT8_MAX;
+        if (ifScope.base.terminalCoarity == UINT8_MAX) {
+            terminalCoarity = UINT8_MAX;
         }
 
         leaveBlockScope(compiler);
         restoreNextRegisterId(compiler, currentNextRegisterId);
+    } else {
+        terminalCoarity = UINT8_MAX;
     }
 
     while (patchHead != INVALID_PC_LOCATION) {
@@ -2935,12 +2879,12 @@ static void parseIf(Compiler* compiler) {
         patchHead = nextPatch;
     }
 
-    emitCode(compiler, INSTRUCTION_CLOSE_UPVALUES(currentNextRegisterId, 0, 0, false, false));
-
-    if (hasElseBranch && previousCoarity != UINT8_MAX) {
+    if (terminalCoarity != UINT8_MAX) {
         // All branches are terminal with the same coarity
-        compiler->currentFunction->currentBlock->terminalCoarity = previousCoarity;
+        compiler->currentFunction->currentBlock->terminalCoarity = terminalCoarity;
     }
+
+    emitCode(compiler, INSTRUCTION_CLOSE_UPVALUES(currentNextRegisterId, 0, 0, false, false));
 }
 
 static void saveRangeOperand(

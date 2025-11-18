@@ -523,7 +523,6 @@ static void runMainLoop(SemiVM* vm) {
             case OP_LOAD_BOOL: {
                 uint8_t a = OPERAND_K_A(instruction);
                 bool i    = OPERAND_K_I(instruction);
-                bool s    = OPERAND_K_S(instruction);
 
                 stack[a].header = VALUE_TYPE_BOOL;
                 stack[a].as.i   = i;

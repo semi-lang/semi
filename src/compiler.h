@@ -446,9 +446,28 @@ typedef struct BlockScope {
     // The union tag specifying the type of this block scope.
     BlockScopeType type;
 
-    // Track if the last control-flow statement in this block is terminal (guarantees return on all paths).
-    // UINT8_MAX = no terminal statement yet or not terminal
-    // 0-254 = terminal statement with this coarity
+    // Track the number of values returned from the innermost function when the control flow leaves this block. If this
+    // function doesn't guarantee to return (non-terminal) the same number of values, it is set to UINT8_MAX. Combined
+    // with the function scope's `nReturns`, we can report a). missing return statement error, and b). inconsistent
+    // return value count error.
+    //
+    // Here's an example:
+    //
+    // ```
+    // fn example(cond) {
+    //                    <-- parent block's terminal coarity = UINT8_MAX
+    //     if cond {
+    //         return 1   <-- terminal coarity = 1
+    //     }              <-- parent block's terminal coarity stays UINT8_MAX
+    //
+    //     if cond {
+    //         return 1   <-- terminal coarity = 1
+    //     } else {
+    //         return 2   <-- terminal coarity = 1
+    //     }              <-- parent block's terminal coarity = 1
+    //                    <-- dead code (currently we don't optimize for this)
+    // }                  <-- function's terminal coarity = 1
+    // ```
     uint8_t terminalCoarity;
 } BlockScope;
 
