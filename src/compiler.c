@@ -1952,7 +1952,7 @@ static void typeCheckLed(Compiler* compiler, const PrattState state, PrattExpr* 
 
     TypeId targetTypeId;
 
-    Token token = nextToken(&compiler->lexer);
+    Token token = peekToken(&compiler->lexer);
     if (token == TK_TYPE_IDENTIFIER) {
         // Simple case: x is SomeType
         PrattExpr typeExpr;
