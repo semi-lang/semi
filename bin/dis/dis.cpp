@@ -19,8 +19,8 @@ extern "C" {
 
 static const char* printFunctionName = "print";
 
-ErrorId printFunction(GC* gc, uint8_t argCount, Value* args, Value* ret) {
-    (void)gc;
+ErrorId printFunction(SemiVM* vm, uint8_t argCount, Value* args, Value* ret) {
+    (void)vm;
     (void)ret;
 
     if (argCount == 0) {

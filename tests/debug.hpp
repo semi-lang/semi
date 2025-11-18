@@ -169,7 +169,7 @@ static void printValue(Value v) {
                     std::cout << ", ";
                 }
             }
-            std::cout << "]";
+            std::cout << " ]";
             break;
         }
         case VALUE_TYPE_DICT: {

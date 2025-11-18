@@ -391,15 +391,6 @@ static inline bool verifyChunk(Chunk* chunk) {
     return true;
 }
 
-static inline MagicMethodsTable* getMagicMethodsTable(SemiVM* vm, Value* value) {
-    BaseValueType type = BASE_TYPE(value);
-    return type < vm->classes.classCount ? &vm->classes.classMethods[type] : &vm->classes.classMethods[0];
-}
-
-static inline MagicMethodsTable* getMagicMethodsTableByTypeId(SemiVM* vm, TypeId typeId) {
-    return typeId < vm->classes.classCount ? &vm->classes.classMethods[typeId] : &vm->classes.classMethods[0];
-}
-
 static void runMainLoop(SemiVM* vm) {
     register Frame* frame;
     register Value* stack;
@@ -486,7 +477,7 @@ static void runMainLoop(SemiVM* vm) {
                 bool i     = OPERAND_K_I(instruction);
                 bool s     = OPERAND_K_S(instruction);
 
-                MagicMethodsTable* table = getMagicMethodsTable(vm, &stack[a]);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, &stack[a]);
 
                 Value boolValue;
                 ErrorId errorId = table->conversionMethods->toBool(&vm->gc, &boolValue, &stack[a]);
@@ -642,126 +633,126 @@ static void runMainLoop(SemiVM* vm) {
             case OP_ADD: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
-                MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, rb);
                 TRAP_ON_ERROR(vm, table->numericMethods->add(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_SUBTRACT: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
-                MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, rb);
                 TRAP_ON_ERROR(vm, table->numericMethods->subtract(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_MULTIPLY: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
-                MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, rb);
                 TRAP_ON_ERROR(vm, table->numericMethods->multiply(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_DIVIDE: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
-                MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, rb);
                 TRAP_ON_ERROR(vm, table->numericMethods->divide(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_FLOOR_DIVIDE: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
-                MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, rb);
                 TRAP_ON_ERROR(vm, table->numericMethods->floorDivide(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_MODULO: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
-                MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, rb);
                 TRAP_ON_ERROR(vm, table->numericMethods->modulo(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_POWER: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
-                MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, rb);
                 TRAP_ON_ERROR(vm, table->numericMethods->power(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_NEGATE: {
                 Value *ra, *rb;
                 load_value_ab(vm, instruction, ra, rb);
-                MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, rb);
                 TRAP_ON_ERROR(vm, table->numericMethods->negate(&vm->gc, ra, rb), "Arithmetic failed");
                 break;
             }
             case OP_GT: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
-                MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, rb);
                 TRAP_ON_ERROR(vm, table->comparisonMethods->gt(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_GE: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
-                MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, rb);
                 TRAP_ON_ERROR(vm, table->comparisonMethods->gte(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_EQ: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
-                MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, rb);
                 TRAP_ON_ERROR(vm, table->comparisonMethods->eq(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_NEQ: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
-                MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, rb);
                 TRAP_ON_ERROR(vm, table->comparisonMethods->neq(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_BITWISE_AND: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
-                MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, rb);
                 TRAP_ON_ERROR(vm, table->numericMethods->bitwiseAnd(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_BITWISE_OR: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
-                MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, rb);
                 TRAP_ON_ERROR(vm, table->numericMethods->bitwiseOr(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_BITWISE_XOR: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
-                MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, rb);
                 TRAP_ON_ERROR(vm, table->numericMethods->bitwiseXor(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_BITWISE_L_SHIFT: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
-                MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, rb);
                 TRAP_ON_ERROR(vm, table->numericMethods->bitwiseShiftLeft(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_BITWISE_R_SHIFT: {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
-                MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, rb);
                 TRAP_ON_ERROR(vm, table->numericMethods->bitwiseShiftRight(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
             case OP_BITWISE_INVERT: {
                 Value *ra, *rb;
                 load_value_ab(vm, instruction, ra, rb);
-                MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, rb);
                 TRAP_ON_ERROR(vm, table->numericMethods->bitwiseInvert(&vm->gc, ra, rb), "Arithmetic failed");
                 break;
             }
@@ -789,12 +780,12 @@ static void runMainLoop(SemiVM* vm) {
 
                 closeUpvalues(vm, rb);
 
-                MagicMethodsTable* table = getMagicMethodsTable(vm, &stack[c]);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, &stack[c]);
                 TRAP_ON_ERROR(vm, table->next(&vm->gc, rb, rc), "Failed to get next iterator value");
                 bool hasNext = IS_VALID(rb);
                 if (hasNext && ra != NULL) {
                     Value one = semiValueNewInt(1);
-                    table     = getMagicMethodsTable(vm, &stack[a]);
+                    table     = semiVMGetMagicMethodsTable(vm, &stack[a]);
                     TRAP_ON_ERROR(
                         vm, table->numericMethods->add(&vm->gc, ra, ra, &one), "Failed to increment iterator index");
                 }
@@ -807,7 +798,7 @@ static void runMainLoop(SemiVM* vm) {
             case OP_BOOL_NOT: {
                 Value *ra, *rb;
                 load_value_ab(vm, instruction, ra, rb);
-                MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, rb);
                 TRAP_ON_ERROR(vm, table->conversionMethods->inverse(&vm->gc, ra, rb), "Arithmetic failed");
                 break;
             }
@@ -853,7 +844,7 @@ static void runMainLoop(SemiVM* vm) {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
 
-                MagicMethodsTable* table = getMagicMethodsTable(vm, rb);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, rb);
                 TRAP_ON_ERROR(vm, table->collectionMethods->getItem(&vm->gc, ra, rb, rc), "GetItem failed");
                 break;
             }
@@ -861,7 +852,7 @@ static void runMainLoop(SemiVM* vm) {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
 
-                MagicMethodsTable* table = getMagicMethodsTable(vm, ra);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, ra);
                 TRAP_ON_ERROR(vm, table->collectionMethods->setItem(&vm->gc, ra, rb, rc), "SetItem failed");
                 break;
             }
@@ -886,7 +877,7 @@ static void runMainLoop(SemiVM* vm) {
                     rc = &stack[c];
                 }
 
-                MagicMethodsTable* table = getMagicMethodsTable(vm, ra);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, ra);
                 TRAP_ON_ERROR(vm, table->collectionMethods->delItem(&vm->gc, ra, rb, rc), "DeleteItem failed");
                 break;
             }
@@ -894,7 +885,7 @@ static void runMainLoop(SemiVM* vm) {
                 Value *ra, *rb, *rc;
                 load_value_abc(vm, instruction, ra, rb, rc);
 
-                MagicMethodsTable* table = getMagicMethodsTable(vm, rc);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, rc);
                 TRAP_ON_ERROR(vm, table->collectionMethods->contain(&vm->gc, ra, rb, rc), "Arithmetic failed");
                 break;
             }
@@ -911,7 +902,7 @@ static void runMainLoop(SemiVM* vm) {
                 temp.header = VALUE_TYPE_LIST;
                 temp.as.obj = &stackList.obj;
 
-                MagicMethodsTable* table = getMagicMethodsTable(vm, ra);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, ra);
                 TRAP_ON_ERROR(vm, table->collectionMethods->extend(&vm->gc, ra, &temp), "List append failed");
                 break;
             }
@@ -921,7 +912,7 @@ static void runMainLoop(SemiVM* vm) {
                 uint8_t count      = OPERAND_T_C(instruction);
                 Value* startValues = stack + startReg;
 
-                MagicMethodsTable* table = getMagicMethodsTable(vm, ra);
+                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, ra);
 
                 for (uint32_t i = 0; i < count; i++) {
                     Value key   = startValues[i * 2];
@@ -940,7 +931,7 @@ static void runMainLoop(SemiVM* vm) {
                 switch (VALUE_TYPE(&stack[a])) {
                     case VALUE_TYPE_NATIVE_FUNCTION: {
                         NativeFunction* nativeFunc = AS_NATIVE_FUNCTION(&stack[a]);
-                        TRAP_ON_ERROR(vm, (*nativeFunc)(&vm->gc, b, args, &stack[a]), "Native function call failed");
+                        TRAP_ON_ERROR(vm, (*nativeFunc)(vm, b, args, &stack[a]), "Native function call failed");
                         break;
                     }
                     case VALUE_TYPE_COMPILED_FUNCTION: {

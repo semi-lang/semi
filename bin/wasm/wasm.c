@@ -18,10 +18,13 @@
 #include "../../src/symbol_table.h"
 #include "../../src/vm.h"
 
-static const char* nowFunctionName = "now";
+typedef struct builtInFunctions {
+    const char* name;
+    ErrorId (*function)(SemiVM* vm, uint8_t argCount, Value* args, Value* ret);
+} builtInFunctions;
 
-ErrorId nowFunction(GC* gc, uint8_t argCount, Value* args, Value* ret) {
-    (void)gc;
+ErrorId nowFunction(SemiVM* vm, uint8_t argCount, Value* args, Value* ret) {
+    (void)vm;
     (void)argCount;
     (void)args;
 
@@ -33,10 +36,82 @@ ErrorId nowFunction(GC* gc, uint8_t argCount, Value* args, Value* ret) {
     return 0;
 }
 
-static const char* printFunctionName = "print";
+static void printValue(Value* value) {
+    switch (VALUE_TYPE(value)) {
+        case VALUE_TYPE_BOOL:
+            printf("%s", AS_BOOL(value) ? "true" : "false");
+            break;
+        case VALUE_TYPE_INVALID:
+            printf("invalid");
+            break;
+        case VALUE_TYPE_INT:
+            printf("%lld", AS_INT(value));
+            break;
+        case VALUE_TYPE_FLOAT:
+            printf("%g", AS_FLOAT(value));
+            break;
+        case VALUE_TYPE_INLINE_STRING: {
+            InlineString inlineStr = AS_INLINE_STRING(value);
+            for (uint8_t j = 0; j < inlineStr.length; j++) {
+                printf("%c", inlineStr.c[j]);
+            }
+            break;
+        }
+        case VALUE_TYPE_OBJECT_STRING: {
+            ObjectString* str = AS_OBJECT_STRING(value);
+            printf("%.*s", (int)str->length, str->str);
+            break;
+        }
+        case VALUE_TYPE_LIST: {
+            ObjectList* list = AS_LIST(value);
+            if (list->size == 0) {
+                printf("List[]");
+                break;
+            }
 
-ErrorId printFunction(GC* gc, uint8_t argCount, Value* args, Value* ret) {
-    (void)gc;
+            printf("List[ ");
+            for (uint32_t j = 0; j < list->size; j++) {
+                if (j > 0) {
+                    printf(", ");
+                }
+                printValue(&list->values[j]);
+            }
+            printf(" ]");
+            break;
+        }
+        case VALUE_TYPE_DICT: {
+            ObjectDict* dict = AS_DICT(value);
+            if (dict->len == 0) {
+                printf("Dict[]");
+                break;
+            }
+            printf("Dict[ ");
+            uint32_t j = 0;
+            for (;;) {
+                if (IS_VALID(&dict->keys[j].key)) {
+                    printValue(&dict->keys[j].key);
+                    printf(": ");
+                    printValue(&dict->values[j]);
+                }
+                j++;
+                if (j < dict->len) {
+                    printf(", ");
+                } else {
+                    break;
+                }
+            }
+            printf(" ]");
+            break;
+        }
+        default:
+            printf("<unprintable value type %d>", (int)VALUE_TYPE(value));
+            break;
+    }
+    return;
+}
+
+ErrorId printFunction(SemiVM* vm, uint8_t argCount, Value* args, Value* ret) {
+    (void)vm;
     (void)ret;
 
     if (argCount == 0) {
@@ -44,36 +119,7 @@ ErrorId printFunction(GC* gc, uint8_t argCount, Value* args, Value* ret) {
     }
 
     for (uint8_t i = 0; i < argCount; i++) {
-        Value* value = &args[i];
-        switch (VALUE_TYPE(value)) {
-            case VALUE_TYPE_BOOL:
-                printf("%s", AS_BOOL(value) ? "true" : "false");
-                break;
-            case VALUE_TYPE_INVALID:
-                printf("invalid");
-                break;
-            case VALUE_TYPE_INT:
-                printf("%lld", AS_INT(value));
-                break;
-            case VALUE_TYPE_FLOAT:
-                printf("%g", AS_FLOAT(value));
-                break;
-            case VALUE_TYPE_INLINE_STRING: {
-                InlineString inlineStr = AS_INLINE_STRING(value);
-                for (uint8_t j = 0; j < inlineStr.length; j++) {
-                    printf("%c", inlineStr.c[j]);
-                }
-                break;
-            }
-            case VALUE_TYPE_OBJECT_STRING: {
-                ObjectString* str = AS_OBJECT_STRING(value);
-                printf("%.*s", (int)str->length, str->str);
-                break;
-            }
-            default:
-                printf("<unprintable value type %d>", (int)VALUE_TYPE(value));
-                break;
-        }
+        printValue(&args[i]);
         if (i < argCount - 1) {
             printf(" ");
         }
@@ -81,6 +127,94 @@ ErrorId printFunction(GC* gc, uint8_t argCount, Value* args, Value* ret) {
     printf("\n");
     return 0;
 }
+
+ErrorId minFunction(SemiVM* vm, uint8_t argCount, Value* args, Value* ret) {
+    if (argCount == 0) {
+        return SEMI_ERROR_INVALID_VALUE;
+    }
+    ErrorId err;
+    Value* minItem             = &args[0];
+    MagicMethodsTable* methods = semiVMGetMagicMethodsTable(vm, minItem);
+    Value cmpResult;
+
+    for (uint8_t i = 1; i < argCount; i++) {
+        Value* item = &args[i];
+        if ((err = methods->comparisonMethods->lt(&vm->gc, &cmpResult, item, minItem)) != 0) {
+            return err;
+        }
+
+        if (AS_BOOL(&cmpResult)) {
+            minItem = item;
+            methods = semiVMGetMagicMethodsTable(vm, minItem);
+        }
+    }
+    *ret = *minItem;
+    return 0;
+}
+
+ErrorId maxFunction(SemiVM* vm, uint8_t argCount, Value* args, Value* ret) {
+    if (argCount == 0) {
+        return SEMI_ERROR_INVALID_VALUE;
+    }
+    ErrorId err;
+    Value* minItem             = &args[0];
+    MagicMethodsTable* methods = semiVMGetMagicMethodsTable(vm, minItem);
+    Value cmpResult;
+
+    for (uint8_t i = 1; i < argCount; i++) {
+        Value* item = &args[i];
+        if ((err = methods->comparisonMethods->gt(&vm->gc, &cmpResult, item, minItem)) != 0) {
+            return err;
+        }
+
+        if (AS_BOOL(&cmpResult)) {
+            minItem = item;
+            methods = semiVMGetMagicMethodsTable(vm, minItem);
+        }
+    }
+    *ret = *minItem;
+    return 0;
+}
+
+ErrorId appendFunction(SemiVM* vm, uint8_t argCount, Value* args, Value* ret) {
+    (void)ret;
+    if (argCount < 2) {
+        return SEMI_ERROR_INVALID_VALUE;
+    }
+
+    Value* listValue = &args[0];
+
+    MagicMethodsTable* methods = semiVMGetMagicMethodsTable(vm, listValue);
+
+    ObjectList stackList;
+    stackList.values = &args[1];
+    stackList.size   = argCount - 1;
+
+    Value temp;
+    temp.header = VALUE_TYPE_LIST;
+    temp.as.obj = &stackList.obj;
+
+    return methods->collectionMethods->extend(&vm->gc, listValue, &temp);
+}
+
+ErrorId lenFunction(SemiVM* vm, uint8_t argCount, Value* args, Value* ret) {
+    if (argCount != 1) {
+        return SEMI_ERROR_INVALID_VALUE;
+    }
+
+    Value* collectionValue     = &args[0];
+    MagicMethodsTable* methods = semiVMGetMagicMethodsTable(vm, collectionValue);
+    return methods->collectionMethods->len(&vm->gc, ret, collectionValue);
+}
+
+static const builtInFunctions builtInFunctionList[] = {
+    { "print",  printFunction},
+    {   "now",    nowFunction},
+    {   "min",    minFunction},
+    {   "max",    maxFunction},
+    {"append", appendFunction},
+    {   "len",    lenFunction},
+};
 
 ErrorId compileAndRunInternal(SemiVM* vm, const char* source, unsigned int length) {
     const char* scriptMainModuleName   = "<script>";
@@ -127,10 +261,12 @@ int compileAndRun(const char* str) {
         return SEMI_ERROR_MEMORY_ALLOCATION_FAILURE;
     }
 
-    semiVMAddGlobalVariable(
-        vm, printFunctionName, (IdentifierLength)strlen(printFunctionName), semiValueNewNativeFunction(printFunction));
-    semiVMAddGlobalVariable(
-        vm, nowFunctionName, (IdentifierLength)strlen(nowFunctionName), semiValueNewNativeFunction(nowFunction));
+    for (size_t i = 0; i < sizeof(builtInFunctionList) / sizeof(builtInFunctions); i++) {
+        semiVMAddGlobalVariable(vm,
+                                builtInFunctionList[i].name,
+                                (IdentifierLength)strlen(builtInFunctionList[i].name),
+                                semiValueNewNativeFunction(builtInFunctionList[i].function));
+    }
 
     ErrorId errId = compileAndRunInternal(vm, str, (unsigned int)strlen(str));
 

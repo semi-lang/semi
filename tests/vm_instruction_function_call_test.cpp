@@ -339,12 +339,12 @@ K[0]: FunctionProto arity=0 coarity=0 maxStackSize=1 -> @testFunc
 
 // Native Function Call Tests
 
-static ErrorId testNativeFunctionNoArgs(GC* gc, uint8_t argCount, Value* args, Value* ret) {
+static ErrorId testNativeFunctionNoArgs(SemiVM* vm, uint8_t argCount, Value* args, Value* ret) {
     *ret = semiValueNewInt(42);
     return 0;
 }
 
-static ErrorId testNativeFunctionWithArgs(GC* gc, uint8_t argCount, Value* args, Value* ret) {
+static ErrorId testNativeFunctionWithArgs(SemiVM* vm, uint8_t argCount, Value* args, Value* ret) {
     if (argCount != 2) {
         return SEMI_ERROR_ARGS_COUNT_MISMATCH;
     }
@@ -358,11 +358,11 @@ static ErrorId testNativeFunctionWithArgs(GC* gc, uint8_t argCount, Value* args,
     return 0;
 }
 
-static ErrorId testNativeFunctionWithError(GC* gc, uint8_t argCount, Value* args, Value* ret) {
+static ErrorId testNativeFunctionWithError(SemiVM* vm, uint8_t argCount, Value* args, Value* ret) {
     return SEMI_ERROR_UNEXPECTED_TYPE;
 }
 
-static ErrorId testNativeFunctionMaxArgs(GC* gc, uint8_t argCount, Value* args, Value* ret) {
+static ErrorId testNativeFunctionMaxArgs(SemiVM* vm, uint8_t argCount, Value* args, Value* ret) {
     IntValue sum = 0;
     for (uint8_t i = 0; i < argCount; i++) {
         if (!IS_INT(&args[i])) {
@@ -496,7 +496,7 @@ TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionArgumentPositioning) {
 TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionZeroReturnValue) {
     SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
 
-    auto testNativeFunctionZeroReturn = [](GC* gc, uint8_t argCount, Value* args, Value* ret) -> ErrorId {
+    auto testNativeFunctionZeroReturn = [](SemiVM* vm, uint8_t argCount, Value* args, Value* ret) -> ErrorId {
         *ret = semiValueNewInt(0);
         return 0;
     };

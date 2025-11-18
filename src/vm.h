@@ -110,4 +110,13 @@ typedef struct SemiVM {
 
 ErrorId semiVMAddGlobalVariable(SemiVM* vm, const char* identifier, IdentifierLength identifierLength, Value value);
 
+static inline MagicMethodsTable* semiVMGetMagicMethodsTable(SemiVM* vm, Value* value) {
+    BaseValueType type = BASE_TYPE(value);
+    return type < vm->classes.classCount ? &vm->classes.classMethods[type] : &vm->classes.classMethods[0];
+}
+
+static inline MagicMethodsTable* semiVMGetMagicMethodsTableByTypeId(SemiVM* vm, TypeId typeId) {
+    return typeId < vm->classes.classCount ? &vm->classes.classMethods[typeId] : &vm->classes.classMethods[0];
+}
+
 #endif  // SEMI_VM_H

@@ -95,8 +95,8 @@ ErrorId compileAndRun(SemiVM* vm, const char* source, unsigned int length, bool 
 
 static const char* printFunctionName = "print";
 
-ErrorId printFunction(GC* gc, uint8_t argCount, Value* args, Value* ret) {
-    (void)gc;
+ErrorId printFunction(SemiVM* vm, uint8_t argCount, Value* args, Value* ret) {
+    (void)vm;
     (void)ret;
 
     if (argCount == 0) {
@@ -116,8 +116,8 @@ ErrorId printFunction(GC* gc, uint8_t argCount, Value* args, Value* ret) {
 
 static const char* nowFunctionName = "now";
 
-ErrorId nowFunction(GC* gc, uint8_t argCount, Value* args, Value* ret) {
-    (void)gc;
+ErrorId nowFunction(SemiVM* vm, uint8_t argCount, Value* args, Value* ret) {
+    (void)vm;
     (void)argCount;
     (void)args;
 

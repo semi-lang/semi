@@ -29,7 +29,7 @@ class VMInstructionDeferTest : public VMTest {
         }
     }
     // Native function to track execution order
-    static ErrorId trackExecution(GC* gc, uint8_t argCount, Value* args, Value* returnValue) {
+    static ErrorId trackExecution(SemiVM* vm, uint8_t argCount, Value* args, Value* returnValue) {
         (void)gc;
 
         if (argCount != 1 || !IS_INT(&args[0])) {

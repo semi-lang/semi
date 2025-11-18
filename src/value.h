@@ -459,7 +459,7 @@ static inline uint32_t semiDictLen(ObjectDict* dict) {
 /*
  │ Native Function
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
-typedef ErrorId(NativeFunction)(GC* gc, uint8_t argCount, Value* args, Value* ret);
+typedef ErrorId(NativeFunction)(SemiVM* vm, uint8_t argCount, Value* args, Value* ret);
 
 Value semiValueNewNativeFunction(NativeFunction* function);
 
