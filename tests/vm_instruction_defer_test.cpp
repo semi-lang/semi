@@ -30,7 +30,7 @@ class VMInstructionDeferTest : public VMTest {
     }
     // Native function to track execution order
     static ErrorId trackExecution(SemiVM* vm, uint8_t argCount, Value* args, Value* returnValue) {
-        (void)gc;
+        (void)vm;
 
         if (argCount != 1 || !IS_INT(&args[0])) {
             return SEMI_ERROR_ARGS_COUNT_MISMATCH;

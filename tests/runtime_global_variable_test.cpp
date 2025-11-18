@@ -133,8 +133,10 @@ TEST_F(RuntimeGlobalVariableTest, AccessMultipleGlobalVariables) {
     ASSERT_EQ(AS_BOOL(&vm->values[2]), true) << "Third global should be loaded correctly";
 }
 
-static ErrorId testGlobalNativeFunction(GC* gc, uint8_t argsCount, Value* args, Value* returnValue) {
+static ErrorId testGlobalNativeFunction(SemiVM* vm, uint8_t argsCount, Value* args, Value* returnValue) {
+    (void)vm;
     (void)argsCount;
+    (void)args;
 
     // Set a simple return value for testing
     *returnValue = semiValueNewInt(12345);
