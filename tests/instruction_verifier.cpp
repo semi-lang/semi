@@ -139,17 +139,20 @@ void SpecParser::parseSectionHeader() {
     } else if (matchKeyword("PreDefine:Registers]")) {
         currentSection = SECTION_PREDEFINE_REGISTERS;
     } else if (matchKeyword("ModuleInit]")) {
-        currentSection       = SECTION_MODULE_INIT;
-        currentFunctionLabel = "";
+        currentSection                                       = SECTION_MODULE_INIT;
+        currentFunctionLabel                                 = "";
+        currentSpec->functions[currentFunctionLabel].ignored = false;
     } else if (matchKeyword("Instructions]")) {
-        currentSection       = SECTION_INSTRUCTIONS;
-        currentFunctionLabel = "";
+        currentSection                                       = SECTION_INSTRUCTIONS;
+        currentFunctionLabel                                 = "";
+        currentSpec->functions[currentFunctionLabel].ignored = false;
     } else if (matchKeyword("Instructions:")) {
         currentSection = SECTION_INSTRUCTIONS;
         char label[64];
         parseLabel(label, sizeof(label));
         currentFunctionLabel = label;
         if (!match(']')) error("Expected ']' after function label");
+        currentSpec->functions[currentFunctionLabel].ignored = false;
     } else if (matchKeyword("Constants]")) {
         currentSection = SECTION_CONSTANTS;
     } else if (matchKeyword("UpvalueDescription:")) {
@@ -166,6 +169,14 @@ void SpecParser::parseSectionHeader() {
         currentSection = SECTION_TYPES;
     } else {
         error("Unknown section header");
+    }
+
+    // Check for optional (ignored) marker
+    skipWhitespace();
+    if (matchKeyword("(ignored)")) {
+        if (currentSection == SECTION_INSTRUCTIONS || currentSection == SECTION_MODULE_INIT) {
+            currentSpec->functions[currentFunctionLabel].ignored = true;
+        }
     }
 
     skipToNextLine();
@@ -739,7 +750,7 @@ ParsedValue SpecParser::parseValueFromProperties(const char* typeName, std::map<
         }
 
         // Store maxStackSize in the size field temporarily (will be used correctly later)
-        result.as.functionValue.size = maxStackSize;
+        result.as.functionValue.maxStackSize = maxStackSize;
 
         // Check for label (-> @label)
         const char* arrow = strstr(properties, "->");
@@ -794,7 +805,9 @@ void Verifier::verify(SemiModule* module) {
     // Verify main instructions
     auto mainIt = spec.functions.find("");
     if (mainIt != spec.functions.end() && module->moduleInit) {
-        verifyInstructions(module->moduleInit, mainIt->second, "main");
+        if (!mainIt->second.ignored) {
+            verifyInstructions(module->moduleInit, mainIt->second, "main");
+        }
     }
 
     // Verify constants and nested functions
@@ -820,7 +833,7 @@ void Verifier::verify(Compiler* compiler) {
     }
 
     auto mainIt = spec.functions.find("");
-    if (mainIt != spec.functions.end()) {
+    if (mainIt != spec.functions.end() && !mainIt->second.ignored) {
         FunctionProto* moduleInit = compiler->artifactModule->moduleInit;
 
         // Create a temporary FunctionProto to wrap the rootFunction's chunk
@@ -1053,7 +1066,7 @@ void Verifier::verifyConstantFunctionProto(const Value* value, const ParsedConst
     // Get expected values from parsed data
     uint8_t expectedArity        = constant.parsedValue.as.functionValue.arity;
     uint8_t expectedCoarity      = constant.parsedValue.as.functionValue.coarity;
-    uint8_t expectedMaxStackSize = (uint8_t)constant.parsedValue.as.functionValue.size;
+    uint8_t expectedMaxStackSize = (uint8_t)constant.parsedValue.as.functionValue.maxStackSize;
 
     // Verify arity
     if (func->arity != expectedArity) {
@@ -1079,7 +1092,7 @@ void Verifier::verifyConstantFunctionProto(const Value* value, const ParsedConst
     // Verify nested function instructions if label is provided
     if (constant.parsedValue.label[0] != '\0') {
         auto funcIt = spec.functions.find(constant.parsedValue.label);
-        if (funcIt != spec.functions.end()) {
+        if (funcIt != spec.functions.end() && !funcIt->second.ignored) {
             verifyInstructions(func, funcIt->second, constant.parsedValue.label);
         }
     }

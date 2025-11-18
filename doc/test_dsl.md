@@ -271,6 +271,40 @@ arity=0 coarity=0 maxStackSize=10
 - This section configures the metadata for the module's main/initialization function
 - For nested functions, their metadata (arity, coarity, maxStackSize) should be specified in the `[Constants]` section as part of their FunctionProto constant definition
 
+
+### Ignoring Sections
+
+You can mark instruction sections as ignored by adding `(ignored)` after the section header. This causes the verifier to skip verification of that section, which is useful for:
+
+- Focusing tests on specific parts of the output
+- Testing modules where certain sections are still under development
+- Partial verification scenarios
+
+**Syntax:**
+```
+[Instructions] (ignored)
+[Instructions:label] (ignored)
+[ModuleInit] (ignored)
+```
+
+**Example:**
+```cpp
+TEST_F(CompilerTest, VerifyConstantsOnly) {
+    const char* source = "x := 42";
+    
+    // Only verify constants, skip instruction verification
+    VerifyCompilation(module, R"(
+[Instructions] (ignored)
+
+[Constants]
+K[0]: Int 42
+)");
+}
+```
+
+**Note:** The `(ignored)` marker is only supported for `[Instructions]`, `[Instructions:label]`, and `[ModuleInit]` sections.
+
+
 ## Complete Examples
 
 ### Example 1: Basic Defer Block

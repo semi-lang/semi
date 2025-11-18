@@ -445,6 +445,11 @@ typedef struct BlockScope {
 
     // The union tag specifying the type of this block scope.
     BlockScopeType type;
+
+    // Track if the last control-flow statement in this block is terminal (guarantees return on all paths).
+    // UINT8_MAX = no terminal statement yet or not terminal
+    // 0-254 = terminal statement with this coarity
+    uint8_t terminalCoarity;
 } BlockScope;
 
 typedef struct LoopScope {

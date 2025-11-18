@@ -1028,6 +1028,7 @@ static void enterBlockScope(Compiler* compiler, BlockScope* newBlock, BlockScope
     newBlock->variableStackStart = currentBlock->variableStackEnd;
     newBlock->variableStackEnd   = currentBlock->variableStackEnd;
     newBlock->type               = type;
+    newBlock->terminalCoarity    = UINT8_MAX;
 }
 
 static void leaveBlockScope(Compiler* compiler) {
@@ -2842,6 +2843,11 @@ static void parseIf(Compiler* compiler) {
     // stack semantics, their implementation should just work.
     LocalRegisterId currentNextRegisterId = getNextRegisterId(compiler);
 
+    // Track terminal coarity state across branches
+    uint8_t previousCoarity = UINT8_MAX;  // UINT8_MAX = not yet determined or inconsistent
+    bool isFirstBranch      = true;
+    bool hasElseBranch      = false;
+
     do {
         nextToken(&compiler->lexer);  // Consume if / elif
 
@@ -2879,6 +2885,18 @@ static void parseIf(Compiler* compiler) {
         BlockScope blockScope;
         enterBlockScope(compiler, &blockScope, BLOCK_SCOPE_TYPE_IF);
         parseScopedStatements(compiler);
+
+        // Check this branch's terminal coarity and update chain state
+        uint8_t branchCoarity = blockScope.terminalCoarity;
+        if (isFirstBranch) {
+            // First branch sets the expected coarity
+            previousCoarity = branchCoarity;
+            isFirstBranch   = false;
+        } else if (branchCoarity != previousCoarity) {
+            // One of them is UINT8_MAX (not terminal)
+            previousCoarity = UINT8_MAX;
+        }
+
         leaveBlockScope(compiler);
         restoreNextRegisterId(compiler, currentNextRegisterId);
 
@@ -2898,6 +2916,15 @@ static void parseIf(Compiler* compiler) {
         IfScope ifScope;
         enterBlockScope(compiler, (BlockScope*)&ifScope, BLOCK_SCOPE_TYPE_IF);
         parseScopedStatements(compiler);
+
+        // Check else branch's terminal coarity and update chain state
+        hasElseBranch         = true;
+        uint8_t branchCoarity = ifScope.base.terminalCoarity;
+        if (branchCoarity != previousCoarity) {
+            // One of them is UINT8_MAX (not terminal)
+            previousCoarity = UINT8_MAX;
+        }
+
         leaveBlockScope(compiler);
         restoreNextRegisterId(compiler, currentNextRegisterId);
     }
@@ -2909,6 +2936,11 @@ static void parseIf(Compiler* compiler) {
     }
 
     emitCode(compiler, INSTRUCTION_CLOSE_UPVALUES(currentNextRegisterId, 0, 0, false, false));
+
+    if (hasElseBranch && previousCoarity != UINT8_MAX) {
+        // All branches are terminal with the same coarity
+        compiler->currentFunction->currentBlock->terminalCoarity = previousCoarity;
+    }
 }
 
 static void saveRangeOperand(
@@ -3184,10 +3216,20 @@ parsed_arguments:
     updateBracketCount(compiler, TK_CLOSE_PAREN);
     parseScopedStatements(compiler);
 
-    // The mandatory return marking the end of the function.
-    // Since we cannot fully verify the coarity of the function if there are phi nodes, we simply return without
-    // values here. The VM will check the coarity with the current frame when it reaches this instruction.
-    emitCode(compiler, INSTRUCTION_RETURN(UINT8_MAX, 0, 0, false, false));
+    // Validate return requirements based on coarity analysis
+    uint8_t functionCoarity;
+    if (compiler->currentFunction->nReturns == UINT8_MAX) {
+        // No explicit returns anywhere - function has coarity 0
+        functionCoarity = 0;
+        emitCode(compiler, INSTRUCTION_RETURN(UINT8_MAX, 0, 0, false, false));
+    } else if (compiler->currentFunction->rootBlock.terminalCoarity == compiler->currentFunction->nReturns) {
+        // Last statement is terminal with correct coarity - all paths covered
+        functionCoarity = compiler->currentFunction->nReturns;
+    } else {
+        // Missing return at the end of the function
+        SEMI_COMPILE_ABORT(
+            compiler, SEMI_ERROR_MISSING_RETURN_STATEMENT, "Missing return statement at the end of function");
+    }
 
     FunctionProto* fn = semiFunctionProtoCreate(compiler->gc, compiler->currentFunction->upvalues.size);
     if (fn == NULL) {
@@ -3195,7 +3237,7 @@ parsed_arguments:
     }
 
     fn->arity        = paramCount;
-    fn->coarity      = compiler->currentFunction->nReturns == UINT8_MAX ? 0 : compiler->currentFunction->nReturns;
+    fn->coarity      = functionCoarity;
     fn->maxStackSize = compiler->currentFunction->maxUsedRegisterCount;
     memcpy(fn->upvalues,
            compiler->currentFunction->upvalues.data,
@@ -3313,6 +3355,8 @@ check_coarity:
         SEMI_COMPILE_ABORT(
             compiler, SEMI_ERROR_INCONSISTENT_RETURN_COUNT, "Inconsistent number of return values in function");
     }
+
+    compiler->currentFunction->currentBlock->terminalCoarity = coarity;
 }
 
 static void parseRaise(Compiler* compiler) {
@@ -3388,9 +3432,14 @@ static void parseDefer(Compiler* compiler) {
 
 static void parseBlock(Compiler* compiler) {
     BlockScope blockScope;
+    uint8_t terminalCoarity;
+
     enterBlockScope(compiler, &blockScope, BLOCK_SCOPE_TYPE_NORMAL);
     parseScopedStatements(compiler);
+    terminalCoarity = compiler->currentFunction->currentBlock->terminalCoarity;
     leaveBlockScope(compiler);
+
+    compiler->currentFunction->currentBlock->terminalCoarity = terminalCoarity;
 }
 
 void semiParseStatement(Compiler* compiler) {

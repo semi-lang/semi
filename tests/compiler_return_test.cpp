@@ -35,7 +35,6 @@ K[0]: FunctionProto arity=0 coarity=0 maxStackSize=0 -> @test
 
 [Instructions:test]
 0: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
-1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 )");
 }
 
@@ -62,7 +61,6 @@ K[0]: FunctionProto arity=0 coarity=1 maxStackSize=1 -> @test
 [Instructions:test]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x002A i=T s=T
 1: OP_RETURN                A=0x00 B=0x00 C=0x00 kb=F kc=F
-2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 )");
 }
 
@@ -95,7 +93,6 @@ K[0]: FunctionProto arity=0 coarity=0 maxStackSize=1 -> @test
 2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 3: OP_CLOSE_UPVALUES        A=0x00 B=0x00 C=0x00 kb=F kc=F
 4: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
-5: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 )");
 }
 
@@ -130,7 +127,6 @@ K[0]: FunctionProto arity=0 coarity=1 maxStackSize=1 -> @test
 4: OP_CLOSE_UPVALUES        A=0x00 B=0x00 C=0x00 kb=F kc=F
 5: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0018 i=T s=T
 6: OP_RETURN                A=0x00 B=0x00 C=0x00 kb=F kc=F
-7: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 )");
 }
 
@@ -203,12 +199,10 @@ K[1]: FunctionProto arity=0 coarity=1 maxStackSize=2 -> @outer
 0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
 1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x0002 i=T s=T
 2: OP_RETURN                A=0x01 B=0x00 C=0x00 kb=F kc=F
-3: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 
 [Instructions:inner]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_RETURN                A=0x00 B=0x00 C=0x00 kb=F kc=F
-2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 )");
 }
 
@@ -265,7 +259,6 @@ K[2]: FunctionProto arity=0 coarity=1 maxStackSize=1 -> @test
 4: OP_CLOSE_UPVALUES        A=0x00 B=0x00 C=0x00 kb=F kc=F
 5: OP_LOAD_CONSTANT         A=0x00 K=0x0001 i=F s=F
 6: OP_RETURN                A=0x00 B=0x00 C=0x00 kb=F kc=F
-7: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 )");
 }
 
@@ -307,7 +300,6 @@ K[1]: FunctionProto arity=0 coarity=1 maxStackSize=3 -> @test
 8:  OP_CLOSE_UPVALUES        A=0x00 B=0x00 C=0x00 kb=F kc=F
 9:  OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0000 i=T s=T
 10: OP_RETURN                A=0x00 B=0x00 C=0x00 kb=F kc=F
-11: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 )");
 }
 
@@ -352,7 +344,6 @@ K[0]: FunctionProto arity=0 coarity=1 maxStackSize=3 -> @test
 2: OP_MULTIPLY              A=0x02 B=0x01 C=0x82 kb=F kc=T
 3: OP_ADD                   A=0x02 B=0x00 C=0x02 kb=F kc=F
 4: OP_RETURN                A=0x02 B=0x00 C=0x00 kb=F kc=F
-5: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 )");
 }
 
@@ -404,6 +395,5 @@ K[0]: FunctionProto arity=0 coarity=0 maxStackSize=1 -> @test
 [Instructions:test]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x002A i=T s=T
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
-2: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
 )");
 }

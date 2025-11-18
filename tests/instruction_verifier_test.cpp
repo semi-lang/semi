@@ -58,3 +58,40 @@ TEST_F(InstructionVerifierTest, LocalIntegerAssignment) {
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x002A i=T s=T
 )");
 }
+
+TEST_F(InstructionVerifierTest, IgnoredSection) {
+    // Create a module with some instructions
+    Instruction code[3];
+    code[0] = INSTRUCTION_LOAD_INLINE_INTEGER(0, 0x2A, true, true);
+    code[1] = INSTRUCTION_ADD(1, 0, 0, false, false);
+    code[2] = INSTRUCTION_RETURN(0xFF, 0, 0, false, false);
+
+    SemiModule* module  = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
+    FunctionProto* func = CreateFunctionObject(0, code, 3, 8, 0, 0);
+    module->moduleInit  = func;
+
+    // Verify that we can mark the main instructions section as ignored
+    // This should pass even though we're not specifying any instructions
+    VerifyCompilation(module, R"(
+[Instructions] (ignored)
+)");
+
+    // Create a nested function for testing ignored named sections
+    Instruction nestedCode[2];
+    nestedCode[0] = INSTRUCTION_LOAD_INLINE_INTEGER(0, 5, true, true);
+    nestedCode[1] = INSTRUCTION_RETURN(0, 0, 0, false, false);
+
+    FunctionProto* nestedFunc = CreateFunctionObject(0, nestedCode, 2, 5, 0, 1);
+    Value funcProtoValue      = semiValueNewPtr(nestedFunc, VALUE_TYPE_FUNCTION_PROTO);
+    semiConstantTableInsert(&module->constantTable, funcProtoValue);
+
+    // Verify that we can ignore the nested function's instructions
+    VerifyCompilation(module, R"(
+[Instructions] (ignored)
+
+[Constants]
+K[0]: FunctionProto arity=0 coarity=1 maxStackSize=5 -> @testFunc
+
+[Instructions:testFunc] (ignored)
+)");
+}

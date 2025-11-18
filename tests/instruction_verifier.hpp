@@ -82,7 +82,7 @@ struct ParsedRangeValue {
 struct ParsedFunctionValue {
     uint8_t arity;
     uint8_t coarity;
-    size_t size;
+    size_t maxStackSize;
 };
 
 // Unified parsed value representation
@@ -142,6 +142,7 @@ struct ParsedFunction {
     uint8_t arity;
     uint8_t coarity;
     uint8_t maxStackSize;
+    bool ignored;
 };
 
 // PreDefine variable
