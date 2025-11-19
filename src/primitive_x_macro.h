@@ -91,11 +91,6 @@
     MACRO(toType, (GC * gc, Value * ret, Value * type, Value * operand), __VA_ARGS__)
 
 /*
- │ Iteration Methods
-─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
-#define ITERATION_X_MACRO(MACRO, ...) MACRO(next, (GC * gc, Value * ret, Value * iterator), __VA_ARGS__)
-
-/*
  │ Collection Methods
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
 

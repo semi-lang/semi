@@ -227,9 +227,6 @@ static inline Value semiValueNewPtr(void* p, ValueType type) {
 #define HASH_METHOD_MACRO(name, args, _) typedef ErrorId(*SemiMagicMethodHash) args;
 HASH_X_MACRO(HASH_METHOD_MACRO, _)
 
-#define ITER_METHOD_MACRO(name, args, _) typedef ErrorId(*SemiMagicMethodIter) args;
-ITERATION_X_MACRO(ITER_METHOD_MACRO, _)
-
 // This expands to:
 //   ErrorId(*add)( ... args ...);
 // that can be used as struct fields.
@@ -264,7 +261,6 @@ typedef struct MagicMethodsTable {
     ComparisonMethods* comparisonMethods;
     ConversionMethods* conversionMethods;
     CollectionMethods* collectionMethods;
-    SemiMagicMethodIter next;
 } MagicMethodsTable;
 
 /*

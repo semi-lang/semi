@@ -1570,7 +1570,6 @@ static const MagicMethodsTable invalidMagicMethodsTable = {
     .comparisonMethods = &invalidComparisonMethods,
     .conversionMethods = &invalidConversionMethods,
     .collectionMethods = &invalidCollectionMethods,
-    .next              = MAGIC_METHOD_SIGNATURE_NAME(INVALID, next),
 };
 
 static ComparisonMethods boolComparisonMethods = {
@@ -1590,7 +1589,6 @@ static const MagicMethodsTable boolMagicMethodsTable = {
     .comparisonMethods = &boolComparisonMethods,
     .conversionMethods = &boolConversionMethods,
     .collectionMethods = &invalidCollectionMethods,
-    .next              = MAGIC_METHOD_SIGNATURE_NAME(INVALID, next),
 };
 
 static NumericMethods numberNumericMethods       = {NUMERIC_X_MACRO(FIELD_INIT_MACRO, NUMBER)};
@@ -1604,7 +1602,6 @@ static const MagicMethodsTable numberMagicMethodsTable = {
     .comparisonMethods = &numberComparisonMethods,
     .conversionMethods = &numberConversionMethods,
     .collectionMethods = &invalidCollectionMethods,
-    .next              = MAGIC_METHOD_SIGNATURE_NAME(INVALID, next),
 };
 
 static ComparisonMethods stringComparisonMethods = {COMPARISON_X_MACRO(FIELD_INIT_MACRO, STRING)};
@@ -1628,7 +1625,6 @@ static const MagicMethodsTable stringMagicMethodsTable = {
     .comparisonMethods = &stringComparisonMethods,
     .conversionMethods = &stringConversionMethods,
     .collectionMethods = &stringCollectionMethods,
-    .next              = MAGIC_METHOD_SIGNATURE_NAME(INVALID, next),
 };
 
 static ComparisonMethods rangeComparisonMethods = {
@@ -1647,7 +1643,6 @@ static const MagicMethodsTable rangeMagicMethodsTable = {
     .comparisonMethods = &rangeComparisonMethods,
     .conversionMethods = &invalidConversionMethods,
     .collectionMethods = &invalidCollectionMethods,
-    .next              = MAGIC_METHOD_SIGNATURE_NAME(RANGE, next),
 };
 
 static TypeInitMethods listTypeInitMethods = {
@@ -1664,7 +1659,6 @@ static const MagicMethodsTable listMagicMethodsTable = {
     .comparisonMethods = &invalidComparisonMethods,
     .conversionMethods = &invalidConversionMethods,
     .collectionMethods = &listCollectionMethods,
-    .next              = MAGIC_METHOD_SIGNATURE_NAME(INVALID, next),
 };
 
 static TypeInitMethods dictTypeInitMethods = {
@@ -1681,7 +1675,6 @@ static const MagicMethodsTable dictMagicMethodsTable = {
     .comparisonMethods = &invalidComparisonMethods,
     .conversionMethods = &invalidConversionMethods,
     .collectionMethods = &dictCollectionMethods,
-    .next              = MAGIC_METHOD_SIGNATURE_NAME(INVALID, next),
 };
 
 void semiPrimitivesFinalizeMagicMethodsTable(MagicMethodsTable* table) {

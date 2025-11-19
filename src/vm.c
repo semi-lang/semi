@@ -778,20 +778,6 @@ static void runMainLoop(SemiVM* vm) {
                 rc = &stack[c];
 
                 closeUpvalues(vm, rb);
-
-                MagicMethodsTable* table = semiVMGetMagicMethodsTable(vm, &stack[c]);
-                TRAP_ON_ERROR(vm, table->next(&vm->gc, rb, rc), "Failed to get next iterator value");
-                bool hasNext = IS_VALID(rb);
-                if (hasNext && ra != NULL) {
-                    Value one = semiValueNewInt(1);
-                    table     = semiVMGetMagicMethodsTable(vm, &stack[a]);
-                    TRAP_ON_ERROR(
-                        vm, table->numericMethods->add(&vm->gc, ra, ra, &one), "Failed to increment iterator index");
-                }
-                if (hasNext) {
-                    MOVE_FORWARD(2);
-                    goto start_of_vm_loop;
-                }
                 break;
             }
             case OP_BOOL_NOT: {
