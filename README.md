@@ -42,6 +42,10 @@ make amalgamate
 
 This will produce `amalgamated/semi.c` and `amalgamated/semi.h`. This is useful for embedding Semi into other projects without needing to manage multiple source files.
 
+## Development
+
+Check out the `./doc` directory and `./.github/instructions/project.instructions.md` for more information on how we develop, build, and test Semi.
+
 ## License
 
 Semi is licensed under the [Mozilla Public License 2.0](https://www.mozilla.org/en-US/MPL/2.0/).

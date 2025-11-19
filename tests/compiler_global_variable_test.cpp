@@ -23,7 +23,7 @@ TEST_F(CompilerGlobalVariableTest, GlobalVariableCorrectlyResolvedDuringCompilat
     ErrorId result = ParseExpression("globalVar", &expr);
     ASSERT_EQ(result, 0) << "Parsing reference to global variable should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=T
 )");
@@ -44,7 +44,7 @@ TEST_F(CompilerGlobalVariableTest, MultipleGlobalVariablesResolvedCorrectly) {
     ErrorId result = ParseExpression("global2", &expr);
     ASSERT_EQ(result, 0) << "Parsing reference to second global variable should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT   A=0x00 K=0x0001 i=F s=T
 )");
@@ -82,7 +82,7 @@ TEST_F(CompilerGlobalVariableTest, GlobalVariableGeneratesCorrectInstruction) {
     ErrorId result = ParseExpression("testGlobal", &expr);
     ASSERT_EQ(result, 0) << "Parsing reference to global variable should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=T
 )");
@@ -127,7 +127,7 @@ TEST_F(CompilerGlobalVariableTest, GlobalVariableAccessInComplexExpression) {
     ErrorId result = ParseExpression("factor * 2", &expr);
     ASSERT_EQ(result, 0) << "Parsing complex expression with global variable should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=T
 1: OP_MULTIPLY        A=0x00 B=0x00 C=0x82 kb=F kc=T
@@ -143,7 +143,7 @@ TEST_F(CompilerGlobalVariableTest, GlobalVariableInAssignmentExpression) {
     ErrorId result = ParseStatement("local := base + 10", true);
     ASSERT_EQ(result, 0) << "Parsing assignment with global variable should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=T
 1: OP_ADD             A=0x00 B=0x00 C=0x8A kb=F kc=T

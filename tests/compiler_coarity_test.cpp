@@ -27,7 +27,7 @@ TEST_F(CompilerCoarityTest, CompleteIfElseWithValueReturns) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Complete if-else with returns should compile";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions] (ignored)
 [Instructions:test] (ignored)
 
@@ -46,7 +46,7 @@ TEST_F(CompilerCoarityTest, CompleteIfElseWithEmptyReturns) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Complete if-else with empty returns should compile";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions] (ignored)
 [Instructions:test] (ignored)
 
@@ -81,7 +81,7 @@ TEST_F(CompilerCoarityTest, CompleteIfElifElseAllReturning) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Complete if-elif-else should compile";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions] (ignored)
 [Instructions:test] (ignored)
 
@@ -132,7 +132,7 @@ TEST_F(CompilerCoarityTest, NestedCompleteIfElseInAllBranches) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Nested complete if-else should compile";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions] (ignored)
 [Instructions:test] (ignored)
 
@@ -186,7 +186,7 @@ TEST_F(CompilerCoarityTest, ForLoopAfterTerminalIfElseIsUnreachable) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Unreachable for loop after terminal if-else should compile";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions] (ignored)
 [Instructions:test] (ignored)
 
@@ -221,7 +221,7 @@ TEST_F(CompilerCoarityTest, TerminalIfElseAfterForLoop) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Terminal if-else after for loop should compile";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions] (ignored)
 [Instructions:test] (ignored)
 
@@ -250,7 +250,7 @@ TEST_F(CompilerCoarityTest, ForLoopInIfBranchWithReturnAfter) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "For loop followed by return in branch should compile";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions] (ignored)
 [Instructions:test] (ignored)
 
@@ -292,7 +292,7 @@ TEST_F(CompilerCoarityTest, CompleteIfElseInsideForLoopFunctionNeedsReturn) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Function with no returns should compile with coarity=0";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions] (ignored)
 [Instructions:test] (ignored)
 
@@ -332,7 +332,7 @@ TEST_F(CompilerCoarityTest, StatementsAfterTerminalIfElse) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Unreachable statements after terminal if-else should compile";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions] (ignored)
 [Instructions:test] (ignored)
 
@@ -352,7 +352,7 @@ TEST_F(CompilerCoarityTest, AnotherIfElseAfterTerminalIfElse) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Unreachable if-else after terminal should compile";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions] (ignored)
 [Instructions:test] (ignored)
 
@@ -376,7 +376,7 @@ TEST_F(CompilerCoarityTest, FunctionWithNoReturns) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Function without returns should compile";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions] (ignored)
 [Instructions:test] (ignored)
 
@@ -396,7 +396,7 @@ TEST_F(CompilerCoarityTest, IfElseWithNoReturns) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "If-else without returns should compile";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions] (ignored)
 [Instructions:test] (ignored)
 
@@ -435,7 +435,7 @@ TEST_F(CompilerCoarityTest, OneBranchWithValueOneWithout) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "One branch with return, one without, explicit return at end should compile";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions] (ignored)
 [Instructions:test] (ignored)
 

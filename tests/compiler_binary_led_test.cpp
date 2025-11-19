@@ -17,7 +17,7 @@ class CompilerBinaryLedTest : public CompilerTest {};
 TEST_F(CompilerBinaryLedTest, OpAddLargeConstVar) {
     const char* source = "{ x := 400000; z := 300000 + x }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
 1: OP_LOAD_CONSTANT         A=0x02 K=0x0001 i=F s=F
@@ -32,7 +32,7 @@ K[1]: Int 300000
 TEST_F(CompilerBinaryLedTest, OpAddLargeVarConst) {
     const char* source = "{ x := 300000; z := x + 400000 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
 1: OP_LOAD_CONSTANT         A=0x02 K=0x0001 i=F s=F
@@ -47,7 +47,7 @@ K[1]: Int 400000
 TEST_F(CompilerBinaryLedTest, OpAddLargeVarVar) {
     const char* source = "{ x := 300000; y := 400000; z := x + y }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
 1: OP_LOAD_CONSTANT         A=0x01 K=0x0001 i=F s=F
@@ -70,7 +70,7 @@ K[1]: Int 400000
 TEST_F(CompilerBinaryLedTest, OpAddConstVar) {
     const char* source = "{ x := 2; z := 1 + x }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_ADD                   A=0x01 B=0x81 C=0x00 kb=T kc=F
@@ -81,7 +81,7 @@ TEST_F(CompilerBinaryLedTest, OpAddConstVar) {
 TEST_F(CompilerBinaryLedTest, OpAddVarConst) {
     const char* source = "{ x := 1; z := x + 2 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_ADD                   A=0x01 B=0x00 C=0x82 kb=F kc=T
@@ -92,7 +92,7 @@ TEST_F(CompilerBinaryLedTest, OpAddVarConst) {
 TEST_F(CompilerBinaryLedTest, OpAddVarVar) {
     const char* source = "{ x := 1; y := 2; z := x + y }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x0002 i=T s=T
@@ -108,7 +108,7 @@ TEST_F(CompilerBinaryLedTest, OpAddVarVar) {
 TEST_F(CompilerBinaryLedTest, OpSubtractConstConst) {
     const char* source = "{ z := 3 - 1 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -118,7 +118,7 @@ TEST_F(CompilerBinaryLedTest, OpSubtractConstConst) {
 TEST_F(CompilerBinaryLedTest, OpSubtractConstVar) {
     const char* source = "{ x := 1; z := 3 - x }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_SUBTRACT              A=0x01 B=0x83 C=0x00 kb=T kc=F
@@ -129,7 +129,7 @@ TEST_F(CompilerBinaryLedTest, OpSubtractConstVar) {
 TEST_F(CompilerBinaryLedTest, OpSubtractVarConst) {
     const char* source = "{ x := 3; z := x - 1 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0003 i=T s=T
 1: OP_SUBTRACT              A=0x01 B=0x00 C=0x81 kb=F kc=T
@@ -140,7 +140,7 @@ TEST_F(CompilerBinaryLedTest, OpSubtractVarConst) {
 TEST_F(CompilerBinaryLedTest, OpSubtractVarVar) {
     const char* source = "{ x := 3; y := 1; z := x - y }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0003 i=T s=T
 1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x0001 i=T s=T
@@ -156,7 +156,7 @@ TEST_F(CompilerBinaryLedTest, OpSubtractVarVar) {
 TEST_F(CompilerBinaryLedTest, OpMultiplyConstConst) {
     const char* source = "{ z := 2 * 3 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0006 i=T s=T
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -166,7 +166,7 @@ TEST_F(CompilerBinaryLedTest, OpMultiplyConstConst) {
 TEST_F(CompilerBinaryLedTest, OpMultiplyConstVar) {
     const char* source = "{ x := 3; z := 2 * x }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0003 i=T s=T
 1: OP_MULTIPLY              A=0x01 B=0x82 C=0x00 kb=T kc=F
@@ -177,7 +177,7 @@ TEST_F(CompilerBinaryLedTest, OpMultiplyConstVar) {
 TEST_F(CompilerBinaryLedTest, OpMultiplyVarConst) {
     const char* source = "{ x := 2; z := x * 3 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_MULTIPLY              A=0x01 B=0x00 C=0x83 kb=F kc=T
@@ -188,7 +188,7 @@ TEST_F(CompilerBinaryLedTest, OpMultiplyVarConst) {
 TEST_F(CompilerBinaryLedTest, OpMultiplyVarVar) {
     const char* source = "{ x := 2; y := 3; z := x * y }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x0003 i=T s=T
@@ -204,7 +204,7 @@ TEST_F(CompilerBinaryLedTest, OpMultiplyVarVar) {
 TEST_F(CompilerBinaryLedTest, OpPowerConstConst) {
     const char* source = "{ z := 2 ** 3 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0008 i=T s=T
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -214,7 +214,7 @@ TEST_F(CompilerBinaryLedTest, OpPowerConstConst) {
 TEST_F(CompilerBinaryLedTest, OpPowerConstVar) {
     const char* source = "{ x := 3; z := 2 ** x }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0003 i=T s=T
 1: OP_POWER                 A=0x01 B=0x82 C=0x00 kb=T kc=F
@@ -225,7 +225,7 @@ TEST_F(CompilerBinaryLedTest, OpPowerConstVar) {
 TEST_F(CompilerBinaryLedTest, OpPowerVarConst) {
     const char* source = "{ x := 2; z := x ** 3 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_POWER                 A=0x01 B=0x00 C=0x83 kb=F kc=T
@@ -236,7 +236,7 @@ TEST_F(CompilerBinaryLedTest, OpPowerVarConst) {
 TEST_F(CompilerBinaryLedTest, OpPowerVarVar) {
     const char* source = "{ x := 2; y := 3; z := x ** y }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x0003 i=T s=T
@@ -252,7 +252,7 @@ TEST_F(CompilerBinaryLedTest, OpPowerVarVar) {
 TEST_F(CompilerBinaryLedTest, OpDivideConstConst) {
     const char* source = "{ z := 4 / 2 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -262,7 +262,7 @@ TEST_F(CompilerBinaryLedTest, OpDivideConstConst) {
 TEST_F(CompilerBinaryLedTest, OpDivideConstVar) {
     const char* source = "{ x := 2; z := 4 / x }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_DIVIDE                A=0x01 B=0x84 C=0x00 kb=T kc=F
@@ -273,7 +273,7 @@ TEST_F(CompilerBinaryLedTest, OpDivideConstVar) {
 TEST_F(CompilerBinaryLedTest, OpDivideVarConst) {
     const char* source = "{ x := 4; z := x / 2 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0004 i=T s=T
 1: OP_DIVIDE                A=0x01 B=0x00 C=0x82 kb=F kc=T
@@ -284,7 +284,7 @@ TEST_F(CompilerBinaryLedTest, OpDivideVarConst) {
 TEST_F(CompilerBinaryLedTest, OpDivideVarVar) {
     const char* source = "{ x := 4; y := 2; z := x / y }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0004 i=T s=T
 1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x0002 i=T s=T
@@ -300,7 +300,7 @@ TEST_F(CompilerBinaryLedTest, OpDivideVarVar) {
 TEST_F(CompilerBinaryLedTest, OpFloorDivideConstConst) {
     const char* source = "{ z := 5 // 2 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -310,7 +310,7 @@ TEST_F(CompilerBinaryLedTest, OpFloorDivideConstConst) {
 TEST_F(CompilerBinaryLedTest, OpFloorDivideConstVar) {
     const char* source = "{ x := 2; z := 5 // x }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_FLOOR_DIVIDE          A=0x01 B=0x85 C=0x00 kb=T kc=F
@@ -321,7 +321,7 @@ TEST_F(CompilerBinaryLedTest, OpFloorDivideConstVar) {
 TEST_F(CompilerBinaryLedTest, OpFloorDivideVarConst) {
     const char* source = "{ x := 5; z := x // 2 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0005 i=T s=T
 1: OP_FLOOR_DIVIDE          A=0x01 B=0x00 C=0x82 kb=F kc=T
@@ -332,7 +332,7 @@ TEST_F(CompilerBinaryLedTest, OpFloorDivideVarConst) {
 TEST_F(CompilerBinaryLedTest, OpFloorDivideVarVar) {
     const char* source = "{ x := 5; y := 2; z := x // y }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0005 i=T s=T
 1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x0002 i=T s=T
@@ -348,7 +348,7 @@ TEST_F(CompilerBinaryLedTest, OpFloorDivideVarVar) {
 TEST_F(CompilerBinaryLedTest, OpModuloConstConst) {
     const char* source = "{ z := 5 % 3 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -358,7 +358,7 @@ TEST_F(CompilerBinaryLedTest, OpModuloConstConst) {
 TEST_F(CompilerBinaryLedTest, OpModuloConstVar) {
     const char* source = "{ x := 3; z := 5 % x }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0003 i=T s=T
 1: OP_MODULO                A=0x01 B=0x85 C=0x00 kb=T kc=F
@@ -369,7 +369,7 @@ TEST_F(CompilerBinaryLedTest, OpModuloConstVar) {
 TEST_F(CompilerBinaryLedTest, OpModuloVarConst) {
     const char* source = "{ x := 5; z := x % 3 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0005 i=T s=T
 1: OP_MODULO                A=0x01 B=0x00 C=0x83 kb=F kc=T
@@ -380,7 +380,7 @@ TEST_F(CompilerBinaryLedTest, OpModuloVarConst) {
 TEST_F(CompilerBinaryLedTest, OpModuloVarVar) {
     const char* source = "{ x := 5; y := 3; z := x % y }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0005 i=T s=T
 1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x0003 i=T s=T
@@ -400,7 +400,7 @@ TEST_F(CompilerBinaryLedTest, OpModuloVarVar) {
 TEST_F(CompilerBinaryLedTest, OpBitwiseAndConstConst) {
     const char* source = "{ z := 3 & 1 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -410,7 +410,7 @@ TEST_F(CompilerBinaryLedTest, OpBitwiseAndConstConst) {
 TEST_F(CompilerBinaryLedTest, OpBitwiseAndConstVar) {
     const char* source = "{ x := 1; z := 3 & x }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_BITWISE_AND           A=0x01 B=0x83 C=0x00 kb=T kc=F
@@ -421,7 +421,7 @@ TEST_F(CompilerBinaryLedTest, OpBitwiseAndConstVar) {
 TEST_F(CompilerBinaryLedTest, OpBitwiseAndVarConst) {
     const char* source = "{ x := 3; z := x & 1 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0003 i=T s=T
 1: OP_BITWISE_AND           A=0x01 B=0x00 C=0x81 kb=F kc=T
@@ -432,7 +432,7 @@ TEST_F(CompilerBinaryLedTest, OpBitwiseAndVarConst) {
 TEST_F(CompilerBinaryLedTest, OpBitwiseAndVarVar) {
     const char* source = "{ x := 3; y := 1; z := x & y }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0003 i=T s=T
 1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x0001 i=T s=T
@@ -448,7 +448,7 @@ TEST_F(CompilerBinaryLedTest, OpBitwiseAndVarVar) {
 TEST_F(CompilerBinaryLedTest, OpBitwiseOrConstConst) {
     const char* source = "{ z := 1 | 2 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0003 i=T s=T
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -458,7 +458,7 @@ TEST_F(CompilerBinaryLedTest, OpBitwiseOrConstConst) {
 TEST_F(CompilerBinaryLedTest, OpBitwiseOrConstVar) {
     const char* source = "{ x := 2; z := 1 | x }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_BITWISE_OR            A=0x01 B=0x81 C=0x00 kb=T kc=F
@@ -469,7 +469,7 @@ TEST_F(CompilerBinaryLedTest, OpBitwiseOrConstVar) {
 TEST_F(CompilerBinaryLedTest, OpBitwiseOrVarConst) {
     const char* source = "{ x := 1; z := x | 2 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_BITWISE_OR            A=0x01 B=0x00 C=0x82 kb=F kc=T
@@ -480,7 +480,7 @@ TEST_F(CompilerBinaryLedTest, OpBitwiseOrVarConst) {
 TEST_F(CompilerBinaryLedTest, OpBitwiseOrVarVar) {
     const char* source = "{ x := 1; y := 2; z := x | y }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x0002 i=T s=T
@@ -496,7 +496,7 @@ TEST_F(CompilerBinaryLedTest, OpBitwiseOrVarVar) {
 TEST_F(CompilerBinaryLedTest, OpBitwiseXorConstConst) {
     const char* source = "{ z := 3 ^ 1 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -506,7 +506,7 @@ TEST_F(CompilerBinaryLedTest, OpBitwiseXorConstConst) {
 TEST_F(CompilerBinaryLedTest, OpBitwiseXorConstVar) {
     const char* source = "{ x := 1; z := 3 ^ x }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_BITWISE_XOR           A=0x01 B=0x83 C=0x00 kb=T kc=F
@@ -517,7 +517,7 @@ TEST_F(CompilerBinaryLedTest, OpBitwiseXorConstVar) {
 TEST_F(CompilerBinaryLedTest, OpBitwiseXorVarConst) {
     const char* source = "{ x := 3; z := x ^ 1 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0003 i=T s=T
 1: OP_BITWISE_XOR           A=0x01 B=0x00 C=0x81 kb=F kc=T
@@ -528,7 +528,7 @@ TEST_F(CompilerBinaryLedTest, OpBitwiseXorVarConst) {
 TEST_F(CompilerBinaryLedTest, OpBitwiseXorVarVar) {
     const char* source = "{ x := 3; y := 1; z := x ^ y }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0003 i=T s=T
 1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x0001 i=T s=T
@@ -544,7 +544,7 @@ TEST_F(CompilerBinaryLedTest, OpBitwiseXorVarVar) {
 TEST_F(CompilerBinaryLedTest, OpBitwiseLShiftConstConst) {
     const char* source = "{ z := 1 << 2 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0004 i=T s=T
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -554,7 +554,7 @@ TEST_F(CompilerBinaryLedTest, OpBitwiseLShiftConstConst) {
 TEST_F(CompilerBinaryLedTest, OpBitwiseLShiftConstVar) {
     const char* source = "{ x := 2; z := 1 << x }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_BITWISE_L_SHIFT       A=0x01 B=0x81 C=0x00 kb=T kc=F
@@ -565,7 +565,7 @@ TEST_F(CompilerBinaryLedTest, OpBitwiseLShiftConstVar) {
 TEST_F(CompilerBinaryLedTest, OpBitwiseLShiftVarConst) {
     const char* source = "{ x := 1; z := x << 2 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_BITWISE_L_SHIFT       A=0x01 B=0x00 C=0x82 kb=F kc=T
@@ -576,7 +576,7 @@ TEST_F(CompilerBinaryLedTest, OpBitwiseLShiftVarConst) {
 TEST_F(CompilerBinaryLedTest, OpBitwiseLShiftVarVar) {
     const char* source = "{ x := 1; y := 2; z := x << y }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x0002 i=T s=T
@@ -592,7 +592,7 @@ TEST_F(CompilerBinaryLedTest, OpBitwiseLShiftVarVar) {
 TEST_F(CompilerBinaryLedTest, OpBitwiseRShiftConstConst) {
     const char* source = "{ z := 4 >> 1 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -602,7 +602,7 @@ TEST_F(CompilerBinaryLedTest, OpBitwiseRShiftConstConst) {
 TEST_F(CompilerBinaryLedTest, OpBitwiseRShiftConstVar) {
     const char* source = "{ x := 1; z := 4 >> x }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_BITWISE_R_SHIFT       A=0x01 B=0x84 C=0x00 kb=T kc=F
@@ -613,7 +613,7 @@ TEST_F(CompilerBinaryLedTest, OpBitwiseRShiftConstVar) {
 TEST_F(CompilerBinaryLedTest, OpBitwiseRShiftVarConst) {
     const char* source = "{ x := 4; z := x >> 1 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0004 i=T s=T
 1: OP_BITWISE_R_SHIFT       A=0x01 B=0x00 C=0x81 kb=F kc=T
@@ -624,7 +624,7 @@ TEST_F(CompilerBinaryLedTest, OpBitwiseRShiftVarConst) {
 TEST_F(CompilerBinaryLedTest, OpBitwiseRShiftVarVar) {
     const char* source = "{ x := 4; y := 1; z := x >> y }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0004 i=T s=T
 1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x0001 i=T s=T
@@ -644,7 +644,7 @@ TEST_F(CompilerBinaryLedTest, OpBitwiseRShiftVarVar) {
 TEST_F(CompilerBinaryLedTest, OpEqConstConst) {
     const char* source = "{ z := 1 == 2 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_BOOL             A=0x00 K=0x0000 i=F s=F
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -654,7 +654,7 @@ TEST_F(CompilerBinaryLedTest, OpEqConstConst) {
 TEST_F(CompilerBinaryLedTest, OpEqConstVar) {
     const char* source = "{ x := 2; z := 1 == x }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_EQ                    A=0x01 B=0x81 C=0x00 kb=T kc=F
@@ -665,7 +665,7 @@ TEST_F(CompilerBinaryLedTest, OpEqConstVar) {
 TEST_F(CompilerBinaryLedTest, OpEqVarConst) {
     const char* source = "{ x := 1; z := x == 2 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_EQ                    A=0x01 B=0x00 C=0x82 kb=F kc=T
@@ -676,7 +676,7 @@ TEST_F(CompilerBinaryLedTest, OpEqVarConst) {
 TEST_F(CompilerBinaryLedTest, OpEqVarVar) {
     const char* source = "{ x := 1; y := 2; z := x == y }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x0002 i=T s=T
@@ -692,7 +692,7 @@ TEST_F(CompilerBinaryLedTest, OpEqVarVar) {
 TEST_F(CompilerBinaryLedTest, OpNeqConstConst) {
     const char* source = "{ z := 1 != 2 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_BOOL             A=0x00 K=0x0000 i=T s=F
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -702,7 +702,7 @@ TEST_F(CompilerBinaryLedTest, OpNeqConstConst) {
 TEST_F(CompilerBinaryLedTest, OpNeqConstVar) {
     const char* source = "{ x := 2; z := 1 != x }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_NEQ                   A=0x01 B=0x81 C=0x00 kb=T kc=F
@@ -713,7 +713,7 @@ TEST_F(CompilerBinaryLedTest, OpNeqConstVar) {
 TEST_F(CompilerBinaryLedTest, OpNeqVarConst) {
     const char* source = "{ x := 1; z := x != 2 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_NEQ                   A=0x01 B=0x00 C=0x82 kb=F kc=T
@@ -724,7 +724,7 @@ TEST_F(CompilerBinaryLedTest, OpNeqVarConst) {
 TEST_F(CompilerBinaryLedTest, OpNeqVarVar) {
     const char* source = "{ x := 1; y := 2; z := x != y }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x0002 i=T s=T
@@ -740,7 +740,7 @@ TEST_F(CompilerBinaryLedTest, OpNeqVarVar) {
 TEST_F(CompilerBinaryLedTest, OpGtConstConst) {
     const char* source = "{ z := 2 > 1 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_BOOL             A=0x00 K=0x0000 i=T s=F
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -750,7 +750,7 @@ TEST_F(CompilerBinaryLedTest, OpGtConstConst) {
 TEST_F(CompilerBinaryLedTest, OpGtConstVar) {
     const char* source = "{ x := 1; z := 2 > x }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_GT                    A=0x01 B=0x82 C=0x00 kb=T kc=F
@@ -761,7 +761,7 @@ TEST_F(CompilerBinaryLedTest, OpGtConstVar) {
 TEST_F(CompilerBinaryLedTest, OpGtVarConst) {
     const char* source = "{ x := 2; z := x > 1 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_GT                    A=0x01 B=0x00 C=0x81 kb=F kc=T
@@ -772,7 +772,7 @@ TEST_F(CompilerBinaryLedTest, OpGtVarConst) {
 TEST_F(CompilerBinaryLedTest, OpGtVarVar) {
     const char* source = "{ x := 2; y := 1; z := x > y }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x0001 i=T s=T
@@ -788,7 +788,7 @@ TEST_F(CompilerBinaryLedTest, OpGtVarVar) {
 TEST_F(CompilerBinaryLedTest, OpGeConstConst) {
     const char* source = "{ z := 2 >= 1 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_BOOL             A=0x00 K=0x0000 i=T s=F
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -798,7 +798,7 @@ TEST_F(CompilerBinaryLedTest, OpGeConstConst) {
 TEST_F(CompilerBinaryLedTest, OpGeConstVar) {
     const char* source = "{ x := 1; z := 2 >= x }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_GE                    A=0x01 B=0x82 C=0x00 kb=T kc=F
@@ -809,7 +809,7 @@ TEST_F(CompilerBinaryLedTest, OpGeConstVar) {
 TEST_F(CompilerBinaryLedTest, OpGeVarConst) {
     const char* source = "{ x := 2; z := x >= 1 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_GE                    A=0x01 B=0x00 C=0x81 kb=F kc=T
@@ -820,7 +820,7 @@ TEST_F(CompilerBinaryLedTest, OpGeVarConst) {
 TEST_F(CompilerBinaryLedTest, OpGeVarVar) {
     const char* source = "{ x := 2; y := 1; z := x >= y }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x0001 i=T s=T
@@ -836,7 +836,7 @@ TEST_F(CompilerBinaryLedTest, OpGeVarVar) {
 TEST_F(CompilerBinaryLedTest, OpLtConstConst) {
     const char* source = "{ z := 1 < 2 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_BOOL             A=0x00 K=0x0000 i=T s=F
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -846,7 +846,7 @@ TEST_F(CompilerBinaryLedTest, OpLtConstConst) {
 TEST_F(CompilerBinaryLedTest, OpLtConstVar) {
     const char* source = "{ x := 2; z := 1 < x }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_GT                    A=0x01 B=0x00 C=0x81 kb=F kc=T
@@ -857,7 +857,7 @@ TEST_F(CompilerBinaryLedTest, OpLtConstVar) {
 TEST_F(CompilerBinaryLedTest, OpLtVarConst) {
     const char* source = "{ x := 1; z := x < 2 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_GT                    A=0x01 B=0x82 C=0x00 kb=T kc=F
@@ -868,7 +868,7 @@ TEST_F(CompilerBinaryLedTest, OpLtVarConst) {
 TEST_F(CompilerBinaryLedTest, OpLtVarVar) {
     const char* source = "{ x := 1; y := 2; z := x < y }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x0002 i=T s=T
@@ -884,7 +884,7 @@ TEST_F(CompilerBinaryLedTest, OpLtVarVar) {
 TEST_F(CompilerBinaryLedTest, OpLteConstConst) {
     const char* source = "{ z := 1 <= 2 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_BOOL             A=0x00 K=0x0000 i=T s=F
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -894,7 +894,7 @@ TEST_F(CompilerBinaryLedTest, OpLteConstConst) {
 TEST_F(CompilerBinaryLedTest, OpLteConstVar) {
     const char* source = "{ x := 2; z := 1 <= x }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0002 i=T s=T
 1: OP_GE                    A=0x01 B=0x00 C=0x81 kb=F kc=T
@@ -905,7 +905,7 @@ TEST_F(CompilerBinaryLedTest, OpLteConstVar) {
 TEST_F(CompilerBinaryLedTest, OpLteVarConst) {
     const char* source = "{ x := 1; z := x <= 2 }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_GE                    A=0x01 B=0x82 C=0x00 kb=T kc=F
@@ -916,7 +916,7 @@ TEST_F(CompilerBinaryLedTest, OpLteVarConst) {
 TEST_F(CompilerBinaryLedTest, OpLteVarVar) {
     const char* source = "{ x := 1; y := 2; z := x <= y }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x0002 i=T s=T
@@ -936,7 +936,7 @@ TEST_F(CompilerBinaryLedTest, OpLteVarVar) {
 TEST_F(CompilerBinaryLedTest, OpCheckTypeConstConst) {
     const char* source = "{ z := 1 is Int }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_BOOL             A=0x00 K=0x0000 i=T s=F
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -946,7 +946,7 @@ TEST_F(CompilerBinaryLedTest, OpCheckTypeConstConst) {
 TEST_F(CompilerBinaryLedTest, OpCheckTypeVarConst) {
     const char* source = "{ x := 1; z := x is Int }";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_CHECK_TYPE            A=0x01 B=0x00 C=0x82 kb=F kc=T
@@ -961,7 +961,7 @@ TEST_F(CompilerBinaryLedTest, OpCheckTypeVarConst) {
 TEST_F(CompilerBinaryLedTest, OpContainConstConst) {
     const char* source = R"({ z := "a" in "abc" })";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_BOOL             A=0x00 K=0x0000 i=T s=F
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -971,7 +971,7 @@ TEST_F(CompilerBinaryLedTest, OpContainConstConst) {
 TEST_F(CompilerBinaryLedTest, OpContainConstVar) {
     const char* source = R"({ x := "abc"; z := "a" in x })";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
 1: OP_LOAD_INLINE_STRING    A=0x02 K=0x0061 i=T s=F
@@ -985,7 +985,7 @@ K[0]: String "abc" length=3
 TEST_F(CompilerBinaryLedTest, OpContainVarConst) {
     const char* source = R"({ x := "a"; z := x in "abc" })";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_STRING    A=0x00 K=0x0061 i=T s=F
 1: OP_LOAD_CONSTANT         A=0x02 K=0x0000 i=F s=F
@@ -999,7 +999,7 @@ K[0]: String "abc" length=3
 TEST_F(CompilerBinaryLedTest, OpContainVarVar) {
     const char* source = R"({ x := "a"; y := "abc"; z := x in y })";
     EXPECT_EQ(ParseModule(source), 0);
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_STRING    A=0x00 K=0x0061 i=T s=F
 1: OP_LOAD_CONSTANT         A=0x01 K=0x0000 i=F s=F

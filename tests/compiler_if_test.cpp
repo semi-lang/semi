@@ -20,7 +20,7 @@ TEST_F(CompilerIfTest, SimpleIfStatement) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Simple if statement should parse successfully";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_BOOL         A=0x00 K=0x0000 i=T s=F
 1: OP_C_JUMP            A=0x00 K=0x0001 i=F s=T
@@ -34,7 +34,7 @@ TEST_F(CompilerIfTest, IfElseStatement) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "If-else statement should parse successfully";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_BOOL         A=0x00 K=0x0000 i=T s=F
 1: OP_C_JUMP            A=0x00 K=0x0002 i=F s=T
@@ -49,7 +49,7 @@ TEST_F(CompilerIfTest, IfElifStatement) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "If-elif statement should parse successfully";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_BOOL         A=0x00 K=0x0000 i=F s=F
 1: OP_C_JUMP            A=0x00 K=0x0002 i=F s=T
@@ -66,7 +66,7 @@ TEST_F(CompilerIfTest, IfElifElseStatement) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "If-elif-else statement should parse successfully";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_BOOL         A=0x00 K=0x0000 i=F s=F
 1: OP_C_JUMP            A=0x00 K=0x0002 i=F s=T
@@ -85,7 +85,7 @@ TEST_F(CompilerIfTest, ConstantTrueCondition) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Constant true condition should parse successfully";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_BOOL              A=0x00 K=0x0000 i=T s=F
 1: OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
@@ -100,7 +100,7 @@ TEST_F(CompilerIfTest, ConstantFalseCondition) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Constant false condition should parse successfully";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_BOOL              A=0x00 K=0x0000 i=F s=F
 1: OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
@@ -116,7 +116,7 @@ TEST_F(CompilerIfTest, VariableCondition) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Variable condition should parse successfully";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_C_JUMP            A=0x00 K=0x0001 i=F s=T
 1: OP_CLOSE_UPVALUES    A=0x01 B=0x00 C=0x00 kb=F kc=F
@@ -130,7 +130,7 @@ TEST_F(CompilerIfTest, ComplexExpressionCondition) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Complex expression condition should parse successfully";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_GT                A=0x01 B=0x00 C=0x85 kb=F kc=T
 1: OP_C_JUMP            A=0x01 K=0x0001 i=F s=T
@@ -144,7 +144,7 @@ TEST_F(CompilerIfTest, VariableBindingInElifBlock) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Variable binding in elif block should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_BOOL              A=0x00 K=0x0000 i=F s=F
 1: OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
@@ -170,7 +170,7 @@ TEST_F(CompilerIfTest, SiblingScopeIsolation) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Sibling scope isolation should work";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_C_JUMP                 A=0x00 K=0x0003 i=F s=T
 1: OP_LOAD_INLINE_INTEGER    A=0x01 K=0x0005 i=T s=T
@@ -186,7 +186,7 @@ TEST_F(CompilerIfTest, VariableAccessFromParentScope) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Variable access from parent scope should work";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER    A=0x00 K=0x0005 i=T s=T
 1: OP_LOAD_BOOL              A=0x01 K=0x0000 i=T s=F
@@ -202,7 +202,7 @@ TEST_F(CompilerIfTest, VariableAssignmentInBlocks) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Variable assignment in blocks should work";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER    A=0x00 K=0x0005 i=T s=T
 1: OP_LOAD_BOOL              A=0x01 K=0x0000 i=T s=F
@@ -226,7 +226,7 @@ TEST_F(CompilerIfTest, UnbindVariableAfterScope) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Variable binding after scope should work (variables in different scopes)";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_BOOL              A=0x00 K=0x0000 i=T s=F
 1: OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
@@ -242,7 +242,7 @@ TEST_F(CompilerIfTest, UnbindVariableAfterElseScope) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Variable binding after else scope should work (variables in different scopes)";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_BOOL              A=0x00 K=0x0000 i=F s=F
 1: OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T
@@ -294,7 +294,7 @@ TEST_F(CompilerIfTest, JumpInstructionVerification) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Should parse successfully";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_BOOL         A=0x00 K=0x0000 i=F s=F
 1: OP_C_JUMP            A=0x00 K=0x0002 i=F s=T
@@ -309,7 +309,7 @@ TEST_F(CompilerIfTest, CloseUpvaluesInstruction) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Should parse successfully";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_BOOL         A=0x00 K=0x0000 i=T s=F
 1: OP_C_JUMP            A=0x00 K=0x0001 i=F s=T
@@ -324,7 +324,7 @@ TEST_F(CompilerIfTest, NestedIfStatements) {
     ErrorId result = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Nested if statements should parse successfully";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_BOOL              A=0x00 K=0x0000 i=T s=F
 1: OP_C_JUMP                 A=0x00 K=0x0005 i=F s=T
@@ -357,7 +357,7 @@ TEST_F(CompilerIfTest, LongElifChainsWithinLimits) {
     ErrorId result = ParseStatement(source.c_str(), false);
     EXPECT_EQ(result, 0) << "Long elif chains within limits should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0:  OP_LOAD_BOOL              A=0x00 K=0x0000 i=F s=F
 1:  OP_C_JUMP                 A=0x00 K=0x0002 i=F s=T

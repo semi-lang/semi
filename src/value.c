@@ -12,8 +12,6 @@
 #include "./semi_common.h"
 #include "./utf8.h"
 
-#define FLOAT_EPSILON 1e-6
-
 static inline Object* newObject(GC* gc, ObjectType type, size_t size) {
     Object* s = (Object*)semiMalloc(gc, size);
     if (!s) {

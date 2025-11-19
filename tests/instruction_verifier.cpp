@@ -239,14 +239,13 @@ ParsedInstruction SpecParser::parseInstruction() {
             instr.k.K  = parseHexWord();
             skipWhitespace();
 
-            if (matchKeyword("i=")) {
-                instr.k.i = parseFlag();
-                skipWhitespace();
-            }
-            if (matchKeyword("s=")) {
-                instr.k.s = parseFlag();
-                skipWhitespace();
-            }
+            if (!matchKeyword("i=")) error("Expected 'i=' in K-type instruction");
+            instr.k.i = parseFlag();
+            skipWhitespace();
+
+            if (!matchKeyword("s=")) error("Expected 's=' in K-type instruction");
+            instr.k.s = parseFlag();
+            skipWhitespace();
         } else if (matchKeyword("B=")) {
             // T-type instruction
             instr.type = ParsedInstruction::T_TYPE;
@@ -258,14 +257,13 @@ ParsedInstruction SpecParser::parseInstruction() {
             instr.t.C = parseHexByte();
             skipWhitespace();
 
-            if (matchKeyword("kb=")) {
-                instr.t.kb = parseFlag();
-                skipWhitespace();
-            }
-            if (matchKeyword("kc=")) {
-                instr.t.kc = parseFlag();
-                skipWhitespace();
-            }
+            if (!matchKeyword("kb=")) error("Expected 'kb=' in T-type instruction");
+            instr.t.kb = parseFlag();
+            skipWhitespace();
+
+            if (!matchKeyword("kc=")) error("Expected 'kc=' in T-type instruction");
+            instr.t.kc = parseFlag();
+            skipWhitespace();
         } else {
             error("Expected 'K=' or 'B=' after 'A='");
         }
@@ -275,10 +273,9 @@ ParsedInstruction SpecParser::parseInstruction() {
         instr.j.J  = parseHexDword();
         skipWhitespace();
 
-        if (matchKeyword("s=")) {
-            instr.j.s = parseFlag();
-            skipWhitespace();
-        }
+        if (!matchKeyword("s=")) error("Expected 's=' in J-type instruction");
+        instr.j.s = parseFlag();
+        skipWhitespace();
     } else {
         error("Expected 'A=' or 'J=' for instruction operands");
     }
@@ -785,9 +782,7 @@ ParsedValue SpecParser::parseValueFromProperties(const char* typeName, std::map<
             func.maxStackSize = maxStackSize;
         }
     } else {
-        // Unknown type - store raw properties
-        result.type     = ParsedValue::TYPE_UNKNOWN;
-        propsMap["raw"] = properties;
+        errorFmt("Unknown constant type: %s", typeName);
     }
 
     return result;
@@ -801,10 +796,15 @@ ParsedValue SpecParser::parseValueFromProperties(const char* typeName, std::map<
 
 Verifier::Verifier(const ParsedSpec& spec) : spec(spec) {}
 
-void Verifier::verify(SemiModule* module) {
+void Verifier::verifyModule(SemiModule* module) {
     // Verify main instructions
     auto mainIt = spec.functions.find("");
-    if (mainIt != spec.functions.end() && module->moduleInit) {
+    if (mainIt != spec.functions.end()) {
+        // moduleInit must exist, even if ignored
+        if (module->moduleInit == nullptr) {
+            ADD_FAILURE() << "Module has no moduleInit function for verification.";
+            return;
+        }
         if (!mainIt->second.ignored) {
             verifyInstructions(module->moduleInit, mainIt->second, "main");
         }
@@ -826,15 +826,24 @@ void Verifier::verify(SemiModule* module) {
     }
 }
 
-void Verifier::verify(Compiler* compiler) {
+void Verifier::verifyCompiler(Compiler* compiler) {
     if (compiler->artifactModule == nullptr) {
         ADD_FAILURE() << "Compiler has no artifact module for verification.";
         return;
     }
 
     auto mainIt = spec.functions.find("");
-    if (mainIt != spec.functions.end() && !mainIt->second.ignored) {
+    if (mainIt != spec.functions.end()) {
         FunctionProto* moduleInit = compiler->artifactModule->moduleInit;
+        if (moduleInit != nullptr) {
+            // only finalizeCompiler() creates moduleInit
+            ADD_FAILURE() << "Module has moduleInit function before finalizeCompiler().";
+            return;
+        }
+        if (mainIt->second.ignored) {
+            // skip verification if marked as ignored
+            return;
+        }
 
         // Create a temporary FunctionProto to wrap the rootFunction's chunk
         // Note: This is a stack-allocated struct that mimics FunctionProto for verification only
@@ -847,17 +856,14 @@ void Verifier::verify(Compiler* compiler) {
             uint8_t upvalueCount;
         } tempFunc;
 
-        if (moduleInit == nullptr) {
-            tempFunc.chunk        = compiler->rootFunction.chunk;
-            tempFunc.maxStackSize = compiler->rootFunction.maxUsedRegisterCount;
-            tempFunc.arity        = 0;
-            tempFunc.upvalueCount = 0;
-            tempFunc.coarity      = 0;
-            tempFunc.moduleId     = compiler->artifactModule->moduleId;
+        tempFunc.chunk        = compiler->rootFunction.chunk;
+        tempFunc.maxStackSize = compiler->rootFunction.maxUsedRegisterCount;
+        tempFunc.arity        = 0;
+        tempFunc.upvalueCount = 0;
+        tempFunc.coarity      = 0;
+        tempFunc.moduleId     = compiler->artifactModule->moduleId;
 
-            moduleInit = (FunctionProto*)&tempFunc;
-        }
-
+        moduleInit = (FunctionProto*)&tempFunc;
         verifyInstructions(moduleInit, mainIt->second, "main");
     }
 
@@ -1553,25 +1559,25 @@ void ModuleBuilder::errorFmt(const char* fmt, ...) {
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
 #pragma region Public API
 
-void VerifyCompilation(SemiModule* module, const char* spec) {
+void VerifyModule(SemiModule* module, const char* spec) {
     try {
         SpecParser parser(spec);
         ParsedSpec parsed = parser.parse();
 
         Verifier verifier(parsed);
-        verifier.verify(module);
+        verifier.verifyModule(module);
     } catch (const std::exception& e) {
         ADD_FAILURE() << "Failed to parse DSL spec: " << e.what();
     }
 }
 
-void VerifyCompilation(Compiler* compiler, const char* spec) {
+void VerifyCompiler(Compiler* compiler, const char* spec) {
     try {
         SpecParser parser(spec);
         ParsedSpec parsed = parser.parse();
 
         Verifier verifier(parsed);
-        verifier.verify(compiler);
+        verifier.verifyCompiler(compiler);
     } catch (const std::exception& e) {
         ADD_FAILURE() << "Failed to parse DSL spec: " << e.what();
     }

@@ -80,12 +80,10 @@ typedef uint32_t Instruction;
 #define OPERAND_J_S(instruction) ((instruction & (1 << 7)) != 0)  // Bits 7
 #define OPERAND_J_J(instruction) ((uint32_t)(instruction >> 8))   // Bits 8-31
 
-// X-macro for all opcodes
-//   name: opcode name without OP_ prefix
-//   type: instruction type - N (none), J (jump), K (constant), T (ternary)
-//
-// We choose to duplicate the list of opcodes here because we want to preserve
-// the comments explaining each opcode.
+// X(name, type)
+//   * name: opcode name without OP_ prefix
+//   * type: instruction type - N (none), J (jump), K (constant), T (ternary)
+
 #define OPCODE_X_MACRO(X)     \
     X(NOOP, N)                \
     X(JUMP, J)                \

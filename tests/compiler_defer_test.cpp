@@ -21,7 +21,7 @@ TEST_F(CompilerDeferTest, BasicDeferBlockExactInstructions) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Basic defer block should compile successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_DEFER_CALL            A=0x00 K=0x0000 i=F s=F
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -42,7 +42,7 @@ TEST_F(CompilerDeferTest, MultipleDeferBlocksExactInstructions) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Multiple defer blocks should compile successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_DEFER_CALL            A=0x00 K=0x0000 i=F s=F
 1: OP_DEFER_CALL            A=0x00 K=0x0001 i=F s=F
@@ -69,7 +69,7 @@ TEST_F(CompilerDeferTest, DeferInFunctionExactInstructions) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Defer in function should compile successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT         A=0x00 K=0x0001 i=F s=F
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
@@ -113,7 +113,7 @@ TEST_F(CompilerDeferTest, ReturnWithoutValueInDeferExactInstructions) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Return without value in defer should compile successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT         A=0x00 K=0x0001 i=F s=F
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
@@ -141,7 +141,7 @@ TEST_F(CompilerDeferTest, EmptyDeferBlockExactInstructions) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Empty defer block should compile successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_DEFER_CALL            A=0x00 K=0x0000 i=F s=F
 1: OP_RETURN                A=0xFF B=0x00 C=0x00 kb=F kc=F

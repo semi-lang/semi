@@ -253,8 +253,8 @@ class Verifier {
    public:
     explicit Verifier(const ParsedSpec& spec);
 
-    void verify(SemiModule* module);
-    void verify(Compiler* compiler);
+    void verifyModule(SemiModule* module);
+    void verifyCompiler(Compiler* compiler);
 
    private:
     const ParsedSpec& spec;
@@ -319,8 +319,8 @@ class ModuleBuilder {
  │ Public API
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
 
-void VerifyCompilation(SemiModule* module, const char* spec);
-void VerifyCompilation(Compiler* compiler, const char* spec);
+void VerifyCompiler(Compiler* compiler, const char* spec);
+void VerifyModule(SemiModule* module, const char* spec);
 
 SemiModule* BuildModule(SemiVM* vm, const char* spec);
 ErrorId BuildAndRunModule(SemiVM* vm, const char* spec, SemiModule** outModule = nullptr);

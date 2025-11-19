@@ -464,12 +464,23 @@ factor: Int 10
 
 ## API
 
-### Main Verification Function
+### Verification Functions
+
+There are two verification functions depending on the parsing method used:
 
 ```cpp
-void VerifyCompilation(SemiModule* module, const char* spec);
-void VerifyCompilation(Compiler* compiler, const char* spec);
+// Use when tests call ParseStatement() or ParseExpression()
+// Instructions are stored in compiler.rootFunction.chunk
+void VerifyCompiler(Compiler* compiler, const char* spec);
+
+// Use when tests call ParseModule()  
+// Instructions are stored in module->moduleInit
+void VerifyModule(SemiModule* module, const char* spec);
 ```
+
+**Usage Guidelines:**
+- If your test uses `ParseStatement()` or `ParseExpression()`, use `VerifyCompiler(&compiler, spec)`
+- If your test uses `ParseModule()`, use `VerifyModule(module, spec)`
 
 Parses and verifies the DSL specification against the compiled module or compiler state.
 
@@ -530,8 +541,3 @@ arity=0 coarity=0 maxStackSize=3
     ASSERT_EQ(vm->values[0].as.i, 8);
 }
 ```
-
-## TODO
-
-- [ ] Support for more complex constant types (nested functions, etc.)
-- [ ] Round-trip validation (compile → DSL → build → verify)

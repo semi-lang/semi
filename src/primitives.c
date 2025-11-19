@@ -10,8 +10,6 @@
 #include "./value.h"
 #include "./vm.h"
 
-#define FLOAT_EPSILON 1e-6
-
 // This expands to struct field initializers for the given baseType.
 #define FIELD_INIT_MACRO(name, args, baseType) .name = MAGIC_METHOD_SIGNATURE_NAME(baseType, name),
 

@@ -16,7 +16,7 @@ TEST_F(CompilerModuleAssignmentTest, ModuleIntegerAssignment) {
     ErrorId result = ParseStatement("x := 42", false);
     ASSERT_EQ(result, 0) << "Parsing 'x := 42' should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x002A i=T s=T
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
@@ -30,7 +30,7 @@ TEST_F(CompilerModuleAssignmentTest, ModuleDoubleAssignment) {
     ErrorId result = ParseStatement("y := 3.14", false);
     ASSERT_EQ(result, 0) << "Parsing 'y := 3.14' should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
@@ -47,7 +47,7 @@ TEST_F(CompilerModuleAssignmentTest, ModuleBooleanAssignment) {
     ErrorId result = ParseStatement("flag := true", false);
     ASSERT_EQ(result, 0) << "Parsing 'flag := true' should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_BOOL             A=0x00 K=0x0000 i=T s=F
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
@@ -61,7 +61,7 @@ TEST_F(CompilerModuleAssignmentTest, ModuleStringAssignment) {
     ErrorId result = ParseStatement("name := \"hello\"", false);
     ASSERT_EQ(result, 0) << "Parsing 'name := \"hello\"' should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
@@ -78,7 +78,7 @@ TEST_F(CompilerModuleAssignmentTest, ModuleExpressionAssignment) {
     ErrorId result = ParseStatement("result := 10 + 5", false);
     ASSERT_EQ(result, 0) << "Parsing 'result := 10 + 5' should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x000F i=T s=T
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
@@ -94,7 +94,7 @@ TEST_F(CompilerModuleAssignmentTest, ModuleVariableToModuleVariableAssignment) {
     ErrorId result = ParseStatement("y := x", false);
     ASSERT_EQ(result, 0) << "Parsing 'y := x' should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_GET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0001 i=F s=F
@@ -111,7 +111,7 @@ TEST_F(CompilerModuleAssignmentTest, ModuleVariableReassignment) {
     ErrorId result = ParseStatement("counter = 100", false);
     ASSERT_EQ(result, 0) << "Assignment should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0064 i=T s=T
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
@@ -126,7 +126,7 @@ TEST_F(CompilerModuleAssignmentTest, MultipleModuleVariablesUniqueIds) {
     ASSERT_EQ(ParseStatement("b := 2", false), 0) << "Binding b should succeed";
     ASSERT_EQ(ParseStatement("c := 3", false), 0) << "Binding c should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
@@ -173,7 +173,7 @@ TEST_F(CompilerModuleAssignmentTest, ExportIntegerAssignment) {
     ErrorId result = ParseStatement("export x := 42", false);
     ASSERT_EQ(result, 0) << "Parsing 'export x := 42' should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x002A i=T s=T
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=T
@@ -187,7 +187,7 @@ TEST_F(CompilerModuleAssignmentTest, ExportDoubleAssignment) {
     ErrorId result = ParseStatement("export pi := 3.14159", false);
     ASSERT_EQ(result, 0) << "Parsing 'export pi := 3.14159' should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=T
@@ -204,7 +204,7 @@ TEST_F(CompilerModuleAssignmentTest, ExportBooleanAssignment) {
     ErrorId result = ParseStatement("export debugMode := true", false);
     ASSERT_EQ(result, 0) << "Parsing 'export debugMode := true' should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_BOOL             A=0x00 K=0x0000 i=T s=F
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=T
@@ -218,7 +218,7 @@ TEST_F(CompilerModuleAssignmentTest, ExportStringAssignment) {
     ErrorId result = ParseStatement("export appName := \"MyApp\"", false);
     ASSERT_EQ(result, 0) << "Parsing 'export appName := \"MyApp\"' should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=T
@@ -235,7 +235,7 @@ TEST_F(CompilerModuleAssignmentTest, ExportExpressionAssignment) {
     ErrorId result = ParseStatement("export maxValue := 100 * 2 + 56", false);
     ASSERT_EQ(result, 0) << "Parsing 'export maxValue := 100 * 2 + 56' should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0100 i=T s=T
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=T
@@ -251,7 +251,7 @@ TEST_F(CompilerModuleAssignmentTest, ExportVariableToExportVariableAssignment) {
     ErrorId result = ParseStatement("export derivedValue := baseValue", false);
     ASSERT_EQ(result, 0) << "Parsing 'export derivedValue := baseValue' should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_GET_MODULE_VAR        A=0x00 K=0x0000 i=F s=T
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0001 i=F s=T
@@ -268,7 +268,7 @@ TEST_F(CompilerModuleAssignmentTest, GlobalVariableToExportVariableAssignment) {
     ErrorId result = ParseStatement("export publicVar := globalVar", false);
     ASSERT_EQ(result, 0) << "Parsing 'export publicVar := globalVar' should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_GET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=T
@@ -287,7 +287,7 @@ TEST_F(CompilerModuleAssignmentTest, ExportVariableReassignment) {
     ErrorId result = ParseStatement("exportCounter = 500", false);
     ASSERT_EQ(result, 0) << "Assignment should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x01F4 i=T s=T
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=T
@@ -303,7 +303,7 @@ TEST_F(CompilerModuleAssignmentTest, ExportAndGlobalVariablesUniqueIds) {
     ErrorId result = ParseStatement("export exportVar := 2", false);
     ASSERT_EQ(result, 0) << "Second binding should succeed";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F

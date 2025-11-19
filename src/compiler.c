@@ -4,6 +4,7 @@
 #include "./compiler.h"
 
 #include <inttypes.h>
+#include <math.h>
 #include <setjmp.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -1266,7 +1267,8 @@ save_to_constant_table:
     return;
 }
 
-// Save expressions to the given register.
+// Save expressions to the given register. It is guaranteed that this function will not use temporary
+// registers other than `reg`.
 static void saveExprToRegister(Compiler* compiler, PrattExpr* expr, LocalRegisterId reg) {
     switch (expr->type) {
         case PRATT_EXPR_TYPE_CONSTANT: {
@@ -2911,63 +2913,77 @@ static void saveRangeOperand(
     *operandInline = false;
 }
 
-static void parseRangeOrIter(Compiler* compiler, LocalRegisterId iterReg) {
-    PrattState state = {
-        .targetRegister    = iterReg,
+// parse range with startExpr already parsed.
+static void parseForRange(Compiler* compiler, PrattExpr startExpr, LocalRegisterId iterReg) {
+    // we handle each expression one by one with the guarantee that each expression
+    // uses only one register (the targetRegister) to store the result.
+
+    PrattExpr endExpr, stepExpr;
+    LocalRegisterId startReg, endReg, stepReg;
+    startReg = iterReg;
+
+    if (startExpr.type == PRATT_EXPR_TYPE_CONSTANT && !IS_NUMBER(&startExpr.value.constant)) {
+        SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_INVALID_VALUE, "Range operands must be numbers");
+    }
+
+    nextToken(&compiler->lexer);  // Consume ".."
+
+    endReg              = reserveTempRegister(compiler);
+    PrattState endState = {
+        .targetRegister    = endReg,
         .rightBindingPower = PRECEDENCE_NON_KEYWORD,
     };
-    PrattExpr iterExpr;
-    semiParseExpression(compiler, state, &iterExpr);
-    if (peekToken(&compiler->lexer) == TK_DOUBLE_DOTS) {
-        // for ... in startExpr..endExpr [step stepExpr]
-        nextToken(&compiler->lexer);  // Consume ".."
+    semiParseExpression(compiler, endState, &endExpr);
 
-        PCLocation pcBeforeIter = currentPCLocation(compiler);
+    stepReg = reserveTempRegister(compiler);
+    if (peekToken(&compiler->lexer) == TK_STEP) {
+        nextToken(&compiler->lexer);  // Consume "step"
+        if (endExpr.type == PRATT_EXPR_TYPE_CONSTANT && !IS_NUMBER(&endExpr.value.constant)) {
+            SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_INVALID_VALUE, "Range operands must be numbers");
+        }
 
-        saveExprToRegister(compiler, &iterExpr, iterReg);
-        uint8_t endOperand, stepOperand;
-        bool endOperandInline, stepOperandInline;
-
-        LocalRegisterId endReg, stepReg;
-        endReg              = reserveTempRegister(compiler);
-        stepReg             = reserveTempRegister(compiler);
-        PrattState endState = {
-            .targetRegister    = endReg,
+        PrattState stepState = {
+            .targetRegister    = stepReg,
             .rightBindingPower = PRECEDENCE_NON_KEYWORD,
         };
-        PrattExpr endExpr, stepExpr;
-        semiParseExpression(compiler, endState, &endExpr);
-        saveRangeOperand(compiler, endExpr, endReg, &endOperand, &endOperandInline);
-
-        if (peekToken(&compiler->lexer) == TK_STEP) {
-            nextToken(&compiler->lexer);  // Consume "step"
-            PrattState stepState = {
-                .targetRegister    = stepReg,
-                .rightBindingPower = PRECEDENCE_NON_KEYWORD,
-            };
-            semiParseExpression(compiler, stepState, &stepExpr);
-        } else {
-            stepExpr = PRATT_EXPR_CONSTANT(semiValueNewInt(1));
-        }
-        saveRangeOperand(compiler, stepExpr, stepReg, &stepOperand, &stepOperandInline);
-
-        if (iterExpr.type == PRATT_EXPR_TYPE_CONSTANT && endExpr.type == PRATT_EXPR_TYPE_CONSTANT &&
-            stepExpr.type == PRATT_EXPR_TYPE_CONSTANT) {
-            rewindCode(compiler, pcBeforeIter);
-
-            Value rangeConstant = semiValueRangeCreate(
-                compiler->gc, iterExpr.value.constant, endExpr.value.constant, stepExpr.value.constant);
-            if (IS_INVALID(&rangeConstant)) {
-                SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_INVALID_VALUE, "Failed to allocate range");
+        semiParseExpression(compiler, stepState, &stepExpr);
+        if (stepExpr.type == PRATT_EXPR_TYPE_CONSTANT) {
+            if (!IS_NUMBER(&stepExpr.value.constant)) {
+                SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_INVALID_VALUE, "Range operands must be numbers");
             }
-            iterExpr = PRATT_EXPR_CONSTANT(rangeConstant);
-            saveExprToRegister(compiler, &iterExpr, iterReg);
-        } else {
-            emitCode(compiler,
-                     INSTRUCTION_MAKE_RANGE(iterReg, endOperand, stepOperand, endOperandInline, stepOperandInline));
+            if (IS_INT(&stepExpr.value.constant) && AS_INT(&stepExpr.value.constant) == 0) {
+                SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_INVALID_VALUE, "Range step cannot be zero");
+            } else if (IS_FLOAT(&stepExpr.value.constant) && fabs(AS_FLOAT(&stepExpr.value.constant)) < FLOAT_EPSILON) {
+                SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_INVALID_VALUE, "Range step cannot be zero");
+            }
         }
     } else {
-        saveExprToRegister(compiler, &iterExpr, iterReg);
+        // Default step is 1
+        stepExpr = PRATT_EXPR_CONSTANT(semiValueNewInt(1));
+    }
+
+    if (startExpr.type == PRATT_EXPR_TYPE_CONSTANT && endExpr.type == PRATT_EXPR_TYPE_CONSTANT &&
+        stepExpr.type == PRATT_EXPR_TYPE_CONSTANT) {
+        // All operands are constant, we can create the range at compile time.
+        Value range = semiValueRangeCreate(
+            compiler->gc, startExpr.value.constant, endExpr.value.constant, stepExpr.value.constant);
+        if (IS_INVALID(&range)) {
+            SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_MEMORY_ALLOCATION_FAILURE, "failed to create range constant");
+        }
+        ConstantIndex idx = semiConstantTableInsert(&compiler->artifactModule->constantTable, range);
+        if (idx > MAX_OPERAND_K) {
+            // TODO: Spill with OP_EXTRA_ARG
+            SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_TOO_MANY_CONSTANTS, "Too many constants in a module");
+        }
+        emitCode(compiler, INSTRUCTION_LOAD_CONSTANT(iterReg, (uint16_t)idx, false, false));
+    } else {
+        // At least one operand is not constant, we have to save them to registers.
+        bool kb, kc;
+        uint8_t operandB, operandC;
+        saveExprToRegister(compiler, &startExpr, startReg);
+        saveExprToOperand(compiler, &endExpr, &operandB, &kb);
+        saveExprToOperand(compiler, &stepExpr, &operandC, &kc);
+        emitCode(compiler, INSTRUCTION_MAKE_RANGE(iterReg, operandB, operandC, kb, kc));
     }
 
     restoreNextRegisterId(compiler, iterReg + 1);
@@ -3005,7 +3021,29 @@ static ForHeader parseForHeader(Compiler* compiler, LocalRegisterId iterReg) {
     }
     MATCH_NEXT_TOKEN_OR_ABORT(compiler, TK_IN, "Expect 'in'");
 
-    parseRangeOrIter(compiler, iterReg);
+    PrattState state = {
+        .targetRegister    = iterReg,
+        .rightBindingPower = PRECEDENCE_NON_KEYWORD,
+    };
+    PrattExpr iterExpr;
+    semiParseExpression(compiler, state, &iterExpr);
+
+    Token t;
+    switch (t = peekToken(&compiler->lexer)) {
+        case TK_OPEN_BRACE: {
+            // for ... in iterator {}
+            saveExprToRegister(compiler, &iterExpr, iterReg);
+            restoreNextRegisterId(compiler, iterReg + 1);
+            break;
+        }
+        case TK_DOUBLE_DOTS:
+            // for ... in startExpr..endExpr [step stepExpr]
+            parseForRange(compiler, iterExpr, iterReg);
+            break;
+
+        default:
+            SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNEXPECTED_TOKEN, "Expected iterator or range expression");
+    }
 
     firstReg = reserveTempRegister(compiler);
     bindLocalVariable(compiler, firstIdentifierId, firstReg);

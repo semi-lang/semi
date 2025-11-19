@@ -20,7 +20,7 @@ TEST_F(CompilerLocalAssignmentTest, LocalIntegerAssignment) {
     ASSERT_NE(var, nullptr) << "Variable 'x' should exist";
     ASSERT_EQ(var->registerId, 0) << "Variable 'x' should be in register 0";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x002A i=T s=T
 )");
@@ -34,7 +34,7 @@ TEST_F(CompilerLocalAssignmentTest, LocalDoubleAssignment) {
     ASSERT_NE(var, nullptr) << "Variable 'y' should exist";
     ASSERT_EQ(var->registerId, 0) << "Variable 'y' should be in register 0";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=F
 
@@ -51,7 +51,7 @@ TEST_F(CompilerLocalAssignmentTest, LocalBooleanAssignment) {
     ASSERT_NE(var, nullptr) << "Variable 'flag' should exist";
     ASSERT_EQ(var->registerId, 0) << "Variable 'flag' should be in register 0";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_BOOL   A=0x00 K=0x0000 i=T s=F
 )");
@@ -65,7 +65,7 @@ TEST_F(CompilerLocalAssignmentTest, LocalStringAssignment) {
     ASSERT_NE(var, nullptr) << "Variable 'name' should exist";
     ASSERT_EQ(var->registerId, 0) << "Variable 'name' should be in register 0";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=F
 
@@ -82,7 +82,7 @@ TEST_F(CompilerLocalAssignmentTest, LocalExpressionAssignment) {
     ASSERT_NE(var, nullptr) << "Variable 'result' should exist";
     ASSERT_EQ(var->registerId, 0) << "Variable 'result' should be in register 0";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x000F i=T s=T
 )");
@@ -103,7 +103,7 @@ TEST_F(CompilerLocalAssignmentTest, LocalVariableToLocalVariableAssignment) {
 
     ASSERT_NE(var_x->registerId, var_y->registerId) << "Variables should have different registers";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_MOVE   A=0x01 B=0x00 C=0x00 kb=F kc=F
 )");
@@ -121,7 +121,7 @@ TEST_F(CompilerLocalAssignmentTest, LocalVariableReassignment) {
 
     ASSERT_EQ(compiler.variables.size, 1) << "Should have only one variable";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0064 i=T s=T
 )");
@@ -149,7 +149,7 @@ TEST_F(CompilerLocalAssignmentTest, MultipleLocalVariablesUniqueRegisters) {
     ASSERT_NE(var_b->registerId, var_c->registerId) << "Variables should have different registers";
     ASSERT_NE(var_a->registerId, var_c->registerId) << "Variables should have different registers";
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0001 i=T s=T
 1: OP_LOAD_INLINE_INTEGER   A=0x01 K=0x0002 i=T s=T

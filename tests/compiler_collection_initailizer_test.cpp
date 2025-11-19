@@ -22,7 +22,7 @@ TEST_F(CompilerCollectionInitializerTest, EmptyListInitializer) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_NEW_COLLECTION   A=0x00 B=0x06 C=0x00 kb=T kc=F
 )");
@@ -36,7 +36,7 @@ TEST_F(CompilerCollectionInitializerTest, EmptyDictInitializer) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_NEW_COLLECTION   A=0x00 B=0x07 C=0x00 kb=T kc=F
 )");
@@ -50,7 +50,7 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializerSingleElement) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_NEW_COLLECTION            A=0x00 B=0x06 C=0x01 kb=T kc=F
 1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
@@ -66,7 +66,7 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializerMultipleElements) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_NEW_COLLECTION            A=0x00 B=0x06 C=0x03 kb=T kc=F
 1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
@@ -84,7 +84,7 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializerWithTrailingComma) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_NEW_COLLECTION            A=0x00 B=0x06 C=0x03 kb=T kc=F
 1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
@@ -102,7 +102,7 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializerExactly16Elements) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0:  OP_NEW_COLLECTION            A=0x00 B=0x06 C=0x10 kb=T kc=F
 1:  OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
@@ -133,7 +133,7 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializer17ElementsRequiresBatch
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0:  OP_NEW_COLLECTION            A=0x00 B=0x06 C=0x11 kb=T kc=F
 1:  OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
@@ -168,7 +168,7 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializer32ElementsRequiresDoubl
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0:  OP_NEW_COLLECTION            A=0x00 B=0x06 C=0x20 kb=T kc=F
 1:  OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
@@ -216,7 +216,7 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializerSinglePair) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_NEW_COLLECTION            A=0x00 B=0x07 C=0x01 kb=T kc=F
 1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
@@ -233,7 +233,7 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializerMultiplePairs) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_NEW_COLLECTION            A=0x00 B=0x07 C=0x03 kb=T kc=F
 1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
@@ -254,7 +254,7 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializerWithTrailingComma) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_NEW_COLLECTION            A=0x00 B=0x07 C=0x02 kb=T kc=F
 1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
@@ -273,7 +273,7 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializerExactly8Pairs) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0:  OP_NEW_COLLECTION            A=0x00 B=0x07 C=0x08 kb=T kc=F
 1:  OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
@@ -304,7 +304,7 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializer9PairsRequiresBatching)
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0:  OP_NEW_COLLECTION            A=0x00 B=0x07 C=0x09 kb=T kc=F
 1:  OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
@@ -340,7 +340,7 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializer16PairsRequiresDoubleBa
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0:  OP_NEW_COLLECTION            A=0x00 B=0x07 C=0x10 kb=T kc=F
 1:  OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T
@@ -420,7 +420,7 @@ TEST_F(CompilerCollectionInitializerTest, ListInitializerWithComplexExpressions)
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_NEW_COLLECTION            A=0x00 B=0x06 C=0x03 kb=T kc=F
 1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0003 i=T s=T
@@ -438,7 +438,7 @@ TEST_F(CompilerCollectionInitializerTest, DictInitializerWithComplexExpressions)
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_NEW_COLLECTION            A=0x00 B=0x07 C=0x02 kb=T kc=F
 1: OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0002 i=T s=T
@@ -457,7 +457,7 @@ TEST_F(CompilerCollectionInitializerTest, NestedListInitializers) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0:  OP_NEW_COLLECTION            A=0x00 B=0x06 C=0x02 kb=T kc=F
 1:  OP_NEW_COLLECTION            A=0x01 B=0x06 C=0x02 kb=T kc=F
@@ -480,7 +480,7 @@ TEST_F(CompilerCollectionInitializerTest, NestedDictInitializers) {
     ASSERT_EQ(result, 0);
     ASSERT_EQ(expr.type, PRATT_EXPR_TYPE_REG);
 
-    VerifyCompilation(&compiler, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0:  OP_NEW_COLLECTION            A=0x00 B=0x07 C=0x02 kb=T kc=F
 1:  OP_LOAD_INLINE_INTEGER       A=0x01 K=0x0001 i=T s=T

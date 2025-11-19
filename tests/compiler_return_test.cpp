@@ -24,7 +24,7 @@ TEST_F(CompilerReturnTest, FirstReturnWithoutValue) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Function with return without value should parse successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
@@ -49,7 +49,7 @@ TEST_F(CompilerReturnTest, FirstReturnWithValue) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Function with return with value should parse successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
@@ -78,7 +78,7 @@ TEST_F(CompilerReturnTest, ConsistentZeroValueReturns) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Consistent zero-value returns should parse successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
@@ -110,7 +110,7 @@ TEST_F(CompilerReturnTest, ConsistentOneValueReturns) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Consistent one-value returns should parse successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
@@ -185,7 +185,7 @@ TEST_F(CompilerReturnTest, NestedFunctionReturns) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Nested function returns should parse successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT         A=0x00 K=0x0001 i=F s=F
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
@@ -240,7 +240,7 @@ TEST_F(CompilerReturnTest, ReturnWithDifferentExpressionTypes) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Return with different expression types should parse successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT         A=0x00 K=0x0002 i=F s=F
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
@@ -278,7 +278,7 @@ TEST_F(CompilerReturnTest, ReturnInForLoop) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Return in for loop should parse successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0:  OP_LOAD_CONSTANT         A=0x00 K=0x0001 i=F s=F
 1:  OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
@@ -329,7 +329,7 @@ TEST_F(CompilerReturnTest, ReturnWithComplexExpression) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Return with complex expression should parse successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
@@ -357,7 +357,7 @@ TEST_F(CompilerReturnTest, EmptyFunction) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Empty function should parse successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F
@@ -383,7 +383,7 @@ TEST_F(CompilerReturnTest, ExplicitVoidReturn) {
     ErrorId result = ParseModule(source);
     EXPECT_EQ(result, 0) << "Function with explicit void return should parse successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
 1: OP_SET_MODULE_VAR        A=0x00 K=0x0000 i=F s=F

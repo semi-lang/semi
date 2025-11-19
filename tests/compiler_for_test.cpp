@@ -20,7 +20,7 @@ TEST_F(CompilerForTest, SimpleForLoopWithRange) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Simple for loop with range should parse successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=F
 1: OP_ITER_NEXT       A=0xFF B=0x01 C=0x00 kb=F kc=F
@@ -39,7 +39,7 @@ TEST_F(CompilerForTest, ForLoopWithExplicitStep) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "For loop with explicit step should parse successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=F
 1: OP_ITER_NEXT       A=0xFF B=0x01 C=0x00 kb=F kc=F
@@ -58,7 +58,7 @@ TEST_F(CompilerForTest, ForLoopWithIndexAndItem) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "For loop with index and item should parse successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=F
 1: OP_ITER_NEXT       A=0x02 B=0x01 C=0x00 kb=F kc=F
@@ -79,7 +79,7 @@ TEST_F(CompilerForTest, ForLoopWithVariableInRange) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "For loop with variables in range should parse successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_MOVE           A=0x02 B=0x00 C=0x00 kb=F kc=F
 1: OP_MAKE_RANGE     A=0x02 B=0x01 C=0x81 kb=F kc=T
@@ -96,7 +96,7 @@ TEST_F(CompilerForTest, NestedForLoops) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Nested for loops should parse successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=F
 1: OP_ITER_NEXT       A=0xFF B=0x01 C=0x00 kb=F kc=F
@@ -122,7 +122,7 @@ TEST_F(CompilerForTest, ConstantRangeOptimization) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Constant range should be optimized";
 
-    VerifyCompilation(module, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=F
 1: OP_ITER_NEXT       A=0xFF B=0x01 C=0x00 kb=F kc=F
@@ -141,7 +141,7 @@ TEST_F(CompilerForTest, NegativeRangeStep) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Range with negative step should parse successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=F
 1: OP_ITER_NEXT       A=0xFF B=0x01 C=0x00 kb=F kc=F
@@ -161,15 +161,15 @@ TEST_F(CompilerForTest, ExpressionInRange) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "Range with expressions should parse successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
-0: OP_SUBTRACT       A=0x01 B=0x00 C=0x81 kb=F kc=T
-1: OP_ADD            A=0x02 B=0x00 C=0x81 kb=F kc=T
-2: OP_MAKE_RANGE     A=0x01 B=0x02 C=0x81 kb=F kc=T
-3: OP_ITER_NEXT      A=0xFF B=0x02 C=0x01 kb=F kc=F
-4: OP_JUMP           J=0x000002 s=T
-5: OP_JUMP           J=0x000002 s=F
-6: OP_CLOSE_UPVALUES A=0x01 B=0x00 C=0x00 kb=F kc=F
+1: OP_SUBTRACT       A=0x01 B=0x00 C=0x81 kb=F kc=T
+3: OP_ADD            A=0x02 B=0x00 C=0x81 kb=F kc=T
+4: OP_MAKE_RANGE     A=0x01 B=0x02 C=0x81 kb=F kc=T
+5: OP_ITER_NEXT      A=0xFF B=0x02 C=0x01 kb=F kc=F
+6: OP_JUMP           J=0x000002 s=T
+7: OP_JUMP           J=0x000002 s=F
+8: OP_CLOSE_UPVALUES A=0x01 B=0x00 C=0x00 kb=F kc=F
 )");
 }
 
@@ -180,7 +180,7 @@ TEST_F(CompilerForTest, ForLoopWithBreak) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "For loop with break should parse successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=F
 1: OP_ITER_NEXT       A=0xFF B=0x01 C=0x00 kb=F kc=F
@@ -200,7 +200,7 @@ TEST_F(CompilerForTest, ForLoopWithContinue) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "For loop with continue should parse successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0: OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=F
 1: OP_ITER_NEXT       A=0xFF B=0x01 C=0x00 kb=F kc=F
@@ -220,20 +220,20 @@ TEST_F(CompilerForTest, ForLoopWithBreakAndContinue) {
     ErrorId(result) = ParseStatement(source, false);
     EXPECT_EQ(result, 0) << "For loop with both break and continue should parse successfully";
 
-    VerifyCompilation(module, R"(
+    VerifyCompiler(&compiler, R"(
 [Instructions]
 0:  OP_LOAD_CONSTANT   A=0x00 K=0x0000 i=F s=F
 1:  OP_ITER_NEXT       A=0xFF B=0x01 C=0x00 kb=F kc=F
-2:  OP_JUMP            J=0x00000F s=T
+2:  OP_JUMP            J=0x00000A s=T
 3:  OP_EQ              A=0x02 B=0x01 C=0x82 kb=F kc=T
 4:  OP_C_JUMP          A=0x02 K=0x0002 i=F s=T
-5:  OP_JUMP            J=0x00000A s=F
-6:  OP_CLOSE_UPVALUES  A=0x01 B=0x00 C=0x00 kb=F kc=F
-7:  OP_EQ              A=0x01 B=0x01 C=0x84 kb=F kc=T
-8:  OP_C_JUMP          A=0x01 K=0x0002 i=F s=T
-9:  OP_JUMP            J=0x000006 s=T
-10: OP_CLOSE_UPVALUES  A=0x01 B=0x00 C=0x00 kb=F kc=F
-11: OP_JUMP            J=0x00000F s=F
+5:  OP_JUMP            J=0x000004 s=F
+6:  OP_CLOSE_UPVALUES  A=0x02 B=0x00 C=0x00 kb=F kc=F
+7:  OP_EQ              A=0x02 B=0x01 C=0x84 kb=F kc=T
+8:  OP_C_JUMP          A=0x02 K=0x0002 i=F s=T
+9:  OP_JUMP            J=0x000003 s=T
+10: OP_CLOSE_UPVALUES  A=0x02 B=0x00 C=0x00 kb=F kc=F
+11: OP_JUMP            J=0x00000A s=F
 12: OP_CLOSE_UPVALUES  A=0x00 B=0x00 C=0x00 kb=F kc=F
 
 [Constants]

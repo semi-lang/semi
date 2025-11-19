@@ -20,7 +20,7 @@ TEST_F(InstructionVerifierTest, BasicDeferBlock) {
     FunctionProto* func = CreateFunctionObject(0, code, 2, 8, 0, 0);
     module->moduleInit  = func;
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_DEFER_CALL    A=0x00 K=0x0000 i=F s=F
 1: OP_RETURN        A=0xFF B=0x00 C=0x00 kb=F kc=F
@@ -37,7 +37,7 @@ TEST_F(InstructionVerifierTest, SimpleIfStatement) {
     FunctionProto* func = CreateFunctionObject(0, code, 3, 8, 0, 0);
     module->moduleInit  = func;
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_BOOL         A=0x00 K=0x0000 i=T s=F
 1: OP_C_JUMP            A=0x00 K=0x0001 i=F s=T
@@ -53,7 +53,7 @@ TEST_F(InstructionVerifierTest, LocalIntegerAssignment) {
     FunctionProto* func = CreateFunctionObject(0, code, 1, 8, 0, 0);
     module->moduleInit  = func;
 
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions]
 0: OP_LOAD_INLINE_INTEGER   A=0x00 K=0x002A i=T s=T
 )");
@@ -72,7 +72,7 @@ TEST_F(InstructionVerifierTest, IgnoredSection) {
 
     // Verify that we can mark the main instructions section as ignored
     // This should pass even though we're not specifying any instructions
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions] (ignored)
 )");
 
@@ -86,7 +86,7 @@ TEST_F(InstructionVerifierTest, IgnoredSection) {
     semiConstantTableInsert(&module->constantTable, funcProtoValue);
 
     // Verify that we can ignore the nested function's instructions
-    VerifyCompilation(module, R"(
+    VerifyModule(module, R"(
 [Instructions] (ignored)
 
 [Constants]

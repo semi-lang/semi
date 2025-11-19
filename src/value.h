@@ -188,6 +188,8 @@ typedef enum {
 
 typedef int64_t IntValue;
 
+#define FLOAT_EPSILON 1e-6
+
 typedef double FloatValue;
 
 typedef struct InlineString {
