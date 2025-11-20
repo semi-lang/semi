@@ -40,7 +40,7 @@ ConstantIndex semiConstantTableInsert(ConstantTable* table, Value key) {
     }
 
     ConstantIndex index = (ConstantIndex)(semiDictLen(table->constantMap));
-    Value indexValue    = semiValueNewInt(index);
+    Value indexValue    = semiValueIntCreate(index);
     return semiDictSet(table->gc, table->constantMap, key, indexValue) ? index : CONST_INDEX_INVALID;
 }
 

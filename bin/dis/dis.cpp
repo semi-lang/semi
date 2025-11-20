@@ -102,13 +102,15 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    semiVMAddGlobalVariable(
-        vm, printFunctionName, (IdentifierLength)strlen(printFunctionName), semiValueNewNativeFunction(printFunction));
+    semiVMAddGlobalVariable(vm,
+                            printFunctionName,
+                            (IdentifierLength)strlen(printFunctionName),
+                            semiValueNativeFunctionCreate(printFunction));
 
     // Initialize predefined variables
     for (const std::string& varName : predefinedVars) {
         const char* varNameCStr = varName.c_str();
-        semiVMAddGlobalVariable(vm, varNameCStr, (IdentifierLength)strlen(varNameCStr), semiValueNewInt(0));
+        semiVMAddGlobalVariable(vm, varNameCStr, (IdentifierLength)strlen(varNameCStr), semiValueIntCreate(0));
     }
 
     SemiModuleSource moduleSource = {

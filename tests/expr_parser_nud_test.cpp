@@ -15,11 +15,11 @@ TEST_F(ExprParserNudTest, ConstantNonStringNud) {
         const char* input;
         Value expected_value;
     } test_cases[] = {
-        { "true",  semiValueNewBool(true)},
-        {"false", semiValueNewBool(false)},
-        {   "42",     semiValueNewInt(42)},
-        { "-123",   semiValueNewInt(-123)},
-        { "3.14", semiValueNewFloat(3.14)},
+        { "true",  semiValueBoolCreate(true)},
+        {"false", semiValueBoolCreate(false)},
+        {   "42",     semiValueIntCreate(42)},
+        { "-123",   semiValueIntCreate(-123)},
+        { "3.14", semiValueFloatCreate(3.14)},
     };
 
     for (size_t i = 0; i < sizeof(test_cases) / sizeof(test_cases[0]); i++) {
@@ -58,46 +58,46 @@ TEST_F(ExprParserNudTest, UnaryNudConstantFolding) {
 
     ConstantTestCase test_cases[] = {
         // Boolean NOT operations
-        {"!","true", PRATT_EXPR_TYPE_CONSTANT,semiValueNewBool(false),0,      "!true constant folding"                                                                              },
-        {"!",     "false", PRATT_EXPR_TYPE_CONSTANT,   semiValueNewBool(true),        0,     "!false constant folding"},
-        {"!",        "42", PRATT_EXPR_TYPE_CONSTANT,  semiValueNewBool(false),        0,        "!42 constant folding"},
-        {"!",         "0", PRATT_EXPR_TYPE_CONSTANT,   semiValueNewBool(true),        0,         "!0 constant folding"},
-        {"!",      "3.14", PRATT_EXPR_TYPE_CONSTANT,  semiValueNewBool(false),        0,      "!3.14 constant folding"},
-        {"!",       "0.0", PRATT_EXPR_TYPE_CONSTANT,   semiValueNewBool(true),        0,       "!0.0 constant folding"},
-        {"!", "\"hello\"", PRATT_EXPR_TYPE_CONSTANT,  semiValueNewBool(false),        0, "!\"hello\" constant folding"},
-        {"!",      "\"\"", PRATT_EXPR_TYPE_CONSTANT,   semiValueNewBool(true),        0,      "!\"\" constant folding"},
+        {"!","true", PRATT_EXPR_TYPE_CONSTANT,semiValueBoolCreate(false),0,      "!true constant folding"                                                                                 },
+        {"!",     "false", PRATT_EXPR_TYPE_CONSTANT,   semiValueBoolCreate(true),     0,     "!false constant folding"},
+        {"!",        "42", PRATT_EXPR_TYPE_CONSTANT,  semiValueBoolCreate(false),     0,        "!42 constant folding"},
+        {"!",         "0", PRATT_EXPR_TYPE_CONSTANT,   semiValueBoolCreate(true),     0,         "!0 constant folding"},
+        {"!",      "3.14", PRATT_EXPR_TYPE_CONSTANT,  semiValueBoolCreate(false),     0,      "!3.14 constant folding"},
+        {"!",       "0.0", PRATT_EXPR_TYPE_CONSTANT,   semiValueBoolCreate(true),     0,       "!0.0 constant folding"},
+        {"!", "\"hello\"", PRATT_EXPR_TYPE_CONSTANT,  semiValueBoolCreate(false),     0, "!\"hello\" constant folding"},
+        {"!",      "\"\"", PRATT_EXPR_TYPE_CONSTANT,   semiValueBoolCreate(true),     0,      "!\"\" constant folding"},
 
         // Arithmetic negation operations
-        {"-",        "42", PRATT_EXPR_TYPE_CONSTANT,     semiValueNewInt(-42),        0,        "-42 constant folding"},
-        {"-",         "0", PRATT_EXPR_TYPE_CONSTANT,       semiValueNewInt(0),        0,         "-0 constant folding"},
-        {"-",      "3.14", PRATT_EXPR_TYPE_CONSTANT, semiValueNewFloat(-3.14),        0,      "-3.14 constant folding"},
-        {"-",       "0.0", PRATT_EXPR_TYPE_CONSTANT,   semiValueNewFloat(0.0),        0,       "-0.0 constant folding"},
+        {"-",        "42", PRATT_EXPR_TYPE_CONSTANT,     semiValueIntCreate(-42),     0,        "-42 constant folding"},
+        {"-",         "0", PRATT_EXPR_TYPE_CONSTANT,       semiValueIntCreate(0),     0,         "-0 constant folding"},
+        {"-",      "3.14", PRATT_EXPR_TYPE_CONSTANT, semiValueFloatCreate(-3.14),     0,      "-3.14 constant folding"},
+        {"-",       "0.0", PRATT_EXPR_TYPE_CONSTANT,   semiValueFloatCreate(0.0),     0,       "-0.0 constant folding"},
 
         // Bitwise NOT operations
-        {"~",        "42", PRATT_EXPR_TYPE_CONSTANT,     semiValueNewInt(~42),        0,        "~42 constant folding"},
-        {"~",         "0", PRATT_EXPR_TYPE_CONSTANT,      semiValueNewInt(~0),        0,         "~0 constant folding"},
-        {"~",       "255", PRATT_EXPR_TYPE_CONSTANT,    semiValueNewInt(~255),        0,       "~255 constant folding"},
+        {"~",        "42", PRATT_EXPR_TYPE_CONSTANT,     semiValueIntCreate(~42),     0,        "~42 constant folding"},
+        {"~",         "0", PRATT_EXPR_TYPE_CONSTANT,      semiValueIntCreate(~0),     0,         "~0 constant folding"},
+        {"~",       "255", PRATT_EXPR_TYPE_CONSTANT,    semiValueIntCreate(~255),     0,       "~255 constant folding"},
 
         // Invalid operations should fail
         {"-",
          "true",    PRATT_EXPR_TYPE_UNSET,
-         semiValueNewBool(false),
+         semiValueBoolCreate(false),
          SEMI_ERROR_UNEXPECTED_TYPE,       "- on bool should fail"                                                    },
         {"-",
          "\"hello\"",    PRATT_EXPR_TYPE_UNSET,
-         semiValueNewBool(false),
+         semiValueBoolCreate(false),
          SEMI_ERROR_UNEXPECTED_TYPE,     "- on string should fail"                                                    },
         {"~",
          "true",    PRATT_EXPR_TYPE_UNSET,
-         semiValueNewBool(false),
+         semiValueBoolCreate(false),
          SEMI_ERROR_UNEXPECTED_TYPE,       "~ on bool should fail"                                                    },
         {"~",
          "3.14",    PRATT_EXPR_TYPE_UNSET,
-         semiValueNewBool(false),
+         semiValueBoolCreate(false),
          SEMI_ERROR_UNEXPECTED_TYPE,     "~ on double should fail"                                                    },
         {"~",
          "\"hello\"",    PRATT_EXPR_TYPE_UNSET,
-         semiValueNewBool(false),
+         semiValueBoolCreate(false),
          SEMI_ERROR_UNEXPECTED_TYPE,     "~ on string should fail"                                                    },
     };
 

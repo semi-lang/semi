@@ -322,8 +322,8 @@ TEST_F(VMInstructionLoadConstantTest, OpLoadStringEmptyFromConstantTable) {
 TEST_F(VMInstructionLoadConstantTest, LoadConstantsInDifferentRegisters) {
     SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
 
-    ConstantIndex intIdx   = semiConstantTableInsert(&module->constantTable, semiValueNewInt(100));
-    ConstantIndex floatIdx = semiConstantTableInsert(&module->constantTable, semiValueNewFloat(2.5));
+    ConstantIndex intIdx   = semiConstantTableInsert(&module->constantTable, semiValueIntCreate(100));
+    ConstantIndex floatIdx = semiConstantTableInsert(&module->constantTable, semiValueFloatCreate(2.5));
     Value s                = semiValueStringCreate(&vm->gc, "test", 4);
     ConstantIndex strIdx   = semiConstantTableInsert(&module->constantTable, s);
 

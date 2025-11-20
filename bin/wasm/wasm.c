@@ -32,7 +32,7 @@ ErrorId nowFunction(SemiVM* vm, uint8_t argCount, Value* args, Value* ret) {
     if (!timespec_get(&ts, TIME_UTC)) {
         return 1;
     }
-    *ret = semiValueNewInt((IntValue)ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+    *ret = semiValueIntCreate((IntValue)ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
     return 0;
 }
 
@@ -265,7 +265,7 @@ int compileAndRun(const char* str) {
         semiVMAddGlobalVariable(vm,
                                 builtInFunctionList[i].name,
                                 (IdentifierLength)strlen(builtInFunctionList[i].name),
-                                semiValueNewNativeFunction(builtInFunctionList[i].function));
+                                semiValueNativeFunctionCreate(builtInFunctionList[i].function));
     }
 
     ErrorId errId = compileAndRunInternal(vm, str, (unsigned int)strlen(str));

@@ -252,7 +252,7 @@ static Token readNumber(Lexer* lexer) {
         }
         switch (c) {
             case EOZ:
-                lexer->tokenValue.constant = semiValueNewInt(0);
+                lexer->tokenValue.constant = semiValueIntCreate(0);
                 return TK_INTEGER;
             case 'b':
                 base = 2;
@@ -272,7 +272,7 @@ static Token readNumber(Lexer* lexer) {
                 // rule out the case of ranges like `0..10`
                 char c2 = SAFE_PEEK_NEXT(lexer);
                 if (c2 == '.') {
-                    lexer->tokenValue.constant = semiValueNewInt(0);
+                    lexer->tokenValue.constant = semiValueIntCreate(0);
                     return TK_INTEGER;
                 }
 
@@ -287,7 +287,7 @@ static Token readNumber(Lexer* lexer) {
                     SEMI_LEXER_ERROR(lexer, SEMI_ERROR_INVALID_NUMBER_LITERAL, "Invalid number literal");
                     return TK_EOF;
                 } else {
-                    lexer->tokenValue.constant = semiValueNewInt(0);
+                    lexer->tokenValue.constant = semiValueIntCreate(0);
                     return TK_INTEGER;
                 }
         }
@@ -392,7 +392,7 @@ static Token readNumber(Lexer* lexer) {
             SEMI_LEXER_ERROR(lexer, SEMI_ERROR_INVALID_NUMBER_LITERAL, "Invalid number literal");
             return TK_EOF;
         }
-        lexer->tokenValue.constant = semiValueNewFloat(d);
+        lexer->tokenValue.constant = semiValueFloatCreate(d);
         return TK_DOUBLE;
     } else {
         char* endptr;
@@ -402,7 +402,7 @@ static Token readNumber(Lexer* lexer) {
             SEMI_LEXER_ERROR(lexer, SEMI_ERROR_INVALID_NUMBER_LITERAL, "Invalid number literal");
             return TK_EOF;
         }
-        lexer->tokenValue.constant = semiValueNewInt(i);
+        lexer->tokenValue.constant = semiValueIntCreate(i);
         return TK_INTEGER;
     }
 }
@@ -1054,7 +1054,7 @@ static ModuleVariableId resolveGlobalVariable(Compiler* compiler, IdentifierId i
 
 static bool hasModuleVariable(Compiler* compiler, IdentifierId identifierId) {
     ValueHash hash = semiHash64Bits(identifierId);
-    Value v        = semiValueNewInt(identifierId);
+    Value v        = semiValueIntCreate(identifierId);
     return semiDictHasWithHash(&compiler->artifactModule->exports, v, hash) ||
            semiDictHasWithHash(&compiler->artifactModule->globals, v, hash);
 }
@@ -1062,13 +1062,13 @@ static bool hasModuleVariable(Compiler* compiler, IdentifierId identifierId) {
 static ModuleVariableId bindModuleVariable(Compiler* compiler, IdentifierId identifierId, bool isExport) {
     SemiModule* module     = compiler->artifactModule;
     ObjectDict* targetDict = isExport ? &module->exports : &module->globals;
-    Value v                = semiValueNewInt(identifierId);
+    Value v                = semiValueIntCreate(identifierId);
     ValueHash hash         = semiHash64Bits(identifierId);
 
-    if (semiDictHasWithHash(&module->exports, semiValueNewInt(identifierId), hash)) {
+    if (semiDictHasWithHash(&module->exports, semiValueIntCreate(identifierId), hash)) {
         SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_VARIABLE_ALREADY_DEFINED, "Variable already defined in module exports");
     }
-    if (semiDictHasWithHash(&module->globals, semiValueNewInt(identifierId), hash)) {
+    if (semiDictHasWithHash(&module->globals, semiValueIntCreate(identifierId), hash)) {
         SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_VARIABLE_ALREADY_DEFINED, "Variable already defined in module globals");
     }
 
@@ -1077,7 +1077,7 @@ static ModuleVariableId bindModuleVariable(Compiler* compiler, IdentifierId iden
     }
 
     if (!semiDictSetWithHash(
-            compiler->gc, targetDict, semiValueNewInt(identifierId), semiValueNewInt(identifierId), hash)) {
+            compiler->gc, targetDict, semiValueIntCreate(identifierId), semiValueIntCreate(identifierId), hash)) {
         SEMI_COMPILE_ABORT(
             compiler, SEMI_ERROR_MEMORY_ALLOCATION_FAILURE, "Memory allocation failure when binding module variable");
     }
@@ -1093,7 +1093,7 @@ static ModuleVariableId bindModuleVariable(Compiler* compiler, IdentifierId iden
 static ModuleVariableId resolveModuleVariable(Compiler* compiler, IdentifierId identifierId, bool* isExport) {
     SemiModule* module = compiler->artifactModule;
     ValueHash hash     = semiHash64Bits(identifierId);
-    Value v            = semiValueNewInt(identifierId);
+    Value v            = semiValueIntCreate(identifierId);
     TupleId tupleId    = semiDictFindTupleId(&module->exports, v, hash);
     if (tupleId >= 0 && tupleId <= UINT32_MAX) {
         *isExport = true;
@@ -1302,7 +1302,7 @@ static void saveURKOperand(Compiler* compiler, IntValue value, uint8_t* operand,
     }
 
     LocalRegisterId operandReg = reserveTempRegister(compiler);
-    saveConstantToRegister(compiler, semiValueNewInt(value), operandReg);
+    saveConstantToRegister(compiler, semiValueIntCreate(value), operandReg);
     *isInlineOperand = false;
 }
 
@@ -1462,11 +1462,11 @@ static void constantNud(Compiler* compiler, const PrattState state, PrattExpr* r
 
     switch (compiler->lexer.token) {
         case TK_TRUE:
-            expr->value.constant = semiValueNewBool(true);
+            expr->value.constant = semiValueBoolCreate(true);
             break;
 
         case TK_FALSE:
-            expr->value.constant = semiValueNewBool(false);
+            expr->value.constant = semiValueBoolCreate(false);
             break;
 
         case TK_INTEGER:
@@ -1532,7 +1532,7 @@ static void typeIdentifierNud(Compiler* compiler, const PrattState state, PrattE
                                                      compiler->lexer.tokenValue.identifier.name,
                                                      compiler->lexer.tokenValue.identifier.length);
     IdentifierId identifierId = semiSymbolTableGetId(identifier);
-    Value baseTypeIndexValue  = semiDictGet(&compiler->artifactModule->types, semiValueNewInt(identifierId));
+    Value baseTypeIndexValue  = semiDictGet(&compiler->artifactModule->types, semiValueIntCreate(identifierId));
     if (IS_INVALID(&baseTypeIndexValue)) {
         SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNDEFINED_TYPE, "Undefined type");
     }
@@ -1570,7 +1570,7 @@ static void unaryNud(Compiler* compiler, const PrattState state, PrattExpr* rest
             Value result;
 
             if (token == TK_BANG) {
-                result = semiValueNewBool(!isConstantExprTruthy(compiler, expr));
+                result = semiValueBoolCreate(!isConstantExprTruthy(compiler, expr));
             } else if (token == TK_MINUS) {
                 if ((errorId = table->numericMethods->negate(compiler->gc, &result, &expr->value.constant)) != 0) {
                     SEMI_COMPILE_ABORT(compiler, errorId, "Error during constant folding for unary minus");
@@ -1929,7 +1929,7 @@ static void typeCheckLed(Compiler* compiler, const PrattState state, PrattExpr* 
     if (leftExpr->type == PRATT_EXPR_TYPE_CONSTANT) {
         // When LHS is a constant, we can directly evaluate the type check at compile time.
         TypeId constantTypeId = (TypeId)BASE_TYPE(&leftExpr->value.constant);
-        *retExpr              = PRATT_EXPR_CONSTANT(semiValueNewBool(constantTypeId == targetTypeId));
+        *retExpr              = PRATT_EXPR_CONSTANT(semiValueBoolCreate(constantTypeId == targetTypeId));
         return;
     }
 
@@ -1940,7 +1940,7 @@ static void typeCheckLed(Compiler* compiler, const PrattState state, PrattExpr* 
 
     LocalRegisterId regC;
     bool kc;
-    PrattExpr typeExpr = PRATT_EXPR_CONSTANT(semiValueNewInt((int64_t)targetTypeId));
+    PrattExpr typeExpr = PRATT_EXPR_CONSTANT(semiValueIntCreate((int64_t)targetTypeId));
     saveExprToOperand(compiler, &typeExpr, &regC, &kc);
 
     emitCode(compiler, INSTRUCTION_CHECK_TYPE(state.targetRegister, regB, regC, false, kc));
@@ -2959,7 +2959,7 @@ static void parseForRange(Compiler* compiler, PrattExpr startExpr, LocalRegister
         }
     } else {
         // Default step is 1
-        stepExpr = PRATT_EXPR_CONSTANT(semiValueNewInt(1));
+        stepExpr = PRATT_EXPR_CONSTANT(semiValueIntCreate(1));
     }
 
     if (startExpr.type == PRATT_EXPR_TYPE_CONSTANT && endExpr.type == PRATT_EXPR_TYPE_CONSTANT &&
@@ -3231,7 +3231,7 @@ parsed_arguments:
     ChunkInit(&compiler->currentFunction->chunk);
     leaveFunctionScope(compiler);
 
-    Value fnValue         = semiValueNewFunctionProto(fn);
+    Value fnValue         = semiValueFunctionProtoCreate(fn);
     ConstantIndex fnIndex = semiConstantTableInsert(&compiler->artifactModule->constantTable, fnValue);
 
     // Load the function proto from the constant table. This makes the register a function.
@@ -3401,7 +3401,7 @@ static void parseDefer(Compiler* compiler) {
     ChunkInit(&compiler->currentFunction->chunk);
     leaveFunctionScope(compiler);
 
-    Value fnValue         = semiValueNewFunctionProto(fn);
+    Value fnValue         = semiValueFunctionProtoCreate(fn);
     ConstantIndex fnIndex = semiConstantTableInsert(&compiler->artifactModule->constantTable, fnValue);
 
     // Load the function proto from the constant table. This makes the register a function.
@@ -3575,7 +3575,7 @@ SemiModule* semiVMCompileModule(SemiVM* vm, SemiModuleSource* moduleSource) {
     FunctionProto* oldModuleInit        = NULL;
     SemiModule* artifactModule          = NULL;
 
-    Value moduleValue    = semiDictGet(&vm->modules, semiValueNewInt(moduleNameIdentifierId));
+    Value moduleValue    = semiDictGet(&vm->modules, semiValueIntCreate(moduleNameIdentifierId));
     bool isModuleExisted = IS_VALID(&moduleValue);
     if (isModuleExisted) {
         artifactModule             = AS_PTR(&moduleValue, SemiModule);
@@ -3636,8 +3636,8 @@ SemiModule* semiVMCompileModule(SemiVM* vm, SemiModuleSource* moduleSource) {
     if (!isModuleExisted) {
         semiDictSet(&vm->gc,
                     &vm->modules,
-                    semiValueNewInt(moduleNameIdentifierId),
-                    semiValueNewPtr(artifactModule, VALUE_TYPE_UNSET));
+                    semiValueIntCreate(moduleNameIdentifierId),
+                    semiValuePtrCreate(artifactModule, VALUE_TYPE_UNSET));
     }
     if (oldModuleInit != NULL) {
         semiFunctionProtoDestroy(&vm->gc, oldModuleInit);

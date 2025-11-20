@@ -61,11 +61,11 @@ ObjectString* semiObjectStringCreate(GC* gc, const char* text, size_t length) {
 
 Value semiValueStringCreate(GC* gc, const char* text, size_t length) {
     if (length == 0) {
-        return semiValueNewInlineString0();
+        return semiValueInlineStringCreate0();
     } else if (length == 1 && IS_VALID_INLINE_CHAR(text[0])) {
-        return semiValueNewInlineString1(text[0]);
+        return semiValueInlineStringCreat1(text[0]);
     } else if (length == 2 && IS_VALID_INLINE_CHAR(text[0]) && IS_VALID_INLINE_CHAR(text[1])) {
-        return semiValueNewInlineString2(text[0], text[1]);
+        return semiValueInlineStringCreate2(text[0], text[1]);
     } else {
         ObjectString* o = semiObjectStringCreate(gc, text, length);
         return o ? (Value){.header = VALUE_TYPE_OBJECT_STRING, .as.obj = (Object*)o} : INVALID_VALUE;
@@ -97,7 +97,7 @@ Value semiValueRangeCreate(GC* gc, Value start, Value end, Value step) {
     bool endIsInt32   = IS_INT(&end) && AS_INT(&end) >= INT32_MIN && AS_INT(&end) <= INT32_MAX;
 
     if (stepIsOne && satrtIsInt32 && endIsInt32) {
-        return semiValueNewInlineRange((int32_t)start.as.i, (int32_t)end.as.i);
+        return semiValueInlineRangeCreate((int32_t)start.as.i, (int32_t)end.as.i);
     } else {
         ObjectRange* o = semiObjectRangeCreate(gc, start, end, step);
         return o ? (Value){.header = VALUE_TYPE_OBJECT_RANGE, .as.obj = (Object*)o} : INVALID_VALUE;
@@ -488,7 +488,7 @@ Value semiDictDelete(GC* gc, ObjectDict* dict, Value key) {
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
 #pragma region
 
-Value semiValueNewNativeFunction(NativeFunction* function) {
+Value semiValueNativeFunctionCreate(NativeFunction* function) {
     return (Value){.header = VALUE_TYPE_NATIVE_FUNCTION, .as.ptr = (void*)function};
 }
 
@@ -521,8 +521,8 @@ void semiFunctionProtoDestroy(GC* gc, FunctionProto* function) {
     semiFree(gc, function, sizeof(FunctionProto) + sizeof(UpvalueDescription) * function->upvalueCount);
 }
 
-Value semiValueNewFunctionProto(FunctionProto* function) {
-    return semiValueNewPtr(function, VALUE_TYPE_FUNCTION_PROTO);
+Value semiValueFunctionProtoCreate(FunctionProto* function) {
+    return semiValuePtrCreate(function, VALUE_TYPE_FUNCTION_PROTO);
 }
 
 /*

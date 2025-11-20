@@ -288,7 +288,7 @@ K[0]: FunctionProto arity=0 coarity=0 maxStackSize=2 -> @testFunc
 TEST_F(VMInstructionFunctionCallTest, FunctionWithMaxArity) {
     // Set up 253 arguments
     for (int i = 0; i < 253; i++) {
-        vm->values[1 + i] = semiValueNewInt(i);
+        vm->values[1 + i] = semiValueIntCreate(i);
     }
 
     SemiModule* module;
@@ -340,7 +340,7 @@ K[0]: FunctionProto arity=0 coarity=0 maxStackSize=1 -> @testFunc
 // Native Function Call Tests
 
 static ErrorId testNativeFunctionNoArgs(SemiVM* vm, uint8_t argCount, Value* args, Value* ret) {
-    *ret = semiValueNewInt(42);
+    *ret = semiValueIntCreate(42);
     return 0;
 }
 
@@ -354,7 +354,7 @@ static ErrorId testNativeFunctionWithArgs(SemiVM* vm, uint8_t argCount, Value* a
     }
 
     IntValue sum = AS_INT(&args[0]) + AS_INT(&args[1]);
-    *ret         = semiValueNewInt(sum);
+    *ret         = semiValueIntCreate(sum);
     return 0;
 }
 
@@ -370,14 +370,14 @@ static ErrorId testNativeFunctionMaxArgs(SemiVM* vm, uint8_t argCount, Value* ar
         }
         sum += AS_INT(&args[i]);
     }
-    *ret = semiValueNewInt(sum);
+    *ret = semiValueIntCreate(sum);
     return 0;
 }
 
 TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionNoArgs) {
     SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
 
-    Value nativeFunc    = semiValueNewNativeFunction(testNativeFunctionNoArgs);
+    Value nativeFunc    = semiValueNativeFunctionCreate(testNativeFunctionNoArgs);
     ConstantIndex index = semiConstantTableInsert(&module->constantTable, nativeFunc);
 
     Instruction code[3];
@@ -398,7 +398,7 @@ TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionNoArgs) {
 TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionWithArgs) {
     SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
 
-    Value nativeFunc    = semiValueNewNativeFunction(testNativeFunctionWithArgs);
+    Value nativeFunc    = semiValueNativeFunctionCreate(testNativeFunctionWithArgs);
     ConstantIndex index = semiConstantTableInsert(&module->constantTable, nativeFunc);
 
     Instruction code[3];
@@ -406,8 +406,8 @@ TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionWithArgs) {
     code[1] = INSTRUCTION_CALL(0, 2, 0, false, false);            // Call with 2 args
     code[2] = INSTRUCTION_TRAP(0, 0, false, false);
 
-    vm->values[1] = semiValueNewInt(10);  // First argument
-    vm->values[2] = semiValueNewInt(32);  // Second argument
+    vm->values[1] = semiValueIntCreate(10);  // First argument
+    vm->values[2] = semiValueIntCreate(32);  // Second argument
 
     module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
 
@@ -422,7 +422,7 @@ TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionWithArgs) {
 TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionWithError) {
     SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
 
-    Value nativeFunc    = semiValueNewNativeFunction(testNativeFunctionWithError);
+    Value nativeFunc    = semiValueNativeFunctionCreate(testNativeFunctionWithError);
     ConstantIndex index = semiConstantTableInsert(&module->constantTable, nativeFunc);
 
     Instruction code[3];
@@ -441,7 +441,7 @@ TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionWithError) {
 TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionMaxArguments) {
     SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
 
-    Value nativeFunc    = semiValueNewNativeFunction(testNativeFunctionMaxArgs);
+    Value nativeFunc    = semiValueNativeFunctionCreate(testNativeFunctionMaxArgs);
     ConstantIndex index = semiConstantTableInsert(&module->constantTable, nativeFunc);
 
     Instruction code[3];
@@ -451,7 +451,7 @@ TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionMaxArguments) {
 
     // Set up 255 arguments, each with value equal to its index
     for (int i = 0; i < 253; i++) {
-        vm->values[1 + i] = semiValueNewInt(i);
+        vm->values[1 + i] = semiValueIntCreate(i);
     }
 
     module->moduleInit = CreateFunctionObject(0, code, 3, 255, 0, 0);
@@ -472,7 +472,7 @@ TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionMaxArguments) {
 TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionArgumentPositioning) {
     SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
 
-    Value nativeFunc    = semiValueNewNativeFunction(testNativeFunctionWithArgs);
+    Value nativeFunc    = semiValueNativeFunctionCreate(testNativeFunctionWithArgs);
     ConstantIndex index = semiConstantTableInsert(&module->constantTable, nativeFunc);
 
     Instruction code[3];
@@ -480,8 +480,8 @@ TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionArgumentPositioning) {
     code[1] = INSTRUCTION_CALL(5, 2, 0, false, false);            // Call with 2 args starting at R[6]
     code[2] = INSTRUCTION_TRAP(0, 0, false, false);
 
-    vm->values[6] = semiValueNewInt(15);  // First argument
-    vm->values[7] = semiValueNewInt(27);  // Second argument
+    vm->values[6] = semiValueIntCreate(15);  // First argument
+    vm->values[7] = semiValueIntCreate(27);  // Second argument
 
     module->moduleInit = CreateFunctionObject(0, code, 3, 254, 0, 0);
 
@@ -497,11 +497,11 @@ TEST_F(VMInstructionFunctionCallTest, CallNativeFunctionZeroReturnValue) {
     SemiModule* module = semiVMModuleCreate(&vm->gc, SEMI_REPL_MODULE_ID);
 
     auto testNativeFunctionZeroReturn = [](SemiVM* vm, uint8_t argCount, Value* args, Value* ret) -> ErrorId {
-        *ret = semiValueNewInt(0);
+        *ret = semiValueIntCreate(0);
         return 0;
     };
 
-    Value nativeFunc    = semiValueNewNativeFunction(testNativeFunctionZeroReturn);
+    Value nativeFunc    = semiValueNativeFunctionCreate(testNativeFunctionZeroReturn);
     ConstantIndex index = semiConstantTableInsert(&module->constantTable, nativeFunc);
 
     Instruction code[3];

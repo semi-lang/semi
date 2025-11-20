@@ -62,14 +62,14 @@ TEST_F(ObjectValueDictTest, BasicSetGet) {
     ObjectDict* dict = semiObjectDictCreate(&gc);
 
     BasicSetGetTestCase test_cases[] = {
-        {"int_key_int_value", semiValueNewInt(42), semiValueNewInt(100)},
-        {"int_key_bool_value", semiValueNewInt(1), semiValueNewBool(true)},
-        {"int_key_float_value", semiValueNewInt(2), semiValueNewFloat(3.14)},
-        {"bool_key_int_value", semiValueNewBool(false), semiValueNewInt(200)},
-        {"bool_key_bool_value", semiValueNewBool(true), semiValueNewBool(false)},
-        {"float_key_int_value", semiValueNewFloat(1.5), semiValueNewInt(300)},
-        {"inline_str_key", INLINE_STRING_VALUE_1('a'), semiValueNewInt(400)},
-        {"inline_str2_key", INLINE_STRING_VALUE_2('x', 'y'), semiValueNewInt(500)}
+        {"int_key_int_value", semiValueIntCreate(42), semiValueIntCreate(100)},
+        {"int_key_bool_value", semiValueIntCreate(1), semiValueBoolCreate(true)},
+        {"int_key_float_value", semiValueIntCreate(2), semiValueFloatCreate(3.14)},
+        {"bool_key_int_value", semiValueBoolCreate(false), semiValueIntCreate(200)},
+        {"bool_key_bool_value", semiValueBoolCreate(true), semiValueBoolCreate(false)},
+        {"float_key_int_value", semiValueFloatCreate(1.5), semiValueIntCreate(300)},
+        {"inline_str_key", INLINE_STRING_VALUE_1('a'), semiValueIntCreate(400)},
+        {"inline_str2_key", INLINE_STRING_VALUE_2('x', 'y'), semiValueIntCreate(500)}
     };
 
     for (const auto& test_case : test_cases) {
@@ -94,9 +94,9 @@ TEST_F(ObjectValueDictTest, ObjectStringKeys) {
     Value str2 = createStringValue("world");
     Value str3 = createStringValue("test");
 
-    Value val1 = semiValueNewInt(10);
-    Value val2 = semiValueNewInt(20);
-    Value val3 = semiValueNewInt(30);
+    Value val1 = semiValueIntCreate(10);
+    Value val2 = semiValueIntCreate(20);
+    Value val3 = semiValueIntCreate(30);
 
     ASSERT_TRUE(semiDictSet(&gc, dict, str1, val1));
     ASSERT_TRUE(semiDictSet(&gc, dict, str2, val2));
@@ -121,9 +121,9 @@ TEST_F(ObjectValueDictTest, ObjectStringKeys) {
 TEST_F(ObjectValueDictTest, UpdateExistingKey) {
     ObjectDict* dict = semiObjectDictCreate(&gc);
 
-    Value key          = semiValueNewInt(42);
-    Value original_val = semiValueNewInt(100);
-    Value updated_val  = semiValueNewInt(200);
+    Value key          = semiValueIntCreate(42);
+    Value original_val = semiValueIntCreate(100);
+    Value updated_val  = semiValueIntCreate(200);
 
     // Set original value
     ASSERT_TRUE(semiDictSet(&gc, dict, key, original_val));
@@ -151,10 +151,10 @@ TEST_F(ObjectValueDictTest, Deletion) {
     ObjectDict* dict = semiObjectDictCreate(&gc);
 
     DeletionTestCase test_cases[] = {
-        {       "int_key",         semiValueNewInt(1), semiValueNewInt(10)},
-        {      "bool_key",     semiValueNewBool(true), semiValueNewInt(20)},
-        {     "float_key",    semiValueNewFloat(3.14), semiValueNewInt(30)},
-        {"inline_str_key", INLINE_STRING_VALUE_1('z'), semiValueNewInt(40)}
+        {       "int_key",      semiValueIntCreate(1), semiValueIntCreate(10)},
+        {      "bool_key",  semiValueBoolCreate(true), semiValueIntCreate(20)},
+        {     "float_key", semiValueFloatCreate(3.14), semiValueIntCreate(30)},
+        {"inline_str_key", INLINE_STRING_VALUE_1('z'), semiValueIntCreate(40)}
     };
 
     // Set all values
@@ -181,7 +181,7 @@ TEST_F(ObjectValueDictTest, Deletion) {
 TEST_F(ObjectValueDictTest, EmptyDictOperations) {
     ObjectDict* dict = semiObjectDictCreate(&gc);
 
-    Value test_key = semiValueNewInt(42);
+    Value test_key = semiValueIntCreate(42);
 
     // Test operations on empty dict
     ASSERT_FALSE(semiDictHas(dict, test_key));
@@ -200,12 +200,12 @@ TEST_F(ObjectValueDictTest, NonExistentKeyOperations) {
     ObjectDict* dict = semiObjectDictCreate(&gc);
 
     // Add one item
-    Value existing_key = semiValueNewInt(1);
-    Value existing_val = semiValueNewInt(100);
+    Value existing_key = semiValueIntCreate(1);
+    Value existing_val = semiValueIntCreate(100);
     ASSERT_TRUE(semiDictSet(&gc, dict, existing_key, existing_val));
 
     // Test operations on non-existent key
-    Value nonexistent_key = semiValueNewInt(999);
+    Value nonexistent_key = semiValueIntCreate(999);
 
     ASSERT_FALSE(semiDictHas(dict, nonexistent_key));
 
@@ -230,10 +230,10 @@ TEST_F(ObjectValueDictTest, HashCollision) {
     // Create integer with same hash: a=97, b=98, VALUE_TYPE_INLINE_STRING=4
     // Hash = (97 << 0) | (98 << 8) | (4 << 16) = 97 + 25088 + 262144 = 287329
     int64_t collision_int   = 97 + (98 << 8) + (4 << 16);  // Should be 287329
-    Value collision_int_val = semiValueNewInt(collision_int);
+    Value collision_int_val = semiValueIntCreate(collision_int);
 
-    Value str_value = semiValueNewInt(1000);
-    Value int_value = semiValueNewInt(2000);
+    Value str_value = semiValueIntCreate(1000);
+    Value int_value = semiValueIntCreate(2000);
 
     // Set both values
     ASSERT_TRUE(semiDictSet(&gc, dict, inline_str, str_value));
@@ -260,8 +260,8 @@ TEST_F(ObjectValueDictTest, DictionaryGrowth) {
 
     // Insert many items
     for (int i = 0; i < num_items; i++) {
-        Value key   = semiValueNewInt(i);
-        Value value = semiValueNewInt(i * 10);
+        Value key   = semiValueIntCreate(i);
+        Value value = semiValueIntCreate(i * 10);
         ASSERT_TRUE(semiDictSet(&gc, dict, key, value)) << "Set failed for key " << i;
     }
 
@@ -273,8 +273,8 @@ TEST_F(ObjectValueDictTest, DictionaryGrowth) {
 
     // Verify all items are still accessible
     for (int i = 0; i < num_items; i++) {
-        Value key            = semiValueNewInt(i);
-        Value expected_value = semiValueNewInt(i * 10);
+        Value key            = semiValueIntCreate(i);
+        Value expected_value = semiValueIntCreate(i * 10);
 
         ASSERT_TRUE(semiDictHas(dict, key)) << "Has failed for key " << i;
 
@@ -287,7 +287,7 @@ TEST_F(ObjectValueDictTest, DictionaryGrowth) {
 TEST_F(ObjectValueDictTest, UnsetValues) {
     ObjectDict* dict = semiObjectDictCreate(&gc);
 
-    Value key         = semiValueNewInt(42);
+    Value key         = semiValueIntCreate(42);
     Value unset_value = createUnsetValue();
 
     // Should be able to set uninit value
@@ -304,15 +304,15 @@ TEST_F(ObjectValueDictTest, MixedOperationsScenario) {
     ObjectDict* dict = semiObjectDictCreate(&gc);
 
     // Add several items
-    Value k1 = semiValueNewInt(1);
-    Value k2 = semiValueNewBool(true);
-    Value k3 = semiValueNewFloat(2.5);
+    Value k1 = semiValueIntCreate(1);
+    Value k2 = semiValueBoolCreate(true);
+    Value k3 = semiValueFloatCreate(2.5);
     Value k4 = INLINE_STRING_VALUE_1('x');
 
-    Value v1 = semiValueNewInt(10);
-    Value v2 = semiValueNewInt(20);
-    Value v3 = semiValueNewInt(30);
-    Value v4 = semiValueNewInt(40);
+    Value v1 = semiValueIntCreate(10);
+    Value v2 = semiValueIntCreate(20);
+    Value v3 = semiValueIntCreate(30);
+    Value v4 = semiValueIntCreate(40);
 
     ASSERT_TRUE(semiDictSet(&gc, dict, k1, v1));
     ASSERT_TRUE(semiDictSet(&gc, dict, k2, v2));
@@ -334,17 +334,17 @@ TEST_F(ObjectValueDictTest, MixedOperationsScenario) {
     ASSERT_FALSE(semiDictHas(dict, k3));
 
     // Add new items to potentially reuse slots
-    Value k5 = semiValueNewInt(5);
-    Value k6 = semiValueNewBool(false);
-    Value v5 = semiValueNewInt(50);
-    Value v6 = semiValueNewInt(60);
+    Value k5 = semiValueIntCreate(5);
+    Value k6 = semiValueBoolCreate(false);
+    Value v5 = semiValueIntCreate(50);
+    Value v6 = semiValueIntCreate(60);
 
     ASSERT_TRUE(semiDictSet(&gc, dict, k5, v5));
     ASSERT_TRUE(semiDictSet(&gc, dict, k6, v6));
     ASSERT_EQ(semiDictLen(dict), 4);
 
     // Update existing item
-    Value new_v1 = semiValueNewInt(11);
+    Value new_v1 = semiValueIntCreate(11);
     ASSERT_TRUE(semiDictSet(&gc, dict, k1, new_v1));
     ASSERT_EQ(semiDictLen(dict), 4);  // Should not change
 

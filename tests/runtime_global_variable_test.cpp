@@ -18,7 +18,7 @@ class RuntimeGlobalVariableTest : public VMTest {};
 
 TEST_F(RuntimeGlobalVariableTest, AccessGlobalIntegerVariable) {
     // Add a global integer variable
-    Value globalValue = semiValueNewInt(123);
+    Value globalValue = semiValueIntCreate(123);
     AddGlobalVariable("globalInt", globalValue);
 
     // Create code that loads the global variable into register 0 and then traps
@@ -39,7 +39,7 @@ TEST_F(RuntimeGlobalVariableTest, AccessGlobalIntegerVariable) {
 
 TEST_F(RuntimeGlobalVariableTest, AccessGlobalFloatVariable) {
     // Add a global float variable
-    Value globalValue = semiValueNewFloat(3.14159);
+    Value globalValue = semiValueFloatCreate(3.14159);
     AddGlobalVariable("globalFloat", globalValue);
 
     // Create code that loads the global variable
@@ -60,7 +60,7 @@ TEST_F(RuntimeGlobalVariableTest, AccessGlobalFloatVariable) {
 
 TEST_F(RuntimeGlobalVariableTest, AccessGlobalBooleanVariable) {
     // Add a global boolean variable
-    Value globalValue = semiValueNewBool(false);
+    Value globalValue = semiValueBoolCreate(false);
     AddGlobalVariable("globalBool", globalValue);
 
     // Create code that loads the global variable
@@ -105,9 +105,9 @@ TEST_F(RuntimeGlobalVariableTest, AccessGlobalStringVariable) {
 
 TEST_F(RuntimeGlobalVariableTest, AccessMultipleGlobalVariables) {
     // Add multiple global variables
-    Value intValue   = semiValueNewInt(42);
-    Value floatValue = semiValueNewFloat(2.718);
-    Value boolValue  = semiValueNewBool(true);
+    Value intValue   = semiValueIntCreate(42);
+    Value floatValue = semiValueFloatCreate(2.718);
+    Value boolValue  = semiValueBoolCreate(true);
 
     AddGlobalVariable("first", intValue);
     AddGlobalVariable("second", floatValue);
@@ -139,13 +139,13 @@ static ErrorId testGlobalNativeFunction(SemiVM* vm, uint8_t argsCount, Value* ar
     (void)args;
 
     // Set a simple return value for testing
-    *returnValue = semiValueNewInt(12345);
+    *returnValue = semiValueIntCreate(12345);
     return 0;
 }
 
 TEST_F(RuntimeGlobalVariableTest, AccessGlobalNativeFunctionVariable) {
     // Add a global native function variable
-    Value funcValue = semiValueNewNativeFunction(testGlobalNativeFunction);
+    Value funcValue = semiValueNativeFunctionCreate(testGlobalNativeFunction);
     AddGlobalVariable("globalFunc", funcValue);
 
     // Create code that loads the global function

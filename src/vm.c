@@ -1007,7 +1007,7 @@ static void runMainLoop(SemiVM* vm) {
 
                 TypeId targetypeId    = (TypeId)BASE_TYPE(rb);
                 TypeId expectedTypeId = (TypeId)AS_INT(rc);
-                *ra                   = semiValueNewBool(targetypeId == expectedTypeId);
+                *ra                   = semiValueBoolCreate(targetypeId == expectedTypeId);
                 break;
             }
             default: {
@@ -1046,7 +1046,7 @@ ErrorId semiRunModule(SemiVM* vm, const char* moduleName, uint8_t moduleNameLeng
         return SEMI_ERROR_MODULE_NOT_FOUND;
     }
     IdentifierId moduleNameIdentifierId = semiSymbolTableGetId(internedModuleName);
-    Value moduleValue                   = semiDictGet(&vm->modules, semiValueNewInt(moduleNameIdentifierId));
+    Value moduleValue                   = semiDictGet(&vm->modules, semiValueIntCreate(moduleNameIdentifierId));
     if (IS_INVALID(&moduleValue)) {
         return SEMI_ERROR_MODULE_NOT_FOUND;
     }

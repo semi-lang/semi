@@ -37,7 +37,7 @@ class ConstantTableTest : public ::testing::Test {
 TEST_F(ConstantTableTest, IntegerInsertion) {
     // Insert a positive integer
     IntValue test_int   = 42;
-    ConstantIndex index = semiConstantTableInsert(&table, semiValueNewInt(test_int));
+    ConstantIndex index = semiConstantTableInsert(&table, semiValueIntCreate(test_int));
     EXPECT_NE(index, CONST_INDEX_INVALID) << "Integer insertion failed.";
     EXPECT_EQ(index, 0) << "First insertion should have index 0.";
 
@@ -54,8 +54,8 @@ TEST_F(ConstantTableTest, IntegerDeduplication) {
     IntValue test_int = 123;
 
     // Insert the same integer twice
-    ConstantIndex index1 = semiConstantTableInsert(&table, semiValueNewInt(test_int));
-    ConstantIndex index2 = semiConstantTableInsert(&table, semiValueNewInt(test_int));
+    ConstantIndex index1 = semiConstantTableInsert(&table, semiValueIntCreate(test_int));
+    ConstantIndex index2 = semiConstantTableInsert(&table, semiValueIntCreate(test_int));
 
     EXPECT_NE(index1, CONST_INDEX_INVALID) << "First integer insertion failed.";
     EXPECT_NE(index2, CONST_INDEX_INVALID) << "Second integer insertion failed.";
@@ -68,7 +68,7 @@ TEST_F(ConstantTableTest, IntegerDeduplication) {
 TEST_F(ConstantTableTest, DoubleInsertion) {
     // Insert a double value
     FloatValue test_double = 3.14159;
-    ConstantIndex index    = semiConstantTableInsert(&table, semiValueNewFloat(test_double));
+    ConstantIndex index    = semiConstantTableInsert(&table, semiValueFloatCreate(test_double));
     EXPECT_NE(index, CONST_INDEX_INVALID) << "Double insertion failed.";
     EXPECT_EQ(index, 0) << "First insertion should have index 0.";
 
@@ -85,8 +85,8 @@ TEST_F(ConstantTableTest, DoubleDeduplication) {
     FloatValue test_double = 2.71828;
 
     // Insert the same double twice
-    ConstantIndex index1 = semiConstantTableInsert(&table, semiValueNewFloat(test_double));
-    ConstantIndex index2 = semiConstantTableInsert(&table, semiValueNewFloat(test_double));
+    ConstantIndex index1 = semiConstantTableInsert(&table, semiValueFloatCreate(test_double));
+    ConstantIndex index2 = semiConstantTableInsert(&table, semiValueFloatCreate(test_double));
 
     EXPECT_NE(index1, CONST_INDEX_INVALID) << "First double insertion failed.";
     EXPECT_NE(index2, CONST_INDEX_INVALID) << "Second double insertion failed.";
@@ -156,8 +156,8 @@ TEST_F(ConstantTableTest, MixedTypeInsertion) {
     const char* test_string = "test";
     size_t test_length      = strlen(test_string);
 
-    ConstantIndex int_index    = semiConstantTableInsert(&table, semiValueNewInt(test_int));
-    ConstantIndex double_index = semiConstantTableInsert(&table, semiValueNewFloat(test_double));
+    ConstantIndex int_index    = semiConstantTableInsert(&table, semiValueIntCreate(test_int));
+    ConstantIndex double_index = semiConstantTableInsert(&table, semiValueFloatCreate(test_double));
     ConstantIndex string_index = InsertString(test_string);
 
     EXPECT_NE(int_index, CONST_INDEX_INVALID) << "Integer insertion failed.";
@@ -195,10 +195,10 @@ TEST_F(ConstantTableTest, EdgeCaseValues) {
     IntValue max_int      = INT64_MAX;
     IntValue min_int      = INT64_MIN;
 
-    ConstantIndex zero_index = semiConstantTableInsert(&table, semiValueNewInt(zero_int));
-    ConstantIndex neg_index  = semiConstantTableInsert(&table, semiValueNewInt(negative_int));
-    ConstantIndex max_index  = semiConstantTableInsert(&table, semiValueNewInt(max_int));
-    ConstantIndex min_index  = semiConstantTableInsert(&table, semiValueNewInt(min_int));
+    ConstantIndex zero_index = semiConstantTableInsert(&table, semiValueIntCreate(zero_int));
+    ConstantIndex neg_index  = semiConstantTableInsert(&table, semiValueIntCreate(negative_int));
+    ConstantIndex max_index  = semiConstantTableInsert(&table, semiValueIntCreate(max_int));
+    ConstantIndex min_index  = semiConstantTableInsert(&table, semiValueIntCreate(min_int));
 
     EXPECT_NE(zero_index, CONST_INDEX_INVALID) << "Zero integer insertion failed.";
     EXPECT_NE(neg_index, CONST_INDEX_INVALID) << "Negative integer insertion failed.";
@@ -210,9 +210,9 @@ TEST_F(ConstantTableTest, EdgeCaseValues) {
     FloatValue negative_double = -3.14;
     FloatValue inf_double      = 1.0 / 0.0;  // Infinity
 
-    ConstantIndex zero_d_index = semiConstantTableInsert(&table, semiValueNewFloat(zero_double));
-    ConstantIndex neg_d_index  = semiConstantTableInsert(&table, semiValueNewFloat(negative_double));
-    ConstantIndex inf_index    = semiConstantTableInsert(&table, semiValueNewFloat(inf_double));
+    ConstantIndex zero_d_index = semiConstantTableInsert(&table, semiValueFloatCreate(zero_double));
+    ConstantIndex neg_d_index  = semiConstantTableInsert(&table, semiValueFloatCreate(negative_double));
+    ConstantIndex inf_index    = semiConstantTableInsert(&table, semiValueFloatCreate(inf_double));
 
     EXPECT_NE(zero_d_index, CONST_INDEX_INVALID) << "Zero double insertion failed.";
     EXPECT_NE(neg_d_index, CONST_INDEX_INVALID) << "Negative double insertion failed.";
@@ -239,7 +239,7 @@ TEST_F(ConstantTableTest, EdgeCaseValues) {
 
 TEST_F(ConstantTableTest, InvalidIndexRetrieval) {
     // Insert one value
-    ConstantIndex valid_index = semiConstantTableInsert(&table, semiValueNewInt(42));
+    ConstantIndex valid_index = semiConstantTableInsert(&table, semiValueIntCreate(42));
     EXPECT_NE(valid_index, CONST_INDEX_INVALID) << "Integer insertion failed.";
 
     // Try to retrieve with invalid indices
@@ -254,10 +254,10 @@ TEST_F(ConstantTableTest, SizeTracking) {
     EXPECT_EQ(semiConstantTableSize(&table), 0) << "Empty table should have size 0.";
 
     // Add values and check size increases
-    semiConstantTableInsert(&table, semiValueNewInt(1));
+    semiConstantTableInsert(&table, semiValueIntCreate(1));
     EXPECT_EQ(semiConstantTableSize(&table), 1) << "Size should be 1 after first insertion.";
 
-    semiConstantTableInsert(&table, semiValueNewFloat(2.0));
+    semiConstantTableInsert(&table, semiValueFloatCreate(2.0));
     EXPECT_EQ(semiConstantTableSize(&table), 2) << "Size should be 2 after second insertion.";
 
     Value s = semiValueStringCreate(&gc, "three", 5);
@@ -265,6 +265,6 @@ TEST_F(ConstantTableTest, SizeTracking) {
     EXPECT_EQ(semiConstantTableSize(&table), 3) << "Size should be 3 after third insertion.";
 
     // Test deduplication doesn't increase size
-    semiConstantTableInsert(&table, semiValueNewInt(1));  // Duplicate
+    semiConstantTableInsert(&table, semiValueIntCreate(1));  // Duplicate
     EXPECT_EQ(semiConstantTableSize(&table), 3) << "Size should remain 3 after duplicate insertion.";
 }

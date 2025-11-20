@@ -365,7 +365,7 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(INVALID, next)(GC* gc, Value* ret, Va
 
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(BOOL, inverse)(GC* gc, Value* ret, Value* operand) {
     (void)gc;
-    *ret = semiValueNewBool(!AS_BOOL(operand));
+    *ret = semiValueBoolCreate(!AS_BOOL(operand));
     return 0;
 }
 
@@ -408,20 +408,20 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(BOOL, toType)(GC* gc, Value* ret, Val
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(BOOL, eq)(GC* gc, Value* ret, Value* left, Value* right) {
     (void)gc;
     if (!IS_BOOL(right)) {
-        *ret = semiValueNewBool(false);
+        *ret = semiValueBoolCreate(false);
         return 0;
     }
-    *ret = semiValueNewBool(AS_BOOL(left) == AS_BOOL(right));
+    *ret = semiValueBoolCreate(AS_BOOL(left) == AS_BOOL(right));
     return 0;
 }
 
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(BOOL, neq)(GC* gc, Value* ret, Value* left, Value* right) {
     (void)gc;
     if (!IS_BOOL(right)) {
-        *ret = semiValueNewBool(false);
+        *ret = semiValueBoolCreate(false);
         return 0;
     }
-    *ret = semiValueNewBool(AS_BOOL(left) != AS_BOOL(right));
+    *ret = semiValueBoolCreate(AS_BOOL(left) != AS_BOOL(right));
     return 0;
 }
 
@@ -448,13 +448,13 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, hash)(GC* gc, ValueHash* ret,
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, add)(GC* gc, Value* ret, Value* left, Value* right) {
     (void)gc;
     if (IS_INT(left) && IS_INT(right)) {
-        *ret = semiValueNewInt(AS_INT(left) + AS_INT(right));
+        *ret = semiValueIntCreate(AS_INT(left) + AS_INT(right));
     } else if ((IS_INT(left) && IS_FLOAT(right))) {
-        *ret = semiValueNewFloat((FloatValue)AS_INT(left) + AS_FLOAT(right));
+        *ret = semiValueFloatCreate((FloatValue)AS_INT(left) + AS_FLOAT(right));
     } else if ((IS_FLOAT(left) && IS_INT(right))) {
-        *ret = semiValueNewFloat(AS_FLOAT(left) + (FloatValue)AS_INT(right));
+        *ret = semiValueFloatCreate(AS_FLOAT(left) + (FloatValue)AS_INT(right));
     } else if (IS_FLOAT(left) && IS_FLOAT(right)) {
-        *ret = semiValueNewFloat(AS_FLOAT(left) + AS_FLOAT(right));
+        *ret = semiValueFloatCreate(AS_FLOAT(left) + AS_FLOAT(right));
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
@@ -464,13 +464,13 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, add)(GC* gc, Value* ret, Valu
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, subtract)(GC* gc, Value* ret, Value* left, Value* right) {
     (void)gc;
     if (IS_INT(left) && IS_INT(right)) {
-        *ret = semiValueNewInt(AS_INT(left) - AS_INT(right));
+        *ret = semiValueIntCreate(AS_INT(left) - AS_INT(right));
     } else if ((IS_INT(left) && IS_FLOAT(right))) {
-        *ret = semiValueNewFloat((FloatValue)AS_INT(left) - AS_FLOAT(right));
+        *ret = semiValueFloatCreate((FloatValue)AS_INT(left) - AS_FLOAT(right));
     } else if ((IS_FLOAT(left) && IS_INT(right))) {
-        *ret = semiValueNewFloat(AS_FLOAT(left) - (FloatValue)AS_INT(right));
+        *ret = semiValueFloatCreate(AS_FLOAT(left) - (FloatValue)AS_INT(right));
     } else if (IS_FLOAT(left) && IS_FLOAT(right)) {
-        *ret = semiValueNewFloat(AS_FLOAT(left) - AS_FLOAT(right));
+        *ret = semiValueFloatCreate(AS_FLOAT(left) - AS_FLOAT(right));
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
@@ -480,13 +480,13 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, subtract)(GC* gc, Value* ret,
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, multiply)(GC* gc, Value* ret, Value* left, Value* right) {
     (void)gc;
     if (IS_INT(left) && IS_INT(right)) {
-        *ret = semiValueNewInt(AS_INT(left) * AS_INT(right));
+        *ret = semiValueIntCreate(AS_INT(left) * AS_INT(right));
     } else if ((IS_INT(left) && IS_FLOAT(right))) {
-        *ret = semiValueNewFloat((FloatValue)AS_INT(left) * AS_FLOAT(right));
+        *ret = semiValueFloatCreate((FloatValue)AS_INT(left) * AS_FLOAT(right));
     } else if ((IS_FLOAT(left) && IS_INT(right))) {
-        *ret = semiValueNewFloat(AS_FLOAT(left) * (FloatValue)AS_INT(right));
+        *ret = semiValueFloatCreate(AS_FLOAT(left) * (FloatValue)AS_INT(right));
     } else if (IS_FLOAT(left) && IS_FLOAT(right)) {
-        *ret = semiValueNewFloat(AS_FLOAT(left) * AS_FLOAT(right));
+        *ret = semiValueFloatCreate(AS_FLOAT(left) * AS_FLOAT(right));
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
@@ -499,22 +499,22 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, divide)(GC* gc, Value* ret, V
         if (AS_INT(right) == 0) {
             return SEMI_ERROR_DIVIDE_BY_ZERO;
         }
-        *ret = semiValueNewInt(AS_INT(left) / AS_INT(right));
+        *ret = semiValueIntCreate(AS_INT(left) / AS_INT(right));
     } else if ((IS_INT(left) && IS_FLOAT(right))) {
         if (AS_FLOAT(right) == 0.0) {
             return SEMI_ERROR_DIVIDE_BY_ZERO;
         }
-        *ret = semiValueNewFloat((FloatValue)AS_INT(left) / AS_FLOAT(right));
+        *ret = semiValueFloatCreate((FloatValue)AS_INT(left) / AS_FLOAT(right));
     } else if ((IS_FLOAT(left) && IS_INT(right))) {
         if (AS_INT(right) == 0) {
             return SEMI_ERROR_DIVIDE_BY_ZERO;
         }
-        *ret = semiValueNewFloat(AS_FLOAT(left) / (FloatValue)AS_INT(right));
+        *ret = semiValueFloatCreate(AS_FLOAT(left) / (FloatValue)AS_INT(right));
     } else if (IS_FLOAT(left) && IS_FLOAT(right)) {
         if (AS_FLOAT(right) == 0.0) {
             return SEMI_ERROR_DIVIDE_BY_ZERO;
         }
-        *ret = semiValueNewFloat(AS_FLOAT(left) / AS_FLOAT(right));
+        *ret = semiValueFloatCreate(AS_FLOAT(left) / AS_FLOAT(right));
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
@@ -527,22 +527,22 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, floorDivide)(GC* gc, Value* r
         if (AS_INT(right) == 0) {
             return SEMI_ERROR_DIVIDE_BY_ZERO;
         }
-        *ret = semiValueNewInt(AS_INT(left) / AS_INT(right));
+        *ret = semiValueIntCreate(AS_INT(left) / AS_INT(right));
     } else if ((IS_INT(left) && IS_FLOAT(right))) {
         if (AS_FLOAT(right) == 0.0) {
             return SEMI_ERROR_DIVIDE_BY_ZERO;
         }
-        *ret = semiValueNewInt((IntValue)floor((FloatValue)AS_INT(left) / AS_FLOAT(right)));
+        *ret = semiValueIntCreate((IntValue)floor((FloatValue)AS_INT(left) / AS_FLOAT(right)));
     } else if ((IS_FLOAT(left) && IS_INT(right))) {
         if (AS_INT(right) == 0) {
             return SEMI_ERROR_DIVIDE_BY_ZERO;
         }
-        *ret = semiValueNewInt((IntValue)floor(AS_FLOAT(left) / (FloatValue)AS_INT(right)));
+        *ret = semiValueIntCreate((IntValue)floor(AS_FLOAT(left) / (FloatValue)AS_INT(right)));
     } else if (IS_FLOAT(left) && IS_FLOAT(right)) {
         if (AS_FLOAT(right) == 0.0) {
             return SEMI_ERROR_DIVIDE_BY_ZERO;
         }
-        *ret = semiValueNewInt((IntValue)floor(AS_FLOAT(left) / AS_FLOAT(right)));
+        *ret = semiValueIntCreate((IntValue)floor(AS_FLOAT(left) / AS_FLOAT(right)));
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
@@ -555,22 +555,22 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, modulo)(GC* gc, Value* ret, V
         if (AS_INT(right) == 0) {
             return SEMI_ERROR_DIVIDE_BY_ZERO;
         }
-        *ret = semiValueNewInt(AS_INT(left) % AS_INT(right));
+        *ret = semiValueIntCreate(AS_INT(left) % AS_INT(right));
     } else if ((IS_INT(left) && IS_FLOAT(right))) {
         if (AS_FLOAT(right) == 0.0) {
             return SEMI_ERROR_DIVIDE_BY_ZERO;
         }
-        *ret = semiValueNewFloat(fmod((FloatValue)AS_INT(left), AS_FLOAT(right)));
+        *ret = semiValueFloatCreate(fmod((FloatValue)AS_INT(left), AS_FLOAT(right)));
     } else if ((IS_FLOAT(left) && IS_INT(right))) {
         if (AS_INT(right) == 0) {
             return SEMI_ERROR_DIVIDE_BY_ZERO;
         }
-        *ret = semiValueNewFloat(fmod(AS_FLOAT(left), (FloatValue)AS_INT(right)));
+        *ret = semiValueFloatCreate(fmod(AS_FLOAT(left), (FloatValue)AS_INT(right)));
     } else if (IS_FLOAT(left) && IS_FLOAT(right)) {
         if (AS_FLOAT(right) == 0.0) {
             return SEMI_ERROR_DIVIDE_BY_ZERO;
         }
-        *ret = semiValueNewFloat(fmod(AS_FLOAT(left), AS_FLOAT(right)));
+        *ret = semiValueFloatCreate(fmod(AS_FLOAT(left), AS_FLOAT(right)));
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
@@ -582,16 +582,16 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, power)(GC* gc, Value* ret, Va
     if (IS_INT(left) && IS_INT(right)) {
         IntValue exponent = AS_INT(right);
         if (exponent >= 0) {
-            *ret = semiValueNewInt(fastIntPower(AS_INT(left), exponent));
+            *ret = semiValueIntCreate(fastIntPower(AS_INT(left), exponent));
         } else {
-            *ret = semiValueNewFloat(pow((FloatValue)AS_INT(left), (FloatValue)AS_INT(right)));
+            *ret = semiValueFloatCreate(pow((FloatValue)AS_INT(left), (FloatValue)AS_INT(right)));
         }
     } else if ((IS_INT(left) && IS_FLOAT(right))) {
-        *ret = semiValueNewFloat(pow((FloatValue)AS_INT(left), AS_FLOAT(right)));
+        *ret = semiValueFloatCreate(pow((FloatValue)AS_INT(left), AS_FLOAT(right)));
     } else if ((IS_FLOAT(left) && IS_INT(right))) {
-        *ret = semiValueNewFloat(pow(AS_FLOAT(left), (FloatValue)AS_INT(right)));
+        *ret = semiValueFloatCreate(pow(AS_FLOAT(left), (FloatValue)AS_INT(right)));
     } else if (IS_FLOAT(left) && IS_FLOAT(right)) {
-        *ret = semiValueNewFloat(pow(AS_FLOAT(left), AS_FLOAT(right)));
+        *ret = semiValueFloatCreate(pow(AS_FLOAT(left), AS_FLOAT(right)));
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
@@ -601,9 +601,9 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, power)(GC* gc, Value* ret, Va
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, negate)(GC* gc, Value* ret, Value* left) {
     (void)gc;
     if (IS_INT(left)) {
-        *ret = semiValueNewInt(-AS_INT(left));
+        *ret = semiValueIntCreate(-AS_INT(left));
     } else if (IS_FLOAT(left)) {
-        *ret = semiValueNewFloat(-(FloatValue)AS_FLOAT(left));
+        *ret = semiValueFloatCreate(-(FloatValue)AS_FLOAT(left));
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
@@ -613,7 +613,7 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, negate)(GC* gc, Value* ret, V
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, bitwiseAnd)(GC* gc, Value* ret, Value* left, Value* right) {
     (void)gc;
     if (IS_INT(left) && IS_INT(right)) {
-        *ret = semiValueNewInt(AS_INT(left) & AS_INT(right));
+        *ret = semiValueIntCreate(AS_INT(left) & AS_INT(right));
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
@@ -623,7 +623,7 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, bitwiseAnd)(GC* gc, Value* re
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, bitwiseOr)(GC* gc, Value* ret, Value* left, Value* right) {
     (void)gc;
     if (IS_INT(left) && IS_INT(right)) {
-        *ret = semiValueNewInt(AS_INT(left) | AS_INT(right));
+        *ret = semiValueIntCreate(AS_INT(left) | AS_INT(right));
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
@@ -633,7 +633,7 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, bitwiseOr)(GC* gc, Value* ret
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, bitwiseXor)(GC* gc, Value* ret, Value* left, Value* right) {
     (void)gc;
     if (IS_INT(left) && IS_INT(right)) {
-        *ret = semiValueNewInt(AS_INT(left) ^ AS_INT(right));
+        *ret = semiValueIntCreate(AS_INT(left) ^ AS_INT(right));
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
@@ -643,7 +643,7 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, bitwiseXor)(GC* gc, Value* re
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, bitwiseInvert)(GC* gc, Value* ret, Value* left) {
     (void)gc;
     if (IS_INT(left)) {
-        *ret = semiValueNewInt(~AS_INT(left));
+        *ret = semiValueIntCreate(~AS_INT(left));
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
@@ -653,7 +653,7 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, bitwiseInvert)(GC* gc, Value*
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, bitwiseShiftLeft)(GC* gc, Value* ret, Value* left, Value* right) {
     (void)gc;
     if (IS_INT(left) && IS_INT(right)) {
-        *ret = semiValueNewInt(AS_INT(left) << AS_INT(right));
+        *ret = semiValueIntCreate(AS_INT(left) << AS_INT(right));
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
@@ -663,7 +663,7 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, bitwiseShiftLeft)(GC* gc, Val
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, bitwiseShiftRight)(GC* gc, Value* ret, Value* left, Value* right) {
     (void)gc;
     if (IS_INT(left) && IS_INT(right)) {
-        *ret = semiValueNewInt(AS_INT(left) >> AS_INT(right));
+        *ret = semiValueIntCreate(AS_INT(left) >> AS_INT(right));
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
@@ -673,9 +673,9 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, bitwiseShiftRight)(GC* gc, Va
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, gt)(GC* gc, Value* ret, Value* left, Value* right) {
     (void)gc;
     if (IS_INT(left) && IS_INT(right)) {
-        *ret = semiValueNewBool(AS_INT(left) > AS_INT(right));
+        *ret = semiValueBoolCreate(AS_INT(left) > AS_INT(right));
     } else if (IS_NUMBER(left) && IS_NUMBER(right)) {
-        *ret = semiValueNewBool(semiValueNumberToFloat(*left) > semiValueNumberToFloat(*right));
+        *ret = semiValueBoolCreate(semiValueNumberToFloat(*left) > semiValueNumberToFloat(*right));
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
@@ -685,9 +685,9 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, gt)(GC* gc, Value* ret, Value
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, gte)(GC* gc, Value* ret, Value* left, Value* right) {
     (void)gc;
     if (IS_INT(left) && IS_INT(right)) {
-        *ret = semiValueNewBool(AS_INT(left) >= AS_INT(right));
+        *ret = semiValueBoolCreate(AS_INT(left) >= AS_INT(right));
     } else if (IS_NUMBER(left) && IS_NUMBER(right)) {
-        *ret = semiValueNewBool(semiValueNumberToFloat(*left) >= semiValueNumberToFloat(*right));
+        *ret = semiValueBoolCreate(semiValueNumberToFloat(*left) >= semiValueNumberToFloat(*right));
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
@@ -697,9 +697,9 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, gte)(GC* gc, Value* ret, Valu
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, lt)(GC* gc, Value* ret, Value* left, Value* right) {
     (void)gc;
     if (IS_INT(left) && IS_INT(right)) {
-        *ret = semiValueNewBool(AS_INT(left) < AS_INT(right));
+        *ret = semiValueBoolCreate(AS_INT(left) < AS_INT(right));
     } else if (IS_NUMBER(left) && IS_NUMBER(right)) {
-        *ret = semiValueNewBool(semiValueNumberToFloat(*left) < semiValueNumberToFloat(*right));
+        *ret = semiValueBoolCreate(semiValueNumberToFloat(*left) < semiValueNumberToFloat(*right));
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
@@ -709,9 +709,9 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, lt)(GC* gc, Value* ret, Value
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, lte)(GC* gc, Value* ret, Value* left, Value* right) {
     (void)gc;
     if (IS_INT(left) && IS_INT(right)) {
-        *ret = semiValueNewBool(AS_INT(left) <= AS_INT(right));
+        *ret = semiValueBoolCreate(AS_INT(left) <= AS_INT(right));
     } else if (IS_NUMBER(left) && IS_NUMBER(right)) {
-        *ret = semiValueNewBool(semiValueNumberToFloat(*left) <= semiValueNumberToFloat(*right));
+        *ret = semiValueBoolCreate(semiValueNumberToFloat(*left) <= semiValueNumberToFloat(*right));
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
@@ -721,9 +721,10 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, lte)(GC* gc, Value* ret, Valu
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, eq)(GC* gc, Value* ret, Value* left, Value* right) {
     (void)gc;
     if (IS_INT(left) && IS_INT(right)) {
-        *ret = semiValueNewBool(AS_INT(left) == AS_INT(right));
+        *ret = semiValueBoolCreate(AS_INT(left) == AS_INT(right));
     } else if (IS_NUMBER(left) && IS_NUMBER(right)) {
-        *ret = semiValueNewBool(fabs(semiValueNumberToFloat(*left) - semiValueNumberToFloat(*right)) < FLOAT_EPSILON);
+        *ret =
+            semiValueBoolCreate(fabs(semiValueNumberToFloat(*left) - semiValueNumberToFloat(*right)) < FLOAT_EPSILON);
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
@@ -733,9 +734,9 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, eq)(GC* gc, Value* ret, Value
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, neq)(GC* gc, Value* ret, Value* left, Value* right) {
     (void)gc;
     if (IS_INT(left) && IS_INT(right)) {
-        *ret = semiValueNewBool(AS_INT(left) != AS_INT(right));
+        *ret = semiValueBoolCreate(AS_INT(left) != AS_INT(right));
     } else if (IS_NUMBER(left) && IS_NUMBER(right)) {
-        *ret = semiValueNewBool(semiValueNumberToFloat(*left) != semiValueNumberToFloat(*right));
+        *ret = semiValueBoolCreate(semiValueNumberToFloat(*left) != semiValueNumberToFloat(*right));
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
@@ -745,9 +746,9 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, neq)(GC* gc, Value* ret, Valu
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, toBool)(GC* gc, Value* ret, Value* operand) {
     (void)gc;
     if (IS_INT(operand)) {
-        *ret = semiValueNewBool(AS_INT(operand) != 0);
+        *ret = semiValueBoolCreate(AS_INT(operand) != 0);
     } else if (IS_FLOAT(operand)) {
-        *ret = semiValueNewBool(AS_FLOAT(operand) != 0.0);
+        *ret = semiValueBoolCreate(AS_FLOAT(operand) != 0.0);
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
@@ -759,7 +760,7 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, toInt)(GC* gc, Value* ret, Va
     if (IS_INT(operand)) {
         *ret = *operand;
     } else if (IS_FLOAT(operand)) {
-        *ret = semiValueNewInt((IntValue)AS_FLOAT(operand));
+        *ret = semiValueIntCreate((IntValue)AS_FLOAT(operand));
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
@@ -769,7 +770,7 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, toInt)(GC* gc, Value* ret, Va
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(NUMBER, toFloat)(GC* gc, Value* ret, Value* operand) {
     (void)gc;
     if (IS_INT(operand)) {
-        *ret = semiValueNewFloat((FloatValue)AS_INT(operand));
+        *ret = semiValueFloatCreate((FloatValue)AS_INT(operand));
     } else if (IS_FLOAT(operand)) {
         *ret = *operand;
     } else {
@@ -887,9 +888,9 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(STRING, gt)(GC* gc, Value* ret, Value
 
     int cmp = memcmp(leftStr, rightStr, leftSize < rightSize ? leftSize : rightSize);
     if (cmp > 0 || (cmp == 0 && leftSize > rightSize)) {
-        *ret = semiValueNewBool(true);
+        *ret = semiValueBoolCreate(true);
     } else {
-        *ret = semiValueNewBool(false);
+        *ret = semiValueBoolCreate(false);
     }
     return 0;
 }
@@ -939,9 +940,9 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(STRING, lt)(GC* gc, Value* ret, Value
 
     int cmp = memcmp(leftStr, rightStr, leftSize < rightSize ? leftSize : rightSize);
     if (cmp < 0 || (cmp == 0 && leftSize < rightSize)) {
-        *ret = semiValueNewBool(true);
+        *ret = semiValueBoolCreate(true);
     } else {
-        *ret = semiValueNewBool(false);
+        *ret = semiValueBoolCreate(false);
     }
     return 0;
 }
@@ -990,11 +991,11 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(STRING, eq)(GC* gc, Value* ret, Value
     }
 
     if (leftSize != rightSize) {
-        *ret = semiValueNewBool(false);
+        *ret = semiValueBoolCreate(false);
         return 0;
     }
 
-    *ret = semiValueNewBool(memcmp(leftStr, rightStr, leftSize) == 0);
+    *ret = semiValueBoolCreate(memcmp(leftStr, rightStr, leftSize) == 0);
     return 0;
 }
 
@@ -1004,7 +1005,7 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(STRING, neq)(GC* gc, Value* ret, Valu
         return err;
     }
 
-    *ret = semiValueNewBool(!AS_BOOL(ret));
+    *ret = semiValueBoolCreate(!AS_BOOL(ret));
     return 0;
 }
 
@@ -1018,7 +1019,7 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(STRING, toBool)(GC* gc, Value* ret, V
         size = (uint32_t)AS_OBJECT_STRING(operand)->length;
     }
 
-    *ret = semiValueNewBool(size != 0);
+    *ret = semiValueBoolCreate(size != 0);
     return 0;
 }
 
@@ -1086,23 +1087,23 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(STRING, contain)(GC* gc, Value* ret, 
     }
 
     if (itemSize == 0) {
-        *ret = semiValueNewBool(true);
+        *ret = semiValueBoolCreate(true);
         return 0;
     }
 
     if (collectionSize < itemSize) {
-        *ret = semiValueNewBool(false);
+        *ret = semiValueBoolCreate(false);
         return 0;
     }
 
     for (uint32_t i = 0; i <= collectionSize - itemSize; i++) {
         if (collectionStr[i] == itemStr[0] && memcmp(collectionStr + i, itemStr, itemSize) == 0) {
-            *ret = semiValueNewBool(true);
+            *ret = semiValueBoolCreate(true);
             return 0;
         }
     }
 
-    *ret = semiValueNewBool(false);
+    *ret = semiValueBoolCreate(false);
     return 0;
 }
 
@@ -1118,7 +1119,7 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(STRING, len)(GC* gc, Value* ret, Valu
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
 
-    *ret = semiValueNewInt((IntValue)size);
+    *ret = semiValueIntCreate((IntValue)size);
     return 0;
 }
 
@@ -1150,7 +1151,7 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(STRING, getItem)(GC* gc, Value* ret, 
         return SEMI_ERROR_INDEX_OOB;
     }
 
-    *ret = semiValueNewInlineString1(str[index]);
+    *ret = semiValueInlineStringCreat1(str[index]);
     return 0;
 }
 
@@ -1167,7 +1168,7 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(RANGE, next)(GC* gc, Value* ret, Valu
         if (range.start >= range.end) {
             *ret = INVALID_VALUE;
         } else {
-            *ret = semiValueNewInt(range.start);
+            *ret = semiValueIntCreate(range.start);
             AS_INLINE_RANGE(iterator).start += 1;
         }
         return 0;
@@ -1198,9 +1199,9 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(RANGE, eq)(GC* gc, Value* ret, Value*
     Value lStart, lEnd, lStep;
     if (IS_INLINE_RANGE(left)) {
         InlineRange range = AS_INLINE_RANGE(left);
-        lStart            = semiValueNewInt(range.start);
-        lEnd              = semiValueNewInt(range.end);
-        lStep             = semiValueNewInt(1);
+        lStart            = semiValueIntCreate(range.start);
+        lEnd              = semiValueIntCreate(range.end);
+        lStep             = semiValueIntCreate(1);
     } else if (IS_OBJECT_RANGE(left)) {
         ObjectRange* range = AS_OBJECT_RANGE(left);
         lStart             = range->start;
@@ -1212,12 +1213,12 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(RANGE, eq)(GC* gc, Value* ret, Value*
 
     if (IS_INLINE_RANGE(right)) {
         InlineRange range = AS_INLINE_RANGE(right);
-        Value rStart      = semiValueNewInt(range.start);
-        Value rEnd        = semiValueNewInt(range.end);
-        Value rStep       = semiValueNewInt(1);
+        Value rStart      = semiValueIntCreate(range.start);
+        Value rEnd        = semiValueIntCreate(range.end);
+        Value rStep       = semiValueIntCreate(1);
 
-        *ret = semiValueNewBool(semiBuiltInEquals(lStart, rStart) && semiBuiltInEquals(lEnd, rEnd) &&
-                                semiBuiltInEquals(lStep, rStep));
+        *ret = semiValueBoolCreate(semiBuiltInEquals(lStart, rStart) && semiBuiltInEquals(lEnd, rEnd) &&
+                                   semiBuiltInEquals(lStep, rStep));
         return 0;
 
     } else if (IS_OBJECT_RANGE(right)) {
@@ -1230,8 +1231,8 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(RANGE, eq)(GC* gc, Value* ret, Value*
         Value rEnd   = range->end;
         Value rStep  = range->step;
 
-        *ret = semiValueNewBool(semiBuiltInEquals(lStart, rStart) && semiBuiltInEquals(lEnd, rEnd) &&
-                                semiBuiltInEquals(lStep, rStep));
+        *ret = semiValueBoolCreate(semiBuiltInEquals(lStart, rStart) && semiBuiltInEquals(lEnd, rEnd) &&
+                                   semiBuiltInEquals(lStep, rStep));
 
         return 0;
     } else {
@@ -1247,7 +1248,7 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(RANGE, neq)(GC* gc, Value* ret, Value
         return err;
     }
 
-    *ret = semiValueNewBool(!AS_BOOL(ret));
+    *ret = semiValueBoolCreate(!AS_BOOL(ret));
     return 0;
 }
 
@@ -1275,14 +1276,14 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(LIST, iter)(GC* gc, Value* ret, Value
 
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(LIST, contain)(GC* gc, Value* ret, Value* item, Value* collection) {
     ObjectList* list = AS_LIST(collection);
-    *ret             = semiValueNewBool(semiListHas(gc, list, *item));
+    *ret             = semiValueBoolCreate(semiListHas(gc, list, *item));
     return 0;
 }
 
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(LIST, len)(GC* gc, Value* ret, Value* collection) {
     (void)gc;
     ObjectList* list = AS_LIST(collection);
-    *ret             = semiValueNewInt((IntValue)semiListLen(list));
+    *ret             = semiValueIntCreate((IntValue)semiListLen(list));
     return 0;
 }
 
@@ -1420,14 +1421,14 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(DICT, iter)(GC* gc, Value* ret, Value
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(DICT, contain)(GC* gc, Value* ret, Value* item, Value* collection) {
     (void)gc;
     ObjectDict* dict = AS_DICT(collection);
-    *ret             = semiValueNewBool(semiDictHas(dict, *item));
+    *ret             = semiValueBoolCreate(semiDictHas(dict, *item));
     return 0;
 }
 
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(DICT, len)(GC* gc, Value* ret, Value* collection) {
     (void)gc;
     ObjectDict* dict = AS_DICT(collection);
-    *ret             = semiValueNewInt((IntValue)semiDictLen(dict));
+    *ret             = semiValueIntCreate((IntValue)semiDictLen(dict));
     return 0;
 }
 
@@ -1716,7 +1717,7 @@ void semiPrimitivesInitBuiltInModuleTypes(GC* gc, SymbolTable* symbolTable, Semi
         TypeIdentifierBaseValueTypePair pair = typeIdentifierBaseValueTypePair[i];
         InternedChar* typeIdentifier  = semiSymbolTableGet(symbolTable, pair.str, (IdentifierLength)strlen(pair.str));
         IdentifierId typeIdentifierId = semiSymbolTableGetId(typeIdentifier);
-        semiDictSet(gc, &module->types, semiValueNewInt(typeIdentifierId), semiValueNewInt((TypeId)pair.type));
+        semiDictSet(gc, &module->types, semiValueIntCreate(typeIdentifierId), semiValueIntCreate((TypeId)pair.type));
     }
 }
 

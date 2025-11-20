@@ -313,7 +313,8 @@ class VMTest : public ::testing::Test {
         InternedChar* moduleNameInterned = semiSymbolTableInsert(&vm->symbolTable, moduleName, moduleNameLength);
         IdentifierId moduleNameId        = semiSymbolTableGetId(moduleNameInterned);
 
-        semiDictSet(&vm->gc, &vm->modules, semiValueNewInt(moduleNameId), semiValueNewPtr(module, VALUE_TYPE_UNSET));
+        semiDictSet(
+            &vm->gc, &vm->modules, semiValueIntCreate(moduleNameId), semiValuePtrCreate(module, VALUE_TYPE_UNSET));
 
         return semiRunModule(vm, moduleName, moduleNameLength);
     }
@@ -468,7 +469,7 @@ class CompilerTest : public ::testing::Test {
 
         // Check exports first
         ValueHash hash  = semiHash64Bits(identifierId);
-        Value v         = semiValueNewInt(identifierId);
+        Value v         = semiValueIntCreate(identifierId);
         TupleId tupleId = semiDictFindTupleId(&compiler.artifactModule->exports, v, hash);
         if (tupleId >= 0 && tupleId <= UINT32_MAX) {
             if (isExport) *isExport = true;
@@ -494,8 +495,8 @@ class CompilerTest : public ::testing::Test {
 
         // Add variable to appropriate dictionary
         ObjectDict* targetDict = isExport ? &compiler.artifactModule->exports : &compiler.artifactModule->globals;
-        Value keyValue         = semiValueNewInt(identifierId);
-        Value dummyValue       = semiValueNewInt(0);  // Dummy value
+        Value keyValue         = semiValueIntCreate(identifierId);
+        Value dummyValue       = semiValueIntCreate(0);  // Dummy value
         ValueHash hash         = semiHash64Bits(identifierId);
 
         bool result = semiDictSetWithHash(compiler.gc, targetDict, keyValue, dummyValue, hash);

@@ -56,7 +56,7 @@ InternedChar* semiSymbolTableInsert(struct SymbolTable* table,
         .str    = (InternedChar*)identifier,
         .length = identifierLength,
     };
-    Value stackEntryValue = semiValueNewPtr((void*)&stackEntry, VALUE_TYPE_UNSET);
+    Value stackEntryValue = semiValuePtrCreate((void*)&stackEntry, VALUE_TYPE_UNSET);
 
     Value existing = semiDictGetWithHash(&table->identifierMap, stackEntryValue, hash);
     if (IS_VALID(&existing)) {
@@ -86,7 +86,7 @@ InternedChar* semiSymbolTableInsert(struct SymbolTable* table,
     newEntry->str    = strData;
     newEntry->length = identifierLength;
 
-    Value entryValue = semiValueNewPtr((void*)newEntry, VALUE_TYPE_UNSET);
+    Value entryValue = semiValuePtrCreate((void*)newEntry, VALUE_TYPE_UNSET);
     semiDictSetWithHash(table->gc, &table->identifierMap, entryValue, entryValue, hash);
 
     return strData;
@@ -102,7 +102,7 @@ InternedChar* semiSymbolTableGet(struct SymbolTable* table, const char* str, Ide
         .str    = (InternedChar*)str,
         .length = length,
     };
-    Value stackEntryValue = semiValueNewPtr((void*)&stackEntry, VALUE_TYPE_UNSET);
+    Value stackEntryValue = semiValuePtrCreate((void*)&stackEntry, VALUE_TYPE_UNSET);
     Value existing        = semiDictGetWithHash(&table->identifierMap, stackEntryValue, hash);
     if (IS_VALID(&existing)) {
         // String already exists, return the existing interned string

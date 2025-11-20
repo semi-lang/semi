@@ -82,7 +82,7 @@ TEST_F(InstructionVerifierTest, IgnoredSection) {
     nestedCode[1] = INSTRUCTION_RETURN(0, 0, 0, false, false);
 
     FunctionProto* nestedFunc = CreateFunctionObject(0, nestedCode, 2, 5, 0, 1);
-    Value funcProtoValue      = semiValueNewPtr(nestedFunc, VALUE_TYPE_FUNCTION_PROTO);
+    Value funcProtoValue      = semiValuePtrCreate(nestedFunc, VALUE_TYPE_FUNCTION_PROTO);
     semiConstantTableInsert(&module->constantTable, funcProtoValue);
 
     // Verify that we can ignore the nested function's instructions

@@ -48,7 +48,7 @@ class VMInstructionDeferTest : public VMTest {
         ResetExecution();
 
         // Add the tracking function as a global constant
-        Value trackFn = semiValueNewNativeFunction(trackExecution);
+        Value trackFn = semiValueNativeFunctionCreate(trackExecution);
 
         ASSERT_EQ(semiVMAddGlobalVariable(vm, "track", 5, trackFn), 0);
     }

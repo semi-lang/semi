@@ -51,9 +51,9 @@ TEST_F(VMInstructionIterTest, OpMakeRangeBasicInteger) {
         // A=0: start (becomes range result)
         // B=1: end
         // C=2: step
-        vm->values[0] = semiValueNewInt(test_case.start);
-        vm->values[1] = semiValueNewInt(test_case.end);
-        vm->values[2] = semiValueNewInt(test_case.step);
+        vm->values[0] = semiValueIntCreate(test_case.start);
+        vm->values[1] = semiValueIntCreate(test_case.end);
+        vm->values[2] = semiValueIntCreate(test_case.step);
 
         SemiModule* module;
         ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
@@ -109,9 +109,9 @@ TEST_F(VMInstructionIterTest, OpMakeRangeFloatValues) {
         // A=0: start (becomes range result)
         // B=1: end
         // C=2: step
-        vm->values[0] = semiValueNewFloat(test_case.start);
-        vm->values[1] = semiValueNewFloat(test_case.end);
-        vm->values[2] = semiValueNewFloat(test_case.step);
+        vm->values[0] = semiValueFloatCreate(test_case.start);
+        vm->values[1] = semiValueFloatCreate(test_case.end);
+        vm->values[2] = semiValueFloatCreate(test_case.step);
 
         SemiModule* module;
         ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
@@ -151,9 +151,9 @@ TEST_F(VMInstructionIterTest, OpMakeRangeMixedTypes) {
         Value end;    // Register B
         Value step;   // Register C
     } test_cases[] = {
-        { "int_start_float_end",     semiValueNewInt(1), semiValueNewFloat(5.5),     semiValueNewInt(1)},
-        { "float_start_int_end", semiValueNewFloat(1.5),     semiValueNewInt(5),     semiValueNewInt(1)},
-        {"int_start_float_step",     semiValueNewInt(1),    semiValueNewInt(10), semiValueNewFloat(1.5)},
+        { "int_start_float_end",     semiValueIntCreate(1), semiValueFloatCreate(5.5),     semiValueIntCreate(1)},
+        { "float_start_int_end", semiValueFloatCreate(1.5),     semiValueIntCreate(5),     semiValueIntCreate(1)},
+        {"int_start_float_step",     semiValueIntCreate(1),    semiValueIntCreate(10), semiValueFloatCreate(1.5)},
     };
 
     for (const auto& test_case : test_cases) {
@@ -193,7 +193,7 @@ TEST_F(VMInstructionIterTest, OpMakeRangeWithConstants) {
     // R[A] := range(R[A], RK(B, kb), RK(C, kc))
     // A=0: start->result, B=129: end (1 after adding INT8_MIN), C=133: step (5 after adding
     // INT8_MIN)
-    vm->values[0] = semiValueNewInt(1);  // start
+    vm->values[0] = semiValueIntCreate(1);  // start
 
     SemiModule* module;
     ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
@@ -219,9 +219,9 @@ TEST_F(VMInstructionIterTest, OpMakeRangeTypeErrors) {
         Value end;    // Register B
         Value step;   // Register C
     } error_cases[] = {
-        {"bool_start", semiValueNewBool(true),     semiValueNewInt(10),     semiValueNewInt(1)},
-        {  "bool_end",     semiValueNewInt(1), semiValueNewBool(false),     semiValueNewInt(1)},
-        { "bool_step",     semiValueNewInt(1),     semiValueNewInt(10), semiValueNewBool(true)},
+        {"bool_start", semiValueBoolCreate(true),     semiValueIntCreate(10),     semiValueIntCreate(1)},
+        {  "bool_end",     semiValueIntCreate(1), semiValueBoolCreate(false),     semiValueIntCreate(1)},
+        { "bool_step",     semiValueIntCreate(1),     semiValueIntCreate(10), semiValueBoolCreate(true)},
     };
 
     for (const auto& test_case : error_cases) {
@@ -273,9 +273,9 @@ TEST_F(VMInstructionIterTest, OpIterNextInlineRange) {
 
     for (const auto& test_case : test_cases) {
         // Create an InlineRange in register 2
-        vm->values[2] = semiValueNewInlineRange((int32_t)test_case.range_start, (int32_t)test_case.range_end);
-        vm->values[0] = semiValueNewInt(0);  // Counter
-        vm->values[1] = semiValueNewInt(0);  // Current value
+        vm->values[2] = semiValueInlineRangeCreate((int32_t)test_case.range_start, (int32_t)test_case.range_end);
+        vm->values[0] = semiValueIntCreate(0);  // Counter
+        vm->values[1] = semiValueIntCreate(0);  // Current value
 
         uint8_t reg_a = test_case.test_no_assign ? 255 : 0;
         char dsl_spec[512];
@@ -333,9 +333,9 @@ TEST_F(VMInstructionIterTest, OpIterNextObjectRange) {
     // Create an ObjectRange with step = 2
     // R[A] := range(R[A], RK(B, kb), RK(C, kc))
     // A=0: start->result, B=0: end, C=1: step
-    vm->values[0] = semiValueNewInt(1);   // start
-    vm->values[1] = semiValueNewInt(10);  // end
-    vm->values[2] = semiValueNewInt(2);   // step
+    vm->values[0] = semiValueIntCreate(1);   // start
+    vm->values[1] = semiValueIntCreate(10);  // end
+    vm->values[2] = semiValueIntCreate(2);   // step
 
     // First create the range
     SemiModule* module;
@@ -353,9 +353,9 @@ arity=0 coarity=0 maxStackSize=8
 
     // Now test iteration
     Value range_obj = vm->values[0];
-    vm->values[2]   = range_obj;           // Move range to register 2
-    vm->values[0]   = semiValueNewInt(0);  // Counter
-    vm->values[1]   = semiValueNewInt(0);  // Current value
+    vm->values[2]   = range_obj;              // Move range to register 2
+    vm->values[0]   = semiValueIntCreate(0);  // Counter
+    vm->values[1]   = semiValueIntCreate(0);  // Current value
 
     int iterations        = 0;
     int expected_values[] = {1, 3, 5, 7, 9};  // step=2 from 1 to 10
@@ -403,9 +403,9 @@ TEST_F(VMInstructionIterTest, OpIterNextFloatRange) {
     // Create a float ObjectRange
     // R[A] := range(R[A], RK(B, kb), RK(C, kc))
     // A=0: start->result, B=1: end, C=2: step
-    vm->values[0] = semiValueNewFloat(1.0);  // start
-    vm->values[1] = semiValueNewFloat(5.0);  // end
-    vm->values[2] = semiValueNewFloat(1.5);  // step
+    vm->values[0] = semiValueFloatCreate(1.0);  // start
+    vm->values[1] = semiValueFloatCreate(5.0);  // end
+    vm->values[2] = semiValueFloatCreate(1.5);  // step
 
     // Create the range
     SemiModule* module;
@@ -424,8 +424,8 @@ arity=0 coarity=0 maxStackSize=8
     // Test iteration
     Value range_obj = vm->values[0];
     vm->values[2]   = range_obj;
-    vm->values[0]   = semiValueNewInt(0);      // Counter
-    vm->values[1]   = semiValueNewFloat(0.0);  // Current value
+    vm->values[0]   = semiValueIntCreate(0);      // Counter
+    vm->values[1]   = semiValueFloatCreate(0.0);  // Current value
 
     int iterations           = 0;
     double expected_values[] = {1.0, 2.5, 4.0};  // step=1.5 from 1.0 to 5.0

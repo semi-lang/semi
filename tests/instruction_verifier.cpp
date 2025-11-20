@@ -1421,7 +1421,7 @@ void ModuleBuilder::buildExports() {
     for (const auto& exp : spec.exports) {
         InternedChar* name  = semiSymbolTableInsert(&vm->symbolTable, exp.identifier, strlen(exp.identifier));
         IdentifierId nameId = semiSymbolTableGetId(name);
-        semiDictSet(&vm->gc, &module->exports, semiValueNewInt(exp.index), semiValueNewInt(nameId));
+        semiDictSet(&vm->gc, &module->exports, semiValueIntCreate(exp.index), semiValueIntCreate(nameId));
     }
 }
 
@@ -1429,7 +1429,7 @@ void ModuleBuilder::buildGlobals() {
     for (const auto& glob : spec.globals) {
         InternedChar* name  = semiSymbolTableInsert(&vm->symbolTable, glob.identifier, strlen(glob.identifier));
         IdentifierId nameId = semiSymbolTableGetId(name);
-        semiDictSet(&vm->gc, &module->globals, semiValueNewInt(glob.index), semiValueNewInt(nameId));
+        semiDictSet(&vm->gc, &module->globals, semiValueIntCreate(glob.index), semiValueIntCreate(nameId));
     }
 }
 
@@ -1438,7 +1438,7 @@ void ModuleBuilder::buildTypes() {
         InternedChar* name  = semiSymbolTableInsert(&vm->symbolTable, type.typeName, strlen(type.typeName));
         IdentifierId nameId = semiSymbolTableGetId(name);
         // Register type with module
-        semiDictSet(&vm->gc, &module->types, semiValueNewInt(type.typeId), semiValueNewInt(nameId));
+        semiDictSet(&vm->gc, &module->types, semiValueIntCreate(type.typeId), semiValueIntCreate(nameId));
     }
 }
 
@@ -1459,12 +1459,12 @@ void ModuleBuilder::applyPreDefines() {
 
         Value value = createValue(var.value);
 
-        semiDictSet(&vm->gc, &module->exports, semiValueNewInt(nameId), value);
+        semiDictSet(&vm->gc, &module->exports, semiValueIntCreate(nameId), value);
     }
 
     // Apply global variable predefines
     for (const auto& var : spec.predefineGlobalVars) {
-        ErrorId result = semiVMAddGlobalVariable(vm, var.identifier, strlen(var.identifier), semiValueNewInt(0));
+        ErrorId result = semiVMAddGlobalVariable(vm, var.identifier, strlen(var.identifier), semiValueIntCreate(0));
         if (result != 0) {
             errorFmt("Failed to add global variable: %s", var.identifier);
         }
@@ -1495,22 +1495,22 @@ Instruction ModuleBuilder::encodeInstruction(const ParsedInstruction& parsed) {
 Value ModuleBuilder::createValue(const ParsedValue& parsedValue) {
     switch (parsedValue.type) {
         case ParsedValue::TYPE_INT:
-            return semiValueNewInt(parsedValue.as.intValue.value);
+            return semiValueIntCreate(parsedValue.as.intValue.value);
 
         case ParsedValue::TYPE_FLOAT:
-            return semiValueNewFloat(parsedValue.as.floatValue.value);
+            return semiValueFloatCreate(parsedValue.as.floatValue.value);
 
         case ParsedValue::TYPE_BOOL:
-            return semiValueNewBool(parsedValue.as.boolValue.value);
+            return semiValueBoolCreate(parsedValue.as.boolValue.value);
 
         case ParsedValue::TYPE_STRING:
             return semiValueStringCreate(&vm->gc, parsedValue.as.stringValue.text, parsedValue.as.stringValue.length);
 
         case ParsedValue::TYPE_RANGE:
             return semiValueRangeCreate(&vm->gc,
-                                        semiValueNewInt(parsedValue.as.rangeValue.start),
-                                        semiValueNewInt(parsedValue.as.rangeValue.end),
-                                        semiValueNewInt(parsedValue.as.rangeValue.step));
+                                        semiValueIntCreate(parsedValue.as.rangeValue.start),
+                                        semiValueIntCreate(parsedValue.as.rangeValue.end),
+                                        semiValueIntCreate(parsedValue.as.rangeValue.step));
 
         case ParsedValue::TYPE_FUNCTION_REF: {
             const char* label = parsedValue.label;
@@ -1518,7 +1518,7 @@ Value ModuleBuilder::createValue(const ParsedValue& parsedValue) {
             if (it == functionMap.end()) {
                 errorFmt("Function label @%s not found", label);
             }
-            return semiValueNewPtr(it->second, VALUE_TYPE_FUNCTION_PROTO);
+            return semiValuePtrCreate(it->second, VALUE_TYPE_FUNCTION_PROTO);
         }
 
         default:
@@ -1612,7 +1612,7 @@ ErrorId BuildAndRunModule(SemiVM* vm, const char* spec, SemiModule** outModule) 
     InternedChar* moduleNameInterned = semiSymbolTableInsert(&vm->symbolTable, moduleName, moduleNameLength);
     IdentifierId moduleNameId        = semiSymbolTableGetId(moduleNameInterned);
 
-    semiDictSet(&vm->gc, &vm->modules, semiValueNewInt(moduleNameId), semiValueNewPtr(module, VALUE_TYPE_UNSET));
+    semiDictSet(&vm->gc, &vm->modules, semiValueIntCreate(moduleNameId), semiValuePtrCreate(module, VALUE_TYPE_UNSET));
 
     return semiRunModule(vm, moduleName, moduleNameLength);
 }

@@ -125,7 +125,7 @@ ErrorId nowFunction(SemiVM* vm, uint8_t argCount, Value* args, Value* ret) {
     if (!timespec_get(&ts, TIME_UTC)) {
         return 1;
     }
-    *ret = semiValueNewInt((IntValue)ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+    *ret = semiValueIntCreate((IntValue)ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
     return 0;
 }
 
@@ -134,10 +134,12 @@ int executeSource(const char* source, bool isRepl, bool disassemble) {
     semiInitConfig(&config);
     SemiVM* vm = semiCreateVM(&config);
 
+    semiVMAddGlobalVariable(vm,
+                            printFunctionName,
+                            (IdentifierLength)strlen(printFunctionName),
+                            semiValueNativeFunctionCreate(printFunction));
     semiVMAddGlobalVariable(
-        vm, printFunctionName, (IdentifierLength)strlen(printFunctionName), semiValueNewNativeFunction(printFunction));
-    semiVMAddGlobalVariable(
-        vm, nowFunctionName, (IdentifierLength)strlen(nowFunctionName), semiValueNewNativeFunction(nowFunction));
+        vm, nowFunctionName, (IdentifierLength)strlen(nowFunctionName), semiValueNativeFunctionCreate(nowFunction));
 
     ErrorId errId = compileAndRun(vm, source, (unsigned int)strlen(source), isRepl, disassemble);
     if (errId != 0) {
@@ -162,8 +164,10 @@ void runRepl(bool disassemble) {
     semiInitConfig(&config);
     SemiVM* vm = semiCreateVM(&config);
 
-    semiVMAddGlobalVariable(
-        vm, printFunctionName, (IdentifierLength)strlen(printFunctionName), semiValueNewNativeFunction(printFunction));
+    semiVMAddGlobalVariable(vm,
+                            printFunctionName,
+                            (IdentifierLength)strlen(printFunctionName),
+                            semiValueNativeFunctionCreate(printFunction));
 
     while (true) {
         std::cout << ">>> ";

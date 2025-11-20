@@ -15,7 +15,7 @@ class CompilerGlobalVariableTest : public CompilerTest {};
 
 TEST_F(CompilerGlobalVariableTest, GlobalVariableCorrectlyResolvedDuringCompilation) {
     // Add a global variable to the VM
-    Value globalValue = semiValueNewInt(42);
+    Value globalValue = semiValueIntCreate(42);
     AddGlobalVariable("globalVar", globalValue);
 
     // Parse an expression that references the global variable
@@ -31,9 +31,9 @@ TEST_F(CompilerGlobalVariableTest, GlobalVariableCorrectlyResolvedDuringCompilat
 
 TEST_F(CompilerGlobalVariableTest, MultipleGlobalVariablesResolvedCorrectly) {
     // Add multiple global variables
-    Value globalValue1 = semiValueNewInt(10);
-    Value globalValue2 = semiValueNewFloat(3.14);
-    Value globalValue3 = semiValueNewBool(true);
+    Value globalValue1 = semiValueIntCreate(10);
+    Value globalValue2 = semiValueFloatCreate(3.14);
+    Value globalValue3 = semiValueBoolCreate(true);
 
     AddGlobalVariable("global1", globalValue1);
     AddGlobalVariable("global2", globalValue2);
@@ -52,7 +52,7 @@ TEST_F(CompilerGlobalVariableTest, MultipleGlobalVariablesResolvedCorrectly) {
 
 TEST_F(CompilerGlobalVariableTest, LocalVariableCannotBeDefinedWhenGlobalExists) {
     // Add a global variable
-    Value globalValue = semiValueNewInt(100);
+    Value globalValue = semiValueIntCreate(100);
     AddGlobalVariable("conflictVar", globalValue);
 
     // Try to define a local variable with the same name
@@ -90,7 +90,7 @@ TEST_F(CompilerGlobalVariableTest, GlobalVariableGeneratesCorrectInstruction) {
 
 TEST_F(CompilerGlobalVariableTest, GlobalVariableTakesPrecedenceOverModuleVariable) {
     // First add a global variable
-    Value globalValue = semiValueNewInt(42);
+    Value globalValue = semiValueIntCreate(42);
     AddGlobalVariable("sharedName", globalValue);
 
     // Add a module variable with the same name (this should be allowed)
@@ -108,7 +108,7 @@ TEST_F(CompilerGlobalVariableTest, NonExistentGlobalVariableNotResolved) {
 
 TEST_F(CompilerGlobalVariableTest, ForLoopVariableCannotBeDefinedWhenGlobalExists) {
     // Add a global variable
-    Value globalValue = semiValueNewInt(42);
+    Value globalValue = semiValueIntCreate(42);
     AddGlobalVariable("loopVar", globalValue);
 
     // Try to define a for-loop with the same variable name
@@ -119,7 +119,7 @@ TEST_F(CompilerGlobalVariableTest, ForLoopVariableCannotBeDefinedWhenGlobalExist
 
 TEST_F(CompilerGlobalVariableTest, GlobalVariableAccessInComplexExpression) {
     // Add a global variable
-    Value globalValue = semiValueNewInt(10);
+    Value globalValue = semiValueIntCreate(10);
     AddGlobalVariable("factor", globalValue);
 
     // Parse a complex expression using the global variable
@@ -136,7 +136,7 @@ TEST_F(CompilerGlobalVariableTest, GlobalVariableAccessInComplexExpression) {
 
 TEST_F(CompilerGlobalVariableTest, GlobalVariableInAssignmentExpression) {
     // Add a global variable
-    Value globalValue = semiValueNewInt(5);
+    Value globalValue = semiValueIntCreate(5);
     AddGlobalVariable("base", globalValue);
 
     // Parse an assignment that uses the global variable in the right-hand side

@@ -216,7 +216,7 @@ typedef struct Value {
     } as;
 } Value;
 
-static inline Value semiValueNewPtr(void* p, ValueType type) {
+static inline Value semiValuePtrCreate(void* p, ValueType type) {
     return (Value){.header = type, .as = {.ptr = p}};
 }
 
@@ -269,7 +269,7 @@ typedef struct MagicMethodsTable {
  │ Bool
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
 
-static inline Value semiValueNewBool(bool b) {
+static inline Value semiValueBoolCreate(bool b) {
     return (Value){.header = VALUE_TYPE_BOOL, .as = {.b = b}};
 }
 
@@ -277,11 +277,11 @@ static inline Value semiValueNewBool(bool b) {
  │ IntValue & FloatValue
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
 
-static inline Value semiValueNewInt(IntValue i) {
+static inline Value semiValueIntCreate(IntValue i) {
     return (Value){.header = VALUE_TYPE_INT, .as = {.i = i}};
 }
 
-static inline Value semiValueNewFloat(FloatValue f) {
+static inline Value semiValueFloatCreate(FloatValue f) {
     return (Value){.header = VALUE_TYPE_FLOAT, .as = {.f = f}};
 }
 
@@ -303,15 +303,15 @@ typedef struct ObjectString {
 
 #define IS_VALID_INLINE_CHAR(c) ((c) >= 0 && (c) <= 0x7F)
 
-static inline Value semiValueNewInlineString0(void) {
+static inline Value semiValueInlineStringCreate0(void) {
     return (Value){.header = VALUE_TYPE_INLINE_STRING, .as = {.is = {.c = {0, 0}, .length = 0}}};
 }
 
-static inline Value semiValueNewInlineString1(char c1) {
+static inline Value semiValueInlineStringCreat1(char c1) {
     return (Value){.header = VALUE_TYPE_INLINE_STRING, .as = {.is = {.c = {c1, 0}, .length = 1}}};
 }
 
-static inline Value semiValueNewInlineString2(char c1, char c2) {
+static inline Value semiValueInlineStringCreate2(char c1, char c2) {
     return (Value){.header = VALUE_TYPE_INLINE_STRING, .as = {.is = {.c = {c1, c2}, .length = 2}}};
 }
 
@@ -334,7 +334,7 @@ typedef struct ObjectRange {
     Value step;
 } ObjectRange;
 
-static inline Value semiValueNewInlineRange(int32_t start, int32_t end) {
+static inline Value semiValueInlineRangeCreate(int32_t start, int32_t end) {
     return (Value){.header = VALUE_TYPE_INLINE_RANGE, .as = {.ir = {.start = start, .end = end}}};
 }
 
@@ -459,7 +459,7 @@ static inline uint32_t semiDictLen(ObjectDict* dict) {
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
 typedef ErrorId(NativeFunction)(SemiVM* vm, uint8_t argCount, Value* args, Value* ret);
 
-Value semiValueNewNativeFunction(NativeFunction* function);
+Value semiValueNativeFunctionCreate(NativeFunction* function);
 
 /*
  │ Function Proto
@@ -483,7 +483,7 @@ typedef struct FunctionProto {
 
 FunctionProto* semiFunctionProtoCreate(GC* gc, uint8_t upvalueCount);
 void semiFunctionProtoDestroy(GC* gc, FunctionProto* function);
-Value semiValueNewFunctionProto(FunctionProto* function);
+Value semiValueFunctionProtoCreate(FunctionProto* function);
 
 /*
  │ Object Upvalue
