@@ -290,13 +290,12 @@ K[1]: FunctionProto arity=0 coarity=1 maxStackSize=3 -> @test
 
 [Instructions:test]
 0:  OP_LOAD_CONSTANT         A=0x00 K=0x0000 i=F s=F
-1:  OP_ITER_NEXT             A=0xFF B=0x01 C=0x00 kb=F kc=F
-2:  OP_JUMP                  J=0x000006 s=T
+1:  OP_RANGE_NEXT            A=0x00 K=0x0006 i=F s=F
 3:  OP_EQ                    A=0x02 B=0x01 C=0x85 kb=F kc=T
 4:  OP_C_JUMP                A=0x02 K=0x0002 i=F s=T
 5:  OP_RETURN                A=0x01 B=0x00 C=0x00 kb=F kc=F
 6:  OP_CLOSE_UPVALUES        A=0x02 B=0x00 C=0x00 kb=F kc=F
-7:  OP_JUMP                  J=0x000006 s=F
+7:  OP_JUMP                  J=0x000005 s=F
 8:  OP_CLOSE_UPVALUES        A=0x00 B=0x00 C=0x00 kb=F kc=F
 9:  OP_LOAD_INLINE_INTEGER   A=0x00 K=0x0000 i=T s=T
 10: OP_RETURN                A=0x00 B=0x00 C=0x00 kb=F kc=F

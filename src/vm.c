@@ -408,6 +408,7 @@ static void runMainLoop(SemiVM* vm) {
             return;                                                                    \
         }                                                                              \
         ip += _steps;                                                                  \
+        goto start_of_vm_loop;                                                         \
     } while (0)
 
 #define MOVE_BACKWARD(steps)                                                           \
@@ -418,6 +419,7 @@ static void runMainLoop(SemiVM* vm) {
             return;                                                                    \
         }                                                                              \
         ip -= _steps;                                                                  \
+        goto start_of_vm_loop;                                                         \
     } while (0)
 
 #define RECONCILE_STATE()                                                      \
@@ -454,7 +456,6 @@ static void runMainLoop(SemiVM* vm) {
                     } else {
                         MOVE_BACKWARD(j);
                     }
-                    goto start_of_vm_loop;
                 }
                 break;
             }
@@ -489,7 +490,6 @@ static void runMainLoop(SemiVM* vm) {
                     } else {
                         MOVE_BACKWARD(k);
                     }
-                    goto start_of_vm_loop;
                 }
                 break;
             }
@@ -511,8 +511,11 @@ static void runMainLoop(SemiVM* vm) {
                     ObjectFunction* function = AS_COMPILED_FUNCTION(&stack[a]);
                     TRAP_ON_ERROR(vm, captureUpvalues(vm, stack, function), "Failed to capture upvalues for function");
                 } else if (IS_OBJECT_RANGE(&v)) {
-                    stack[a] = semiValueRangeCreate(
-                        &vm->gc, AS_OBJECT_RANGE(&v)->start, AS_OBJECT_RANGE(&v)->end, AS_OBJECT_RANGE(&v)->step);
+                    ObjectRange* objRange = semiObjectRangeCopy(&vm->gc, AS_OBJECT_RANGE(&v));
+                    if (!objRange) {
+                        TRAP_ON_ERROR(vm, SEMI_ERROR_MEMORY_ALLOCATION_FAILURE, "Failed to copy range object");
+                    }
+                    stack[a] = OBJECT_VALUE(objRange, VALUE_TYPE_OBJECT_RANGE);
                 } else {
                     stack[a] = v;
                 }
@@ -598,6 +601,49 @@ static void runMainLoop(SemiVM* vm) {
 
                 deferFn->prevDeferredFn = frame->deferredFn;
                 frame->deferredFn       = deferFn;
+                break;
+            }
+
+            case OP_RANGE_NEXT: {
+                uint8_t a  = OPERAND_K_A(instruction);
+                uint16_t k = OPERAND_K_K(instruction);
+                bool i     = OPERAND_K_I(instruction);
+
+                bool canProceed = false;
+                Value nextValue;
+
+                if (IS_INLINE_RANGE(&stack[a])) {
+                    InlineRange range = AS_INLINE_RANGE(&stack[a]);
+                    canProceed        = (range.start < range.end);
+                    nextValue         = semiValueIntCreate(range.start);
+                    AS_INLINE_RANGE(&stack[a]).start += 1;
+                } else if (IS_OBJECT_RANGE(&stack[a])) {
+                    ObjectRange* range = AS_OBJECT_RANGE(&stack[a]);
+                    if (range->isIntRange) {
+                        canProceed = range->as.ir.step > 0 ? (range->as.ir.start < range->as.ir.end)
+                                                           : (range->as.ir.start > range->as.ir.end);
+                        nextValue  = semiValueIntCreate(range->as.ir.start);
+                        range->as.ir.start += range->as.ir.step;
+                    } else {
+                        canProceed = range->as.fr.step > 0 ? (range->as.fr.end - range->as.fr.start > FLOAT_EPSILON)
+                                                           : (range->as.fr.start - range->as.fr.end > FLOAT_EPSILON);
+                        nextValue  = semiValueFloatCreate(range->as.fr.start);
+                        range->as.fr.start += range->as.fr.step;
+                    }
+                } else {
+                    TRAP_ON_ERROR(vm, SEMI_ERROR_UNEXPECTED_TYPE, "Range next called on non-range value");
+                }
+
+                if (canProceed & i) {
+                    stack[a + 2] = nextValue;
+                    stack[a + 3] = stack[a + 1];
+                    stack[a + 1] = semiValueIntCreate(AS_INT(&stack[a + 1]) + 1);
+                } else if (canProceed & !i) {
+                    stack[a + 1] = nextValue;
+                } else {
+                    MOVE_FORWARD(k);
+                }
+
                 break;
             }
 
@@ -762,7 +808,11 @@ static void runMainLoop(SemiVM* vm) {
                     TRAP_ON_ERROR(vm, SEMI_ERROR_UNEXPECTED_TYPE, "Range bounds must be numeric values");
                 } else {
                     uint8_t a = OPERAND_T_A(instruction);
-                    stack[a]  = semiValueRangeCreate(&vm->gc, *ra, *rb, *rc);
+                    Value v   = semiValueRangeCreate(&vm->gc, *ra, *rb, *rc);
+                    if (IS_INVALID(&v)) {
+                        TRAP_ON_ERROR(vm, SEMI_ERROR_UNEXPECTED_TYPE, "Only numeric ranges are supported");
+                    }
+                    stack[a] = v;
                 }
                 break;
             }

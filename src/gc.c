@@ -154,16 +154,9 @@ void semiGCMarkAndSweep(GC* gc) {
 
         switch (OBJECT_TYPE(obj)) {
             case OBJECT_TYPE_STRING:
-                // Strings do not reference other objects, so we can skip them.
+            case OBJECT_TYPE_RANGE:
                 break;
 
-            case OBJECT_TYPE_RANGE: {
-                ObjectRange* range = (ObjectRange*)obj;
-                grayValue(gc, &range->start);
-                grayValue(gc, &range->end);
-                grayValue(gc, &range->step);
-                break;
-            }
             case OBJECT_TYPE_LIST: {
                 ObjectList* list = (ObjectList*)obj;
                 for (uint32_t i = 0; i < list->size; i++) {

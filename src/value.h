@@ -184,6 +184,8 @@ typedef enum {
 #define AS_NATIVE_FUNCTION(v)   (AS_PTR((v), NativeFunction))
 #define AS_CLASS(v)             ((ObjectClass*)((v)->as.obj))
 
+#define OBJECT_VALUE(o, t) ((Value){.header = (ValueType)(t), .as = {.obj = (Object*)(o)}})
+
 #define INVALID_VALUE ((Value){.header = VALUE_TYPE_INVALID, .as = {.i = 0}})
 
 typedef int64_t IntValue;
@@ -329,9 +331,19 @@ Value semiValueStringCreate(GC* gc, const char* text, size_t length);
 typedef struct ObjectRange {
     Object obj;
 
-    Value start;
-    Value end;
-    Value step;
+    union {
+        struct {
+            IntValue start;
+            IntValue end;
+            IntValue step;
+        } ir;
+        struct {
+            FloatValue start;
+            FloatValue end;
+            FloatValue step;
+        } fr;
+    } as;
+    bool isIntRange;
 } ObjectRange;
 
 static inline Value semiValueInlineRangeCreate(int32_t start, int32_t end) {
@@ -343,7 +355,7 @@ static inline void semiObjectRangeDestroy(GC* gc, ObjectRange* range) {
     semiFree(gc, range, sizeof(ObjectRange));
 }
 Value semiValueRangeCreate(GC* gc, Value start, Value end, Value step);
-
+ObjectRange* semiObjectRangeCopy(GC* gc, const ObjectRange* range);
 /*
  │ ObjectList
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
@@ -364,7 +376,7 @@ static inline void semiObjectListDestroy(GC* gc, ObjectList* list) {
 
 static inline Value semiValueListCreate(GC* gc, uint32_t capacity) {
     ObjectList* o = semiObjectListCreate(gc, capacity);
-    return o ? (Value){.header = VALUE_TYPE_LIST, .as = {.obj = (Object*)o}} : INVALID_VALUE;
+    return o ? OBJECT_VALUE(o, VALUE_TYPE_LIST) : INVALID_VALUE;
 }
 
 void semiListEnsureCapacity(GC* gc, ObjectList* list, uint32_t capacity);
@@ -431,7 +443,7 @@ typedef struct ObjectDict {
 ObjectDict* semiObjectDictCreate(GC* gc);
 static inline Value semiValueDictCreate(GC* gc) {
     ObjectDict* o = semiObjectDictCreate(gc);
-    return o ? (Value){.header = VALUE_TYPE_DICT, .as = {.obj = (Object*)o}} : INVALID_VALUE;
+    return o ? OBJECT_VALUE(o, VALUE_TYPE_DICT) : INVALID_VALUE;
 }
 static inline void semiObjectDictDestroy(GC* gc, ObjectDict* dict) {
     semiFree(gc, dict->keys, sizeof(ObjectDictKey) * OBJECT_DICT_MAX_INDEX_LOAD(dict->indexSize));
@@ -536,7 +548,7 @@ static inline void semiObjectFunctionDestroy(GC* gc, ObjectFunction* function) {
 }
 static inline Value semiValueFunctionCreate(GC* gc, FunctionProto* function) {
     ObjectFunction* o = semiObjectFunctionCreate(gc, function);
-    return o ? (Value){.header = VALUE_TYPE_COMPILED_FUNCTION, .as = {.obj = (Object*)o}} : INVALID_VALUE;
+    return o ? OBJECT_VALUE(o, VALUE_TYPE_COMPILED_FUNCTION) : INVALID_VALUE;
 }
 
 /*

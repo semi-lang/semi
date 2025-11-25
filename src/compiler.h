@@ -165,8 +165,8 @@ typedef enum Token {
     TK_RAISE,
     // "break"
     TK_BREAK,
-    // "step"
-    TK_STEP,
+    // "by"
+    TK_BY,
     // "struct"
     TK_STRUCT,
     // "continue"

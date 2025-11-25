@@ -108,6 +108,7 @@ static const KeywordMap KEYWORDS_LEN_2[] = {
     {"if", TK_IF},
     {"as", TK_AS},
     {"fn", TK_FN},
+    {"by", TK_BY},
 };
 
 static const KeywordMap KEYWORDS_LEN_3[] = {
@@ -118,7 +119,6 @@ static const KeywordMap KEYWORDS_LEN_3[] = {
 static const KeywordMap KEYWORDS_LEN_4[] = {
     {"elif", TK_ELIF},
     {"else", TK_ELSE},
-    {"step", TK_STEP},
     {"true", TK_TRUE},
 };
 
@@ -975,7 +975,12 @@ static inline LocalRegisterId getNextRegisterId(Compiler* compiler) {
 }
 
 static inline void restoreNextRegisterId(Compiler* compiler, LocalRegisterId registerId) {
-    compiler->currentFunction->nextRegisterId = registerId;
+    FunctionScope* currentFunction = compiler->currentFunction;
+
+    currentFunction->nextRegisterId = registerId;
+    if (currentFunction->nextRegisterId > currentFunction->maxUsedRegisterCount) {
+        currentFunction->maxUsedRegisterCount = currentFunction->nextRegisterId;
+    }
 }
 
 static void enterFunctionScope(Compiler* compiler, bool isDeferredFunction) {
@@ -2313,7 +2318,7 @@ void semiParseExpression(Compiler* compiler, const PrattState state, PrattExpr* 
             case TK_CLOSE_PAREN:
             case TK_SEPARATOR:
             case TK_DOUBLE_DOTS:
-            case TK_STEP:
+            case TK_BY:
             case TK_BINDING:
             case TK_ASSIGN:
                 return;
@@ -2913,37 +2918,33 @@ static void saveRangeOperand(
     *operandInline = false;
 }
 
-// parse range with startExpr already parsed.
-static void parseForRange(Compiler* compiler, PrattExpr startExpr, LocalRegisterId iterReg) {
+// parse range with startExpr just parsed, assuming that the next token is "..". The result
+// will be saved to startReg.
+static void parseForRange(Compiler* compiler, PrattExpr startExpr, LocalRegisterId startReg) {
     // we handle each expression one by one with the guarantee that each expression
     // uses only one register (the targetRegister) to store the result.
 
     PrattExpr endExpr, stepExpr;
-    LocalRegisterId startReg, endReg, stepReg;
-    startReg = iterReg;
-
     if (startExpr.type == PRATT_EXPR_TYPE_CONSTANT && !IS_NUMBER(&startExpr.value.constant)) {
         SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_INVALID_VALUE, "Range operands must be numbers");
     }
 
-    nextToken(&compiler->lexer);  // Consume ".."
+    nextToken(&compiler->lexer);  // consume ".."
 
-    endReg              = reserveTempRegister(compiler);
     PrattState endState = {
-        .targetRegister    = endReg,
+        .targetRegister    = reserveTempRegister(compiler),
         .rightBindingPower = PRECEDENCE_NON_KEYWORD,
     };
     semiParseExpression(compiler, endState, &endExpr);
 
-    stepReg = reserveTempRegister(compiler);
-    if (peekToken(&compiler->lexer) == TK_STEP) {
-        nextToken(&compiler->lexer);  // Consume "step"
+    if (peekToken(&compiler->lexer) == TK_BY) {
+        nextToken(&compiler->lexer);  // consume "by"
         if (endExpr.type == PRATT_EXPR_TYPE_CONSTANT && !IS_NUMBER(&endExpr.value.constant)) {
             SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_INVALID_VALUE, "Range operands must be numbers");
         }
 
         PrattState stepState = {
-            .targetRegister    = stepReg,
+            .targetRegister    = reserveTempRegister(compiler),
             .rightBindingPower = PRECEDENCE_NON_KEYWORD,
         };
         semiParseExpression(compiler, stepState, &stepExpr);
@@ -2975,7 +2976,7 @@ static void parseForRange(Compiler* compiler, PrattExpr startExpr, LocalRegister
             // TODO: Spill with OP_EXTRA_ARG
             SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_TOO_MANY_CONSTANTS, "Too many constants in a module");
         }
-        emitCode(compiler, INSTRUCTION_LOAD_CONSTANT(iterReg, (uint16_t)idx, false, false));
+        emitCode(compiler, INSTRUCTION_LOAD_CONSTANT(startReg, (uint16_t)idx, false, false));
     } else {
         // At least one operand is not constant, we have to save them to registers.
         bool kb, kc;
@@ -2983,29 +2984,40 @@ static void parseForRange(Compiler* compiler, PrattExpr startExpr, LocalRegister
         saveExprToRegister(compiler, &startExpr, startReg);
         saveExprToOperand(compiler, &endExpr, &operandB, &kb);
         saveExprToOperand(compiler, &stepExpr, &operandC, &kc);
-        emitCode(compiler, INSTRUCTION_MAKE_RANGE(iterReg, operandB, operandC, kb, kc));
+        emitCode(compiler, INSTRUCTION_MAKE_RANGE(startReg, operandB, operandC, kb, kc));
     }
+
+    restoreNextRegisterId(compiler, startReg + 1);
+}
+
+static void parseForIter(Compiler* compiler, PrattExpr iterExpr, LocalRegisterId iterReg) {
+    saveExprToRegister(compiler, &iterExpr, iterReg);
+    emitCode(compiler, INSTRUCTION_ITER_PREPARE(iterReg, iterReg, 0, false, false));
 
     restoreNextRegisterId(compiler, iterReg + 1);
 }
 
+typedef enum {
+    FOR_HEADER_TYPE_ITER,
+    FOR_HEADER_TYPE_RANGE,
+    FOR_HEADER_TYPE_INFINITE,
+} ForHeaderType;
+
 typedef struct ForHeader {
-    LocalRegisterId indexReg;
-    LocalRegisterId itemReg;
+    ForHeaderType type;
+    bool hasIndexVar;
 } ForHeader;
 
 static ForHeader parseForHeader(Compiler* compiler, LocalRegisterId iterReg) {
     nextToken(&compiler->lexer);  // Consume "for"
-
     if (peekToken(&compiler->lexer) == TK_OPEN_BRACE) {
         // for { ... }
         return (ForHeader){
-            .indexReg = INVALID_LOCAL_REGISTER_ID,
-            .itemReg  = INVALID_LOCAL_REGISTER_ID,
+            .type = FOR_HEADER_TYPE_INFINITE,
         };
     }
 
-    LocalRegisterId firstReg, secondReg;
+    ForHeaderType forHeaderType;
     IdentifierId firstIdentifierId, secondIdentifierId;
     firstIdentifierId = newIdentifierNud(compiler);
 
@@ -3032,55 +3044,55 @@ static ForHeader parseForHeader(Compiler* compiler, LocalRegisterId iterReg) {
     switch (t = peekToken(&compiler->lexer)) {
         case TK_OPEN_BRACE: {
             // for ... in iterator {}
-            saveExprToRegister(compiler, &iterExpr, iterReg);
-            restoreNextRegisterId(compiler, iterReg + 1);
+            forHeaderType = FOR_HEADER_TYPE_ITER;
+            parseForIter(compiler, iterExpr, iterReg);
             break;
         }
-        case TK_DOUBLE_DOTS:
-            // for ... in startExpr..endExpr [step stepExpr]
+        case TK_DOUBLE_DOTS: {
+            // for ... in startExpr..endExpr [by stepExpr]
+            forHeaderType = FOR_HEADER_TYPE_RANGE;
             parseForRange(compiler, iterExpr, iterReg);
+            if (hasIndexVar) {
+                // reserve internal index register and initialize it to 0
+                LocalRegisterId internalCounterReg = reserveTempRegister(compiler);
+                saveConstantToRegister(compiler, semiValueIntCreate(0), internalCounterReg);
+            }
             break;
+        }
 
         default:
             SEMI_COMPILE_ABORT(compiler, SEMI_ERROR_UNEXPECTED_TOKEN, "Expected iterator or range expression");
     }
 
-    firstReg = reserveTempRegister(compiler);
-    bindLocalVariable(compiler, firstIdentifierId, firstReg);
-
+    // itemReg comes first, followed by indexReg if the index variable exists.
+    LocalRegisterId itemReg = reserveTempRegister(compiler);
     if (hasIndexVar) {
-        secondReg = reserveTempRegister(compiler);
-        bindLocalVariable(compiler, secondIdentifierId, secondReg);
-
-        return (ForHeader){
-            .indexReg = secondReg,
-            .itemReg  = firstReg,
-        };
+        LocalRegisterId indexReg = reserveTempRegister(compiler);
+        bindLocalVariable(compiler, secondIdentifierId, itemReg);
+        bindLocalVariable(compiler, firstIdentifierId, indexReg);
     } else {
-        return (ForHeader){
-            .indexReg = INVALID_LOCAL_REGISTER_ID,
-            .itemReg  = firstReg,
-        };
+        bindLocalVariable(compiler, firstIdentifierId, itemReg);
     }
+
+    return (ForHeader){
+        .type        = forHeaderType,
+        .hasIndexVar = hasIndexVar,
+    };
 }
 
 static void parseFor(Compiler* compiler) {
     /*
-     pc ┐       make_range / get_item
-        │       iter_next ─┐ <──┬────┐
-        │       jump ───── │ ── │ ── │ ───┐
-        │       ┌─  <──────┘    │    │    │
-        v       │               │    │    │
-                │   continue ───┘    │    │
-           loop │                    │    │
-                │   break ────────── │ ── │ ──┐
-                │                    │    │   │
-                └─                   │    │   │
-                jump ────────────────┘    │   │
-                close_upvalues <──────────┘ <─┘
-
-    Note that `iter_next` also closes upvalues for each iteration. This is crucial to ensure
-    upvalues referencing unique variable instances if they are introduced in the loop body.
+     pc ┐       LOAD_CONSTANT / MAKE_RANGE / ITER_PREPARE
+        │       ITER_NEXT / RANGE_NEXT <─────┬────┐ ───┐
+        │       ┌─                           │    │    │
+        v       │                            │    │    │
+                │                continue ───┘    │    │
+           loop │                                 │    │
+                │                break ────────── │ ── │ ──┐
+                │                                 │    │   │
+                └─                                │    │   │
+                JUMP ─────────────────────────────┘    │   │
+                CLOSE_UPVALUES <───────────────────────┘ <─┘
 
     If it is an infinite for-loop, the structure is simpler:
 
@@ -3091,8 +3103,8 @@ static void parseFor(Compiler* compiler) {
         v       │   break ────────── │ ──┐
                 │                    │   │
                 └─                   │   │
-                jump ────────────────┘   │
-                close_upvalues <─────────┘
+                JUMP ────────────────┘   │
+                CLOSE_UPVALUES <─────────┘
     */
 
     // For-blocks don't increase or decrease the number of variables and registers used, so we
@@ -3108,13 +3120,12 @@ static void parseFor(Compiler* compiler) {
 
     ForHeader forHeader = parseForHeader(compiler, iterReg);
 
-    if (forHeader.indexReg == INVALID_LOCAL_REGISTER_ID && forHeader.itemReg == INVALID_LOCAL_REGISTER_ID) {
-        loopScope.loopStartLocation    = currentPCLocation(compiler);
-        loopScope.previousJumpLocation = INVALID_PC_LOCATION;
+    loopScope.previousJumpLocation = INVALID_PC_LOCATION;
+    if (forHeader.type == FOR_HEADER_TYPE_INFINITE) {
+        loopScope.loopStartLocation = currentPCLocation(compiler);
     } else {
-        loopScope.loopStartLocation =
-            emitCode(compiler, INSTRUCTION_ITER_NEXT(forHeader.indexReg, forHeader.itemReg, iterReg, false, false));
-        loopScope.previousJumpLocation = emitCode(compiler, INSTRUCTION_JUMP(INVALID_PC_LOCATION, false));
+        // To be patched with ITER_NEXT or RANGE_NEXT
+        loopScope.loopStartLocation = emitPlaceholder(compiler);
     }
 
     MATCH_PEEK_TOKEN_OR_ABORT(compiler, TK_OPEN_BRACE, "Expected opening brace for for body");
@@ -3123,12 +3134,36 @@ static void parseFor(Compiler* compiler) {
     emitJumpBack(compiler, loopScope.loopStartLocation);
     leaveBlockScope(compiler);
 
+    // Patch all break statements to jump to the loop end.
     while (loopScope.previousJumpLocation != INVALID_PC_LOCATION) {
         PCLocation temp                = loopScope.previousJumpLocation;
         loopScope.previousJumpLocation = OPERAND_J_J(compiler->currentFunction->chunk.data[temp]);
         overrideJumpHere(compiler, temp);
     }
-    emitCode(compiler, INSTRUCTION_CLOSE_UPVALUES(currentNextRegisterId, 0, 0, false, false));
+    PCLocation loopEndPCLocation =
+        emitCode(compiler, INSTRUCTION_CLOSE_UPVALUES(currentNextRegisterId, 0, 0, false, false));
+
+    // Invariant: loopEndPCLocation >= loopScope.loopStartLocation
+    uint16_t diff = (uint16_t)(loopEndPCLocation - loopScope.loopStartLocation);
+    switch (forHeader.type) {
+        case FOR_HEADER_TYPE_ITER:
+            patchCode(compiler,
+                      loopScope.loopStartLocation,
+                      INSTRUCTION_ITER_NEXT(iterReg, diff, forHeader.hasIndexVar, false));
+            break;
+
+        case FOR_HEADER_TYPE_RANGE:
+            patchCode(compiler,
+                      loopScope.loopStartLocation,
+                      INSTRUCTION_RANGE_NEXT(iterReg, diff, forHeader.hasIndexVar, false));
+            break;
+
+        case FOR_HEADER_TYPE_INFINITE:
+            break;
+
+        default:
+            SEMI_UNREACHABLE();
+    }
 
     restoreNextRegisterId(compiler, currentNextRegisterId);
 }

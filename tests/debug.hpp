@@ -19,14 +19,14 @@ extern "C" {
 #endif
 
 // Static opcode name strings - initialized via X-macro
-static const char* opcodeNames[MAX_OPCODE + 1] = {
+static const char* opcodeNames[OPCODE_COUNT] = {
 #define OPCODE_NAME_INIT(name, type) [OP_##name] = "OP_" #name,
     OPCODE_X_MACRO(OPCODE_NAME_INIT)
 #undef OPCODE_NAME_INIT
 };
 
 // Static opcode type strings - initialized via X-macro
-static const char* opcodeTypes[MAX_OPCODE + 1] = {
+static const char* opcodeTypes[OPCODE_COUNT] = {
 #define OPCODE_TYPE_INIT_N(name, type) [OP_##name] = "N",
 #define OPCODE_TYPE_INIT_J(name, type) [OP_##name] = "J",
 #define OPCODE_TYPE_INIT_K(name, type) [OP_##name] = "K",
@@ -49,11 +49,11 @@ static const char* opcodeTypes[MAX_OPCODE + 1] = {
 
 // Inline accessor functions
 static inline const char* getOpcodeName(Opcode opcode) {
-    return (opcode <= MAX_OPCODE) ? opcodeNames[opcode] : "UNKNOWN";
+    return (opcode < OPCODE_COUNT) ? opcodeNames[opcode] : "UNKNOWN";
 }
 
 static inline const char* getOpcodeType(Opcode opcode) {
-    return (opcode <= MAX_OPCODE) ? opcodeTypes[opcode] : "UNKNOWN";
+    return (opcode < OPCODE_COUNT) ? opcodeTypes[opcode] : "UNKNOWN";
 }
 
 static void printInstruction(Instruction instruction, PCLocation pc) {
@@ -147,11 +147,11 @@ static void printValue(Value v) {
         case VALUE_TYPE_OBJECT_RANGE: {
             ObjectRange* range = AS_OBJECT_RANGE(value);
             std::cout << "range(";
-            printValue(range->start);
-            std::cout << ", ";
-            printValue(range->end);
-            std::cout << ", ";
-            printValue(range->step);
+            if (range->isIntRange) {
+                std::cout << range->as.ir.start << ", " << range->as.ir.end << ", " << range->as.ir.step;
+            } else {
+                std::cout << range->as.fr.start << ", " << range->as.fr.end << ", " << range->as.fr.step;
+            }
             std::cout << ")";
             break;
         }

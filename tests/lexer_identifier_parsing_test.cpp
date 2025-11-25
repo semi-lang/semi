@@ -168,7 +168,7 @@ TEST_F(IdentifierParsingTest, IdentifierTooLong) {
 
 TEST_F(IdentifierParsingTest, AllKeywords) {
     InitLexer(
-        "and or in is if elif else for import export as defer fn return raise break step struct "
+        "and or in is if elif else for import export as defer fn return raise break by struct "
         "true false");
 
     EXPECT_EQ(NextToken(), TK_AND);
@@ -187,7 +187,7 @@ TEST_F(IdentifierParsingTest, AllKeywords) {
     EXPECT_EQ(NextToken(), TK_RETURN);
     EXPECT_EQ(NextToken(), TK_RAISE);
     EXPECT_EQ(NextToken(), TK_BREAK);
-    EXPECT_EQ(NextToken(), TK_STEP);
+    EXPECT_EQ(NextToken(), TK_BY);
     EXPECT_EQ(NextToken(), TK_STRUCT);
     EXPECT_EQ(NextToken(), TK_TRUE);
     EXPECT_EQ(NextToken(), TK_FALSE);

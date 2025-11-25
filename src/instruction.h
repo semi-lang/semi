@@ -97,6 +97,8 @@ typedef uint32_t Instruction;
     X(GET_MODULE_VAR, K)      \
     X(SET_MODULE_VAR, K)      \
     X(DEFER_CALL, K)          \
+    X(ITER_NEXT, K)           \
+    X(RANGE_NEXT, K)          \
     X(MOVE, T)                \
     X(GET_UPVALUE, T)         \
     X(SET_UPVALUE, T)         \
@@ -120,7 +122,7 @@ typedef uint32_t Instruction;
     X(BITWISE_R_SHIFT, T)     \
     X(BITWISE_INVERT, T)      \
     X(MAKE_RANGE, T)          \
-    X(ITER_NEXT, T)           \
+    X(ITER_PREPARE, T)        \
     X(BOOL_NOT, T)            \
     X(GET_ATTR, T)            \
     X(SET_ATTR, T)            \
@@ -149,72 +151,75 @@ typedef uint32_t Instruction;
 //   * inline_range(K):       Create an inline range object with start=(K>>8), end=(K&(2^8-1)), step=1.
 typedef enum {
     // clang-format off
-    OP_NOOP = 0,              // |       |  no operation
+    OP_NOOP = 0,                // |       |  no operation
     
-    OP_JUMP,                  // |   J   |  if J != 0, pc += (s ? J : -J)
-    OP_EXTRA_ARG,             // |   J   |  reset extraarg to 0 if s, then extraarg = (extraarg << 24) + J
+    OP_JUMP,                    // |   J   |  if J != 0, pc += (s ? J : -J)
+    OP_EXTRA_ARG,               // |   J   |  reset extraarg to 0 if s, then extraarg = (extraarg << 24) + J
     
-    OP_TRAP,                  // |   K   |  trap and exit with K
-    OP_C_JUMP,                // |   K   |  if to_bool(R[A]) == i and K != 0, pc += (s ? K : -K)
-    OP_LOAD_CONSTANT,         // |   K   |  R[A] := i ? VM.globals[K] : Mod.constants[K]
-                              //            Mod is the module of the current frame
-    OP_LOAD_BOOL,             // |   K   |  R[A] := i
-    OP_LOAD_INLINE_INTEGER,   // |   K   |  R[A] := s ? K : -K
-    OP_LOAD_INLINE_STRING,    // |   K   |  R[A] := K as inline string
-    OP_GET_MODULE_VAR,        // |   K   |  R[A] := s ? Mod.exports[K] : Mod.globals[K];
-                              //            Mod is the module of the current frame
-    OP_SET_MODULE_VAR,        // |   K   |  s ? (Mod.exports[K] := R[A]) : (Mod.globals[K] := R[A])
-                              //            Mod is the module of the current frame
-    OP_DEFER_CALL,            // |   K   |  push Mod.constants[K] to the defer stack
-                              //            Mod is the module of the current frame
+    OP_TRAP,                    // |   K   |  trap and exit with K
+    OP_C_JUMP,                  // |   K   |  if to_bool(R[A]) == i and K != 0, pc += (s ? K : -K)
+    OP_LOAD_CONSTANT,           // |   K   |  R[A] := i ? VM.globals[K] : Mod.constants[K]
+                                //            Mod is the module of the current frame
+    OP_LOAD_BOOL,               // |   K   |  R[A] := i
+    OP_LOAD_INLINE_INTEGER,     // |   K   |  R[A] := s ? K : -K
+    OP_LOAD_INLINE_STRING,      // |   K   |  R[A] := K as inline string
+    OP_GET_MODULE_VAR,          // |   K   |  R[A] := s ? Mod.exports[K] : Mod.globals[K];
+                                //            Mod is the module of the current frame
+    OP_SET_MODULE_VAR,          // |   K   |  s ? (Mod.exports[K] := R[A]) : (Mod.globals[K] := R[A])
+                                //            Mod is the module of the current frame
+    OP_DEFER_CALL,              // |   K   |  push Mod.constants[K] to the defer stack
+                                //            Mod is the module of the current frame
+    OP_ITER_NEXT,               // |   K   |  R[A](R[A+1], R[A+2], R[A+3]) (set the next value to R[A+3])
+                                //            If R[A+3] != nil, update counter R[A+4] if i is true.
+                                //            If R[A+3] == nil, set pc += K
+    OP_RANGE_NEXT,              // |   K   |  range R[A] can proceed ? R[A+1] := next value : pc += K
+                                //            If i is true, (R[A+2], R[A+3]) := (next value, counter) if it can proceed.
 
-    OP_MOVE,                  // |   T   |  R[A] := R[B]
-    OP_GET_UPVALUE,           // |   T   |  R[A] := Upvalue[B]
-    OP_SET_UPVALUE,           // |   T   |  Upvalue[A] := R[B]
-    OP_CLOSE_UPVALUES,        // |   T   |  close all upvalues >= R[A]
-    OP_ADD,                   // |   T   |  R[A] := RK(B, kb)  + RK(C, kc)
-    OP_SUBTRACT,              // |   T   |  R[A] := RK(B, kb)  - RK(C, kc)
-    OP_MULTIPLY,              // |   T   |  R[A] := RK(B, kb)  * RK(C, kc)
-    OP_DIVIDE,                // |   T   |  R[A] := RK(B, kb)  / RK(C, kc)
-    OP_FLOOR_DIVIDE,          // |   T   |  R[A] := RK(B, kb) // RK(C, kc)
-    OP_MODULO,                // |   T   |  R[A] := RK(B, kb)  % RK(C, kc)
-    OP_POWER,                 // |   T   |  R[A] := RK(B, kb) ** RK(C, kc)
-    OP_NEGATE,                // |   T   |  R[A] := -R[B]
-    OP_GT,                    // |   T   |  R[A] := RK(B, kb)  > RK(C, kc)
-    OP_GE,                    // |   T   |  R[A] := RK(B, kb) >= RK(C, kc)
-    OP_EQ,                    // |   T   |  R[A] := RK(B, kb) == RK(C, kc)
-    OP_NEQ,                   // |   T   |  R[A] := RK(B, kb) != RK(C, kc)
-    OP_BITWISE_AND,           // |   T   |  R[A] := RK(B, kb)  & RK(C, kc)
-    OP_BITWISE_OR,            // |   T   |  R[A] := RK(B, kb)  | RK(C, kc)
-    OP_BITWISE_XOR,           // |   T   |  R[A] := RK(B, kb)  ^ RK(C, kc)
-    OP_BITWISE_L_SHIFT,       // |   T   |  R[A] := RK(B, kb) << RK(C, kc)
-    OP_BITWISE_R_SHIFT,       // |   T   |  R[A] := RK(B, kb) >> RK(C, kc)
-    OP_BITWISE_INVERT,        // |   T   |  R[A] := ~R[B]
-    OP_MAKE_RANGE,            // |   T   |  R[A] := range(R[A], RK(B, kb), RB(C, kc))
-    OP_ITER_NEXT,             // |   T   |  R[A], R[B] := next(R[C])
-                              //            If the iteration does not end, pc += 2
-                              //            If A is 255, don't assign R[A], C < B, close upvalues >= R[B];
-                              //            otherwise, C < B < A, closes upvalues >= R[B] 
-    OP_BOOL_NOT,              // |   T   |  R[A] := !R[B]
-    OP_GET_ATTR,              // |   T   |  R[A] := GET_ATTR(R[B], uRK(C, kc), kb)
-                              //            GET_ATTR(object, index, type_index_or_symbol_index)
-    OP_SET_ATTR,              // |   T   |  SET_ATTR(R[A], uRK(B, kb), kc, R[C])
-                              //            SET_ATTR(object, index, type_index_or_symbol_index, value)
-    OP_NEW_COLLECTION,        // |   T   |  R[A] := new collection of type uRK(B, kb) with initial capacity C
-    OP_GET_ITEM,              // |   T   |  R[A] := R[B][RK(C, kc)]
-    OP_SET_ITEM,              // |   T   |  R[A][RK(B, kb)] = R[C]
-    OP_DEL_ITEM,              // |   T   |  R[A] = delete R[B][RK(C, kc)]
-    OP_CONTAIN,               // |   T   |  R[A] := RK(B, kb)] in R[C]
-    OP_APPEND_LIST,           // |   T   |  append C elements to R[A], starting from R[B]
-    OP_APPEND_MAP,            // |   T   |  append C pairs to R[A], starting from (R[B], R[B+1]) as key-value pairs
-    OP_CALL,                  // |   T   |  R[A](R[A+1], R[A+2], ..., R[A+B]), B is the number of arguments.
-                              //            The return value is stored in R[A].
-    OP_RETURN,                // |   T   |  return from function; if A != 255, copy R[A] to the caller register.
-    OP_CHECK_TYPE,            // |   T   |  R[A] := R[B] is of type RK(C, kc)
+    OP_MOVE,                    // |   T   |  R[A] := R[B]
+    OP_GET_UPVALUE,             // |   T   |  R[A] := Upvalue[B]
+    OP_SET_UPVALUE,             // |   T   |  Upvalue[A] := R[B]
+    OP_CLOSE_UPVALUES,          // |   T   |  close all upvalues >= R[A]
+    OP_ADD,                     // |   T   |  R[A] := RK(B, kb)  + RK(C, kc)
+    OP_SUBTRACT,                // |   T   |  R[A] := RK(B, kb)  - RK(C, kc)
+    OP_MULTIPLY,                // |   T   |  R[A] := RK(B, kb)  * RK(C, kc)
+    OP_DIVIDE,                  // |   T   |  R[A] := RK(B, kb)  / RK(C, kc)
+    OP_FLOOR_DIVIDE,            // |   T   |  R[A] := RK(B, kb) // RK(C, kc)
+    OP_MODULO,                  // |   T   |  R[A] := RK(B, kb)  % RK(C, kc)
+    OP_POWER,                   // |   T   |  R[A] := RK(B, kb) ** RK(C, kc)
+    OP_NEGATE,                  // |   T   |  R[A] := -R[B]
+    OP_GT,                      // |   T   |  R[A] := RK(B, kb)  > RK(C, kc)
+    OP_GE,                      // |   T   |  R[A] := RK(B, kb) >= RK(C, kc)
+    OP_EQ,                      // |   T   |  R[A] := RK(B, kb) == RK(C, kc)
+    OP_NEQ,                     // |   T   |  R[A] := RK(B, kb) != RK(C, kc)
+    OP_BITWISE_AND,             // |   T   |  R[A] := RK(B, kb)  & RK(C, kc)
+    OP_BITWISE_OR,              // |   T   |  R[A] := RK(B, kb)  | RK(C, kc)
+    OP_BITWISE_XOR,             // |   T   |  R[A] := RK(B, kb)  ^ RK(C, kc)
+    OP_BITWISE_L_SHIFT,         // |   T   |  R[A] := RK(B, kb) << RK(C, kc)
+    OP_BITWISE_R_SHIFT,         // |   T   |  R[A] := RK(B, kb) >> RK(C, kc)
+    OP_BITWISE_INVERT,          // |   T   |  R[A] := ~R[B]
+    OP_MAKE_RANGE,              // |   T   |  R[A] := make_range(R[A], RK(B, kb), RK(C, kc))
+    OP_ITER_PREPARE,            // |   T   |  TYPE(R[A]).__iter__(&R[A], &R[A+1], &R[A+2]), which has the effect of:
+                                //            R[A], R[A+1], R[A+2] := next function, invariant data, iter state
+    OP_BOOL_NOT,                // |   T   |  R[A] := !R[B]
+    OP_GET_ATTR,                // |   T   |  R[A] := GET_ATTR(R[B], uRK(C, kc), kb)
+                                //            GET_ATTR(object, index, type_index_or_symbol_index)
+    OP_SET_ATTR,                // |   T   |  SET_ATTR(R[A], uRK(B, kb), kc, R[C])
+                                //            SET_ATTR(object, index, type_index_or_symbol_index, value)
+    OP_NEW_COLLECTION,          // |   T   |  R[A] := new collection of type uRK(B, kb) with initial capacity C
+    OP_GET_ITEM,                // |   T   |  R[A] := R[B][RK(C, kc)]
+    OP_SET_ITEM,                // |   T   |  R[A][RK(B, kb)] = R[C]
+    OP_DEL_ITEM,                // |   T   |  R[A] = delete R[B][RK(C, kc)]
+    OP_CONTAIN,                 // |   T   |  R[A] := RK(B, kb)] in R[C]
+    OP_APPEND_LIST,             // |   T   |  append C elements to R[A], starting from R[B]
+    OP_APPEND_MAP,              // |   T   |  append C pairs to R[A], starting from (R[B], R[B+1]) as key-value pairs
+    OP_CALL,                    // |   T   |  R[A](R[A+1], R[A+2], ..., R[A+B]), B is the number of arguments.
+                                //            The return value is stored in R[A].
+    OP_RETURN,                  // |   T   |  return from function; if A != 255, copy R[A] to the caller register.
+    OP_CHECK_TYPE,              // |   T   |  R[A] := R[B] is of type RK(C, kc)
     // clang-format on
 } Opcode;
 
-#define MAX_OPCODE ((uint8_t)OP_CHECK_TYPE)
+#define OPCODE_COUNT (((uint8_t)OP_CHECK_TYPE) + 1)
 
 // Generate all instruction creation functions using OPCODE_X_MACRO
 // This automatically creates INSTRUCTION_* functions for all opcodes by using

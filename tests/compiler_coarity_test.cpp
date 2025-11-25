@@ -256,7 +256,7 @@ TEST_F(CompilerCoarityTest, ForLoopInIfBranchWithReturnAfter) {
 
 [Constants]
 K[0]: Range start=1 end=10 step=1
-K[1]: FunctionProto arity=1 coarity=1 maxStackSize=4 -> @test
+K[1]: FunctionProto arity=1 coarity=1 maxStackSize=3 -> @test
 )");
 }
 

@@ -1212,9 +1212,15 @@ void Verifier::verifyConstantRange(const Value* value, const ParsedConstant& con
         actualStep        = 1;  // InlineRange always has step=1
     } else {
         ObjectRange* range = AS_OBJECT_RANGE(value);
-        actualStart        = IS_INT(&range->start) ? AS_INT(&range->start) : 0;
-        actualEnd          = IS_INT(&range->end) ? AS_INT(&range->end) : 0;
-        actualStep         = IS_INT(&range->step) ? AS_INT(&range->step) : 0;
+        if (!range->isIntRange) {
+            ADD_FAILURE() << "Type mismatch at [Constants].(" << constant.index << "):\n"
+                          << "  Expected: Range (integer)\n"
+                          << "  Actual:   Range (float)";
+            return;
+        }
+        actualStart = range->as.ir.start;
+        actualEnd   = range->as.ir.end;
+        actualStep  = range->as.ir.step;
     }
 
     // Verify start

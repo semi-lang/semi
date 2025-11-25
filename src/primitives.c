@@ -1162,84 +1162,34 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(STRING, getItem)(GC* gc, Value* ret, 
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
 #pragma region
 
-static ErrorId MAGIC_METHOD_SIGNATURE_NAME(RANGE, next)(GC* gc, Value* ret, Value* iterator) {
-    if (IS_INLINE_RANGE(iterator)) {
-        InlineRange range = AS_INLINE_RANGE(iterator);
-        if (range.start >= range.end) {
-            *ret = INVALID_VALUE;
-        } else {
-            *ret = semiValueIntCreate(range.start);
-            AS_INLINE_RANGE(iterator).start += 1;
-        }
-        return 0;
-
-    } else if (IS_OBJECT_RANGE(iterator)) {
-        ObjectRange* range = AS_OBJECT_RANGE(iterator);
-        ErrorId err;
-        Value cmpResult;
-        err = MAGIC_METHOD_SIGNATURE_NAME(NUMBER, lt)(gc, &cmpResult, &range->start, &range->end);
-        if (err != 0) {
-            return err;
-        }
-        if (!AS_BOOL(&cmpResult)) {
-            *ret = INVALID_VALUE;
-            return 0;
-        }
-
-        *ret = range->start;
-        return MAGIC_METHOD_SIGNATURE_NAME(NUMBER, add)(gc, &range->start, &range->start, &range->step);
-    }
-
-    return SEMI_ERROR_UNEXPECTED_TYPE;
-}
-
-static ErrorId MAGIC_METHOD_SIGNATURE_NAME(RANGE, eq)(GC* gc, Value* ret, Value* left, Value* right) {
+static ErrorId MAGIC_METHOD_SIGNATURE_NAME(RANGE, eq)(GC* gc, Value* ret, Value* a, Value* b) {
     (void)gc;
 
-    Value lStart, lEnd, lStep;
-    if (IS_INLINE_RANGE(left)) {
-        InlineRange range = AS_INLINE_RANGE(left);
-        lStart            = semiValueIntCreate(range.start);
-        lEnd              = semiValueIntCreate(range.end);
-        lStep             = semiValueIntCreate(1);
-    } else if (IS_OBJECT_RANGE(left)) {
-        ObjectRange* range = AS_OBJECT_RANGE(left);
-        lStart             = range->start;
-        lEnd               = range->end;
-        lStep              = range->step;
+    bool result;
+
+    if (IS_INLINE_RANGE(a) && IS_INLINE_RANGE(b)) {
+        InlineRange rangeA = AS_INLINE_RANGE(a);
+        InlineRange rangeB = AS_INLINE_RANGE(b);
+        result             = rangeA.start == rangeB.start && rangeA.end == rangeB.end;
+    } else if (IS_OBJECT_RANGE(a) && IS_OBJECT_RANGE(b)) {
+        ObjectRange* rangeA = AS_OBJECT_RANGE(a);
+        ObjectRange* rangeB = AS_OBJECT_RANGE(b);
+        if (rangeA->isIntRange != rangeB->isIntRange) {
+            result = false;
+        } else if (rangeA->isIntRange) {
+            result = rangeA->as.ir.start == rangeB->as.ir.start && rangeA->as.ir.end == rangeB->as.ir.end &&
+                     rangeA->as.ir.step == rangeB->as.ir.step;
+        } else {
+            result = fabs(rangeA->as.fr.start - rangeB->as.fr.start) < FLOAT_EPSILON &&
+                     fabs(rangeA->as.fr.end - rangeB->as.fr.end) < FLOAT_EPSILON &&
+                     fabs(rangeA->as.fr.step - rangeB->as.fr.step) < FLOAT_EPSILON;
+        }
     } else {
         return SEMI_ERROR_UNEXPECTED_TYPE;
     }
 
-    if (IS_INLINE_RANGE(right)) {
-        InlineRange range = AS_INLINE_RANGE(right);
-        Value rStart      = semiValueIntCreate(range.start);
-        Value rEnd        = semiValueIntCreate(range.end);
-        Value rStep       = semiValueIntCreate(1);
-
-        *ret = semiValueBoolCreate(semiBuiltInEquals(lStart, rStart) && semiBuiltInEquals(lEnd, rEnd) &&
-                                   semiBuiltInEquals(lStep, rStep));
-        return 0;
-
-    } else if (IS_OBJECT_RANGE(right)) {
-        ObjectRange* range = AS_OBJECT_RANGE(right);
-        Value leftStart    = range->start;
-        Value leftEnd      = range->end;
-        Value leftStep     = range->step;
-
-        Value rStart = range->start;
-        Value rEnd   = range->end;
-        Value rStep  = range->step;
-
-        *ret = semiValueBoolCreate(semiBuiltInEquals(lStart, rStart) && semiBuiltInEquals(lEnd, rEnd) &&
-                                   semiBuiltInEquals(lStep, rStep));
-
-        return 0;
-    } else {
-        return SEMI_ERROR_UNEXPECTED_TYPE;
-    }
-
-    return SEMI_ERROR_UNEXPECTED_TYPE;
+    *ret = semiValueBoolCreate(result);
+    return 0;
 }
 
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(RANGE, neq)(GC* gc, Value* ret, Value* left, Value* right) {

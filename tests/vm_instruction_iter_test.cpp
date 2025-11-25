@@ -191,8 +191,7 @@ arity=0 coarity=0 maxStackSize=8
 TEST_F(VMInstructionIterTest, OpMakeRangeWithConstants) {
     // Test using inline constants for B and C operands
     // R[A] := range(R[A], RK(B, kb), RK(C, kc))
-    // A=0: start->result, B=129: end (1 after adding INT8_MIN), C=133: step (5 after adding
-    // INT8_MIN)
+    // A=0: start->result, B=129: end (1 after adding INT8_MIN), C=133: step (5 after adding INT8_MIN)
     vm->values[0] = semiValueIntCreate(1);  // start
 
     SemiModule* module;
@@ -251,33 +250,33 @@ arity=0 coarity=0 maxStackSize=8
     }
 }
 
-// OP_ITER_NEXT Tests
+// OP_RANGE_NEXT Tests
 struct InlineRangeIterTestCase {
     const char* name;
     int range_start;
     int range_end;
     int expected_iterations;
-    bool test_no_assign;        // Test A=255 case
+    bool has_counter;
     int expected_final_result;  // Expected trap value when iteration ends
 };
 
-TEST_F(VMInstructionIterTest, OpIterNextInlineRange) {
+TEST_F(VMInstructionIterTest, OpRangeNextInlineRange) {
     InlineRangeIterTestCase test_cases[] = {
-        {  "range_1_to_5",  1, 5, 4, false, 99},
-        {  "range_0_to_3",  0, 3, 3, false, 99},
-        {   "empty_range",  5, 5, 0, false, 99},
-        { "reverse_range", 10, 1, 0, false, 99},
-        {"single_element",  1, 2, 1, false, 99},
-        {"no_assign_test",  1, 3, 2,  true, 99},
+        {  "range_1_to_5",  1, 5, 4,  true, 153},
+        {  "range_0_to_3",  0, 3, 3,  true, 153},
+        {   "empty_range",  5, 5, 0,  true, 153},
+        { "reverse_range", 10, 1, 0,  true, 153},
+        {"single_element",  1, 2, 1,  true, 153},
+        {  "with_counter",  1, 3, 2, false, 153},
     };
 
     for (const auto& test_case : test_cases) {
-        // Create an InlineRange in register 2
-        vm->values[2] = semiValueInlineRangeCreate((int32_t)test_case.range_start, (int32_t)test_case.range_end);
-        vm->values[0] = semiValueIntCreate(0);  // Counter
-        vm->values[1] = semiValueIntCreate(0);  // Current value
+        vm->values[0] = semiValueIntCreate(0);  // iteration counter
+        vm->values[1] = semiValueInlineRangeCreate((int32_t)test_case.range_start, (int32_t)test_case.range_end);
+        if (test_case.has_counter) {
+            vm->values[2] = semiValueIntCreate(0);  // Counter register
+        }
 
-        uint8_t reg_a = test_case.test_no_assign ? 255 : 0;
         char dsl_spec[512];
         snprintf(dsl_spec,
                  sizeof(dsl_spec),
@@ -286,39 +285,27 @@ TEST_F(VMInstructionIterTest, OpIterNextInlineRange) {
 arity=0 coarity=0 maxStackSize=8
 
 [Instructions]
-0: OP_ITER_NEXT  A=0x%02X B=0x01 C=0x02 kb=F kc=F
-1: OP_TRAP       A=0x00 K=0x0063 i=F s=F
-2: OP_TRAP       A=0x00 K=0x0000 i=F s=F
-3: OP_TRAP       A=0x00 K=0x0058 i=F s=F
+0: OP_RANGE_NEXT  A=0x01 K=0x0003 i=%c s=F
+1: OP_ADD         A=0x00 B=0x00 C=0x81 kb=F kc=T
+1: OP_JUMP        J=0x000002 s=F
+2: OP_TRAP        A=0x00 K=0x0099 i=F s=F
+3: OP_TRAP        A=0x00 K=0x0058 i=F s=F
 )",
-                 reg_a);
+                 test_case.has_counter ? 'T' : 'F');
 
         int iterations = 0;
         int result;
 
-        while (iterations < 10) {  // Safety limit
-            SemiModule* module;
-            result = InstructionVerifier::BuildAndRunModule(vm, dsl_spec, &module);
-
-            if (result == 99) {
-                // Iteration ended
-                break;
-            } else if (result == 0) {
-                // Iteration continued
-                iterations++;
-                // Reset VM state to continue from the beginning for next iteration
-                vm->error = 0;
-            } else {
-                FAIL() << "Unexpected result " << result << " for " << test_case.name;
-            }
-        }
+        SemiModule* module;
+        result = InstructionVerifier::BuildAndRunModule(vm, dsl_spec, &module);
 
         ASSERT_EQ(result, test_case.expected_final_result) << "Final result mismatch for " << test_case.name;
-        ASSERT_EQ(iterations, test_case.expected_iterations) << "Iteration count mismatch for " << test_case.name;
+        ASSERT_EQ(AS_INT(&vm->values[0]), test_case.expected_iterations)
+            << "Iteration count mismatch for " << test_case.name;
 
-        // For non-no-assign cases, check that counter was incremented
-        if (!test_case.test_no_assign && test_case.expected_iterations > 0) {
-            ASSERT_EQ(vm->values[0].as.i, test_case.expected_iterations)
+        // For non-no-assign cases, check that internal counter was incremented
+        if (test_case.has_counter) {
+            ASSERT_EQ(AS_INT(&vm->values[2]), test_case.expected_iterations)
                 << "Counter should be incremented for " << test_case.name;
         }
 
@@ -329,141 +316,142 @@ arity=0 coarity=0 maxStackSize=8
     }
 }
 
-TEST_F(VMInstructionIterTest, OpIterNextObjectRange) {
-    // Create an ObjectRange with step = 2
-    // R[A] := range(R[A], RK(B, kb), RK(C, kc))
-    // A=0: start->result, B=0: end, C=1: step
-    vm->values[0] = semiValueIntCreate(1);   // start
-    vm->values[1] = semiValueIntCreate(10);  // end
-    vm->values[2] = semiValueIntCreate(2);   // step
+struct ObjectRangeIterIntTestCase {
+    const char* name;
+    int range_start;
+    int range_end;
+    int range_step;
+    int expected_iterations;
+    bool has_counter;
+    int expected_final_result;  // Expected trap value when iteration ends
+};
 
-    // First create the range
-    SemiModule* module;
-    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
-                                                            R"(
-[ModuleInit]
-arity=0 coarity=0 maxStackSize=8
+TEST_F(VMInstructionIterTest, OpRangeNextObjectRangeInt) {
+    ObjectRangeIterIntTestCase test_cases[] = {
+        { "range_1_to_5",  1,  5,  1, 4,  true, 153},
+        { "range_0_to_3",  0,  3,  1, 3,  true, 153},
+        {  "empty_range",  5,  5,  1, 0,  true, 153},
+        {"reverse_range", 10,  1,  1, 0,  true, 153},
+        {       "step_2",  1, 10,  2, 5,  true, 153},
+        {      "step_-2", 10,  0, -2, 5,  true, 153},
+        { "with_counter",  1,  3,  1, 2, false, 153},
+    };
 
-[Instructions]
-0: OP_MAKE_RANGE  A=0x00 B=0x01 C=0x02 kb=F kc=F
-1: OP_TRAP        A=0x00 K=0x0000 i=F s=F
-)",
-                                                            &module);
-    ASSERT_EQ(result, 0) << "Should create ObjectRange successfully";
-
-    // Now test iteration
-    Value range_obj = vm->values[0];
-    vm->values[2]   = range_obj;              // Move range to register 2
-    vm->values[0]   = semiValueIntCreate(0);  // Counter
-    vm->values[1]   = semiValueIntCreate(0);  // Current value
-
-    int iterations        = 0;
-    int expected_values[] = {1, 3, 5, 7, 9};  // step=2 from 1 to 10
-
-    while (iterations < 10) {  // Safety limit
-        SemiModule* module;
-        result = InstructionVerifier::BuildAndRunModule(vm,
-                                                        R"(
-[ModuleInit]
-arity=0 coarity=0 maxStackSize=8
-
-[Instructions]
-0: OP_ITER_NEXT  A=0x00 B=0x01 C=0x02 kb=F kc=F
-1: OP_TRAP       A=0x00 K=0x0063 i=F s=F
-2: OP_TRAP       A=0x00 K=0x0000 i=F s=F
-3: OP_TRAP       A=0x00 K=0x0058 i=F s=F
-)",
-                                                        &module);
-
-        if (result == 99) {
-            // Iteration ended
-            break;
-        } else if (result == 0) {
-            // Iteration continued
-
-            // Check that we got the expected value
-            ASSERT_LT(iterations, 5) << "Too many iterations";
-            ASSERT_EQ(vm->values[1].as.i, expected_values[iterations])
-                << "Iteration " << iterations << " should produce value " << expected_values[iterations];
-
-            iterations++;
-        } else {
-            FAIL() << "Unexpected result " << result;
+    for (const auto& test_case : test_cases) {
+        vm->values[0] = semiValueIntCreate(0);  // iteration counter
+        vm->values[1] = OBJECT_VALUE(semiObjectRangeCreate(&vm->gc,
+                                                           semiValueIntCreate((int64_t)test_case.range_start),
+                                                           semiValueIntCreate((int64_t)test_case.range_end),
+                                                           semiValueIntCreate((int64_t)test_case.range_step)),
+                                     VALUE_TYPE_OBJECT_RANGE);
+        if (test_case.has_counter) {
+            vm->values[2] = semiValueIntCreate(0);  // Counter register
         }
+
+        char dsl_spec[512];
+        snprintf(dsl_spec,
+                 sizeof(dsl_spec),
+                 R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
+
+[Instructions]
+0: OP_RANGE_NEXT  A=0x01 K=0x0003 i=%c s=F
+1: OP_ADD         A=0x00 B=0x00 C=0x81 kb=F kc=T
+1: OP_JUMP        J=0x000002 s=F
+2: OP_TRAP        A=0x00 K=0x0099 i=F s=F
+3: OP_TRAP        A=0x00 K=0x0058 i=F s=F
+)",
+                 test_case.has_counter ? 'T' : 'F');
+
+        int iterations = 0;
+        int result;
+
+        SemiModule* module;
+        result = InstructionVerifier::BuildAndRunModule(vm, dsl_spec, &module);
+
+        ASSERT_EQ(result, test_case.expected_final_result) << "Final result mismatch for " << test_case.name;
+        ASSERT_EQ(AS_INT(&vm->values[0]), test_case.expected_iterations)
+            << "Iteration count mismatch for " << test_case.name;
+
+        // For non-no-assign cases, check that internal counter was incremented
+        if (test_case.has_counter) {
+            ASSERT_EQ(AS_INT(&vm->values[2]), test_case.expected_iterations)
+                << "Counter should be incremented for " << test_case.name;
+        }
+
+        // Reset VM for next test case
+        semiDestroyVM(vm);
+        vm = semiCreateVM(NULL);
+        ASSERT_NE(vm, nullptr) << "Failed to recreate VM for next test case";
     }
-
-    ASSERT_EQ(result, 99) << "Should end iteration with trap 99";
-    ASSERT_EQ(iterations, 5) << "Should have exactly 5 iterations for range 1-10 step 2";
-
-    // Check that the counter was incremented correctly
-    ASSERT_EQ(vm->values[0].as.i, 5) << "Counter should be incremented to 5";
 }
+struct ObjectRangeIterFloatTestCase {
+    const char* name;
+    double range_start;
+    double range_end;
+    double range_step;
+    int expected_iterations;
+    bool has_counter;
+    int expected_final_result;  // Expected trap value when iteration ends
+};
+TEST_F(VMInstructionIterTest, OpRangeNextObjectRangeFloat) {
+    ObjectRangeIterFloatTestCase test_cases[] = {
+        { "range_1_to_5",   1,   5,  1, 4,  true, 153},
+        { "range_0_to_3",   0,   3,  1, 3,  true, 153},
+        {  "empty_range",   5,   5,  1, 0,  true, 153},
+        {"reverse_range",  10,   1,  1, 0,  true, 153},
+        {       "step_2", 1.5,  10,  2, 5,  true, 153},
+        {      "step_-2",  10, 0.5, -2, 5,  true, 153},
+        { "with_counter",   1,   3,  1, 2, false, 153},
+    };
 
-TEST_F(VMInstructionIterTest, OpIterNextFloatRange) {
-    // Create a float ObjectRange
-    // R[A] := range(R[A], RK(B, kb), RK(C, kc))
-    // A=0: start->result, B=1: end, C=2: step
-    vm->values[0] = semiValueFloatCreate(1.0);  // start
-    vm->values[1] = semiValueFloatCreate(5.0);  // end
-    vm->values[2] = semiValueFloatCreate(1.5);  // step
-
-    // Create the range
-    SemiModule* module;
-    ErrorId result = InstructionVerifier::BuildAndRunModule(vm,
-                                                            R"(
-[ModuleInit]
-arity=0 coarity=0 maxStackSize=8
-
-[Instructions]
-0: OP_MAKE_RANGE  A=0x00 B=0x01 C=0x02 kb=F kc=F
-1: OP_TRAP        A=0x00 K=0x0000 i=F s=F
-)",
-                                                            &module);
-    ASSERT_EQ(result, 0) << "Should create float ObjectRange successfully";
-
-    // Test iteration
-    Value range_obj = vm->values[0];
-    vm->values[2]   = range_obj;
-    vm->values[0]   = semiValueIntCreate(0);      // Counter
-    vm->values[1]   = semiValueFloatCreate(0.0);  // Current value
-
-    int iterations           = 0;
-    double expected_values[] = {1.0, 2.5, 4.0};  // step=1.5 from 1.0 to 5.0
-
-    while (iterations < 10) {
-        SemiModule* module;
-        result = InstructionVerifier::BuildAndRunModule(vm,
-                                                        R"(
-[ModuleInit]
-arity=0 coarity=0 maxStackSize=8
-
-[Instructions]
-0: OP_ITER_NEXT  A=0x00 B=0x01 C=0x02 kb=F kc=F
-1: OP_TRAP       A=0x00 K=0x0063 i=F s=F
-2: OP_TRAP       A=0x00 K=0x0000 i=F s=F
-3: OP_TRAP       A=0x00 K=0x0058 i=F s=F
-)",
-                                                        &module);
-
-        if (result == 99) {
-            // Iteration ended
-            break;
-        } else if (result == 0) {
-            // Iteration continued
-
-            ASSERT_LT(iterations, 3) << "Too many iterations";
-            ASSERT_DOUBLE_EQ(vm->values[1].as.f, expected_values[iterations])
-                << "Double iteration " << iterations << " value mismatch";
-
-            iterations++;
-        } else {
-            FAIL() << "Unexpected result " << result;
+    for (const auto& test_case : test_cases) {
+        vm->values[0] = semiValueIntCreate(0);  // iteration counter
+        vm->values[1] = OBJECT_VALUE(semiObjectRangeCreate(&vm->gc,
+                                                           semiValueFloatCreate(test_case.range_start),
+                                                           semiValueFloatCreate(test_case.range_end),
+                                                           semiValueFloatCreate(test_case.range_step)),
+                                     VALUE_TYPE_OBJECT_RANGE);
+        if (test_case.has_counter) {
+            vm->values[2] = semiValueIntCreate(0);  // Counter register
         }
+
+        char dsl_spec[512];
+        snprintf(dsl_spec,
+                 sizeof(dsl_spec),
+                 R"(
+[ModuleInit]
+arity=0 coarity=0 maxStackSize=8
+
+[Instructions]
+0: OP_RANGE_NEXT  A=0x01 K=0x0003 i=%c s=F
+1: OP_ADD         A=0x00 B=0x00 C=0x81 kb=F kc=T
+1: OP_JUMP        J=0x000002 s=F
+2: OP_TRAP        A=0x00 K=0x0099 i=F s=F
+3: OP_TRAP        A=0x00 K=0x0058 i=F s=F
+)",
+                 test_case.has_counter ? 'T' : 'F');
+
+        int iterations = 0;
+        int result;
+
+        SemiModule* module;
+        result = InstructionVerifier::BuildAndRunModule(vm, dsl_spec, &module);
+
+        ASSERT_EQ(result, test_case.expected_final_result) << "Final result mismatch for " << test_case.name;
+        ASSERT_EQ(AS_INT(&vm->values[0]), test_case.expected_iterations)
+            << "Iteration count mismatch for " << test_case.name;
+
+        // For non-no-assign cases, check that internal counter was incremented
+        if (test_case.has_counter) {
+            ASSERT_EQ(AS_INT(&vm->values[2]), test_case.expected_iterations)
+                << "Counter should be incremented for " << test_case.name;
+        }
+
+        // Reset VM for next test case
+        semiDestroyVM(vm);
+        vm = semiCreateVM(NULL);
+        ASSERT_NE(vm, nullptr) << "Failed to recreate VM for next test case";
     }
-
-    ASSERT_EQ(result, 99) << "Should end iteration with trap 99";
-    ASSERT_EQ(iterations, 3) << "Should have exactly 3 iterations for double range";
-
-    // Check that the counter was incremented correctly
-    ASSERT_EQ(vm->values[0].as.i, 3) << "Counter should be incremented to 3";
 }
