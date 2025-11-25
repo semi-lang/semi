@@ -144,15 +144,14 @@ static void printValue(Value v) {
             std::cout << "range(" << ir.start << ", " << ir.end << ", 1)";
             break;
         }
-        case VALUE_TYPE_OBJECT_RANGE: {
+        case VALUE_TYPE_OBJECT_INT_RANGE: {
             ObjectRange* range = AS_OBJECT_RANGE(value);
-            std::cout << "range(";
-            if (range->isIntRange) {
-                std::cout << range->as.ir.start << ", " << range->as.ir.end << ", " << range->as.ir.step;
-            } else {
-                std::cout << range->as.fr.start << ", " << range->as.fr.end << ", " << range->as.fr.step;
-            }
-            std::cout << ")";
+            std::cout << "range(" << range->as.ir.start << ", " << range->as.ir.end << ", " << range->as.ir.step << ")";
+            break;
+        }
+        case VALUE_TYPE_OBJECT_FLOAT_RANGE: {
+            ObjectRange* range = AS_OBJECT_RANGE(value);
+            std::cout << "range(" << range->as.fr.start << ", " << range->as.fr.end << ", " << range->as.fr.step << ")";
             break;
         }
         case VALUE_TYPE_FUNCTION_PROTO: {

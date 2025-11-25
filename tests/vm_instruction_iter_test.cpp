@@ -81,7 +81,7 @@ arity=0 coarity=0 maxStackSize=8
                     << "InlineRange start mismatch for " << test_case.name;
                 ASSERT_EQ(vm->values[0].as.ir.end, test_case.end) << "InlineRange end mismatch for " << test_case.name;
             } else {
-                ASSERT_EQ(vm->values[0].header, VALUE_TYPE_OBJECT_RANGE)
+                ASSERT_EQ(vm->values[0].header, VALUE_TYPE_OBJECT_INT_RANGE)
                     << "Should create ObjectRange for " << test_case.name;
                 // Additional ObjectRange validation could be added here
             }
@@ -132,7 +132,7 @@ arity=0 coarity=0 maxStackSize=8
             ASSERT_EQ(result, 0) << "Test case: " << test_case.name;
 
             // Float ranges should always create ObjectRange
-            ASSERT_EQ(vm->values[0].header, VALUE_TYPE_OBJECT_RANGE)
+            ASSERT_EQ(vm->values[0].header, VALUE_TYPE_OBJECT_FLOAT_RANGE)
                 << "Float ranges should create ObjectRange for " << test_case.name;
         }
 
@@ -178,7 +178,7 @@ arity=0 coarity=0 maxStackSize=8
         ASSERT_EQ(result, 0) << "Test case: " << test_case.name;
 
         // Mixed types should always create ObjectRange
-        ASSERT_EQ(vm->values[0].header, VALUE_TYPE_OBJECT_RANGE)
+        ASSERT_EQ(vm->values[0].header, VALUE_TYPE_OBJECT_FLOAT_RANGE)
             << "Mixed types should create ObjectRange for " << test_case.name;
 
         // Reset VM for next test case
@@ -208,7 +208,7 @@ arity=0 coarity=0 maxStackSize=8
 
     ASSERT_EQ(result, 0) << "Should handle inline constants";
 
-    ASSERT_EQ(vm->values[0].header, VALUE_TYPE_OBJECT_RANGE) << "Should create ObjectRange since step=5 (not 1)";
+    ASSERT_EQ(vm->values[0].header, VALUE_TYPE_OBJECT_INT_RANGE) << "Should create ObjectRange since step=5 (not 1)";
 }
 
 TEST_F(VMInstructionIterTest, OpMakeRangeTypeErrors) {
@@ -339,11 +339,10 @@ TEST_F(VMInstructionIterTest, OpRangeNextObjectRangeInt) {
 
     for (const auto& test_case : test_cases) {
         vm->values[0] = semiValueIntCreate(0);  // iteration counter
-        vm->values[1] = OBJECT_VALUE(semiObjectRangeCreate(&vm->gc,
-                                                           semiValueIntCreate((int64_t)test_case.range_start),
-                                                           semiValueIntCreate((int64_t)test_case.range_end),
-                                                           semiValueIntCreate((int64_t)test_case.range_step)),
-                                     VALUE_TYPE_OBJECT_RANGE);
+        vm->values[1] = OBJECT_VALUE(
+            semiObjectIntRangeCreate(
+                &vm->gc, (int64_t)test_case.range_start, (int64_t)test_case.range_end, (int64_t)test_case.range_step),
+            VALUE_TYPE_OBJECT_INT_RANGE);
         if (test_case.has_counter) {
             vm->values[2] = semiValueIntCreate(0);  // Counter register
         }
@@ -408,11 +407,9 @@ TEST_F(VMInstructionIterTest, OpRangeNextObjectRangeFloat) {
 
     for (const auto& test_case : test_cases) {
         vm->values[0] = semiValueIntCreate(0);  // iteration counter
-        vm->values[1] = OBJECT_VALUE(semiObjectRangeCreate(&vm->gc,
-                                                           semiValueFloatCreate(test_case.range_start),
-                                                           semiValueFloatCreate(test_case.range_end),
-                                                           semiValueFloatCreate(test_case.range_step)),
-                                     VALUE_TYPE_OBJECT_RANGE);
+        vm->values[1] = OBJECT_VALUE(
+            semiObjectFloatRangeCreate(&vm->gc, test_case.range_start, test_case.range_end, test_case.range_step),
+            VALUE_TYPE_OBJECT_FLOAT_RANGE);
         if (test_case.has_counter) {
             vm->values[2] = semiValueIntCreate(0);  // Counter register
         }

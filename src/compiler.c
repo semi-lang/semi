@@ -1249,7 +1249,7 @@ static void saveConstantToRegister(Compiler* compiler, Value value, LocalRegiste
             goto save_to_constant_table;
         }
 
-        case VALUE_TYPE_OBJECT_RANGE: {
+        case VALUE_TYPE_OBJECT_INT_RANGE: {
             goto save_to_constant_table;
         }
 

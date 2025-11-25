@@ -122,8 +122,10 @@ typedef enum {
     VALUE_TYPE_OBJECT_STRING = BASE_VALUE_TYPE_STRING | (1 << VALUE_HEADER_VARIANT_SHIFT) | VALUE_HEADER_OBJECT_MASK,
 
     // Range
-    VALUE_TYPE_INLINE_RANGE = BASE_VALUE_TYPE_RANGE,
-    VALUE_TYPE_OBJECT_RANGE = BASE_VALUE_TYPE_RANGE | (1 << VALUE_HEADER_VARIANT_SHIFT) | VALUE_HEADER_OBJECT_MASK,
+    VALUE_TYPE_INLINE_RANGE     = BASE_VALUE_TYPE_RANGE,
+    VALUE_TYPE_OBJECT_INT_RANGE = BASE_VALUE_TYPE_RANGE | (1 << VALUE_HEADER_VARIANT_SHIFT) | VALUE_HEADER_OBJECT_MASK,
+    VALUE_TYPE_OBJECT_FLOAT_RANGE =
+        BASE_VALUE_TYPE_RANGE | (2 << VALUE_HEADER_VARIANT_SHIFT) | VALUE_HEADER_OBJECT_MASK,
 
     // List
     VALUE_TYPE_LIST = BASE_VALUE_TYPE_LIST | VALUE_HEADER_OBJECT_MASK,
@@ -147,19 +149,20 @@ typedef enum {
 #define VALUE_VARIANT(v) ((uint16_t)(((v)->header & VALUE_HEADER_VARIANT_MASK) >> VALUE_HEADER_VARIANT_SHIFT))
 #define VALUE_TYPE(v)    ((ValueType)((v)->header))
 
-#define IS_BOOL(v)              (VALUE_TYPE(v) == VALUE_TYPE_BOOL)
-#define IS_INT(v)               (VALUE_TYPE(v) == VALUE_TYPE_INT)
-#define IS_FLOAT(v)             (VALUE_TYPE(v) == VALUE_TYPE_FLOAT)
-#define IS_OBJECT_STRING(v)     (VALUE_TYPE(v) == VALUE_TYPE_OBJECT_STRING)
-#define IS_INLINE_STRING(v)     (VALUE_TYPE(v) == VALUE_TYPE_INLINE_STRING)
-#define IS_OBJECT_RANGE(v)      (VALUE_TYPE(v) == VALUE_TYPE_OBJECT_RANGE)
-#define IS_INLINE_RANGE(v)      (VALUE_TYPE(v) == VALUE_TYPE_INLINE_RANGE)
-#define IS_LIST(v)              (VALUE_TYPE(v) == VALUE_TYPE_LIST)
-#define IS_DICT(v)              (VALUE_TYPE(v) == VALUE_TYPE_DICT)
-#define IS_FUNCTION_PROTO(v)    (VALUE_TYPE(v) == VALUE_TYPE_FUNCTION_PROTO)
-#define IS_COMPILED_FUNCTION(v) (VALUE_TYPE(v) == VALUE_TYPE_COMPILED_FUNCTION)
-#define IS_NATIVE_FUNCTION(v)   (VALUE_TYPE(v) == VALUE_TYPE_NATIVE_FUNCTION)
-#define IS_CLASS(v)             (VALUE_TYPE(v) == VALUE_TYPE_CLASS)
+#define IS_BOOL(v)               (VALUE_TYPE(v) == VALUE_TYPE_BOOL)
+#define IS_INT(v)                (VALUE_TYPE(v) == VALUE_TYPE_INT)
+#define IS_FLOAT(v)              (VALUE_TYPE(v) == VALUE_TYPE_FLOAT)
+#define IS_OBJECT_STRING(v)      (VALUE_TYPE(v) == VALUE_TYPE_OBJECT_STRING)
+#define IS_INLINE_STRING(v)      (VALUE_TYPE(v) == VALUE_TYPE_INLINE_STRING)
+#define IS_OBJECT_INT_RANGE(v)   (VALUE_TYPE(v) == VALUE_TYPE_OBJECT_INT_RANGE)
+#define IS_OBJECT_FLOAT_RANGE(v) (VALUE_TYPE(v) == VALUE_TYPE_OBJECT_FLOAT_RANGE)
+#define IS_INLINE_RANGE(v)       (VALUE_TYPE(v) == VALUE_TYPE_INLINE_RANGE)
+#define IS_LIST(v)               (VALUE_TYPE(v) == VALUE_TYPE_LIST)
+#define IS_DICT(v)               (VALUE_TYPE(v) == VALUE_TYPE_DICT)
+#define IS_FUNCTION_PROTO(v)     (VALUE_TYPE(v) == VALUE_TYPE_FUNCTION_PROTO)
+#define IS_COMPILED_FUNCTION(v)  (VALUE_TYPE(v) == VALUE_TYPE_COMPILED_FUNCTION)
+#define IS_NATIVE_FUNCTION(v)    (VALUE_TYPE(v) == VALUE_TYPE_NATIVE_FUNCTION)
+#define IS_CLASS(v)              (VALUE_TYPE(v) == VALUE_TYPE_CLASS)
 
 #define IS_VALID(v)   (VALUE_TYPE(v) != VALUE_TYPE_INVALID)
 #define IS_INVALID(v) (VALUE_TYPE(v) == VALUE_TYPE_INVALID)
@@ -328,34 +331,39 @@ Value semiValueStringCreate(GC* gc, const char* text, size_t length);
  │ InlineRange & ObjectRange
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
 
+typedef struct ObjectRangeIntVariant {
+    IntValue start;
+    IntValue end;
+    IntValue step;
+} ObjectRangeIntVariant;
+
+typedef struct ObjectRangeFloatVariant {
+    FloatValue start;
+    FloatValue end;
+    FloatValue step;
+} ObjectRangeFloatVariant;
+
 typedef struct ObjectRange {
     Object obj;
 
     union {
-        struct {
-            IntValue start;
-            IntValue end;
-            IntValue step;
-        } ir;
-        struct {
-            FloatValue start;
-            FloatValue end;
-            FloatValue step;
-        } fr;
+        ObjectRangeIntVariant ir;
+        ObjectRangeFloatVariant fr;
     } as;
-    bool isIntRange;
 } ObjectRange;
 
 static inline Value semiValueInlineRangeCreate(int32_t start, int32_t end) {
     return (Value){.header = VALUE_TYPE_INLINE_RANGE, .as = {.ir = {.start = start, .end = end}}};
 }
 
-ObjectRange* semiObjectRangeCreate(GC* gc, Value start, Value end, Value step);
+ObjectRange* semiObjectIntRangeCreate(GC* gc, IntValue start, IntValue end, IntValue step);
+ObjectRange* semiObjectFloatRangeCreate(GC* gc, FloatValue start, FloatValue end, FloatValue step);
 static inline void semiObjectRangeDestroy(GC* gc, ObjectRange* range) {
     semiFree(gc, range, sizeof(ObjectRange));
 }
 Value semiValueRangeCreate(GC* gc, Value start, Value end, Value step);
 ObjectRange* semiObjectRangeCopy(GC* gc, const ObjectRange* range);
+
 /*
  │ ObjectList
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/

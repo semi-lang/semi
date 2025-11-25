@@ -1165,27 +1165,29 @@ static ErrorId MAGIC_METHOD_SIGNATURE_NAME(STRING, getItem)(GC* gc, Value* ret, 
 static ErrorId MAGIC_METHOD_SIGNATURE_NAME(RANGE, eq)(GC* gc, Value* ret, Value* a, Value* b) {
     (void)gc;
 
-    bool result;
+    if (!(IS_RANGE(a) && IS_RANGE(b))) {
+        return SEMI_ERROR_UNEXPECTED_TYPE;
+    }
 
+    bool result;
     if (IS_INLINE_RANGE(a) && IS_INLINE_RANGE(b)) {
         InlineRange rangeA = AS_INLINE_RANGE(a);
         InlineRange rangeB = AS_INLINE_RANGE(b);
         result             = rangeA.start == rangeB.start && rangeA.end == rangeB.end;
-    } else if (IS_OBJECT_RANGE(a) && IS_OBJECT_RANGE(b)) {
+    } else if (IS_OBJECT_INT_RANGE(a) && IS_OBJECT_INT_RANGE(b)) {
         ObjectRange* rangeA = AS_OBJECT_RANGE(a);
         ObjectRange* rangeB = AS_OBJECT_RANGE(b);
-        if (rangeA->isIntRange != rangeB->isIntRange) {
-            result = false;
-        } else if (rangeA->isIntRange) {
-            result = rangeA->as.ir.start == rangeB->as.ir.start && rangeA->as.ir.end == rangeB->as.ir.end &&
-                     rangeA->as.ir.step == rangeB->as.ir.step;
-        } else {
-            result = fabs(rangeA->as.fr.start - rangeB->as.fr.start) < FLOAT_EPSILON &&
-                     fabs(rangeA->as.fr.end - rangeB->as.fr.end) < FLOAT_EPSILON &&
-                     fabs(rangeA->as.fr.step - rangeB->as.fr.step) < FLOAT_EPSILON;
-        }
+        result              = rangeA->as.ir.start == rangeB->as.ir.start && rangeA->as.ir.end == rangeB->as.ir.end &&
+                 rangeA->as.ir.step == rangeB->as.ir.step;
+    } else if (IS_OBJECT_FLOAT_RANGE(a) && IS_OBJECT_FLOAT_RANGE(b)) {
+        ObjectRange* rangeA = AS_OBJECT_RANGE(a);
+        ObjectRange* rangeB = AS_OBJECT_RANGE(b);
+        result              = fabs(rangeA->as.fr.start - rangeB->as.fr.start) < FLOAT_EPSILON &&
+                 fabs(rangeA->as.fr.end - rangeB->as.fr.end) < FLOAT_EPSILON &&
+                 fabs(rangeA->as.fr.step - rangeB->as.fr.step) < FLOAT_EPSILON;
+
     } else {
-        return SEMI_ERROR_UNEXPECTED_TYPE;
+        result = false;
     }
 
     *ret = semiValueBoolCreate(result);

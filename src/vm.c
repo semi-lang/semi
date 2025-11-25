@@ -506,20 +506,26 @@ static void runMainLoop(SemiVM* vm) {
                     v = semiConstantTableGet(&module->constantTable, k);
                 }
 
-                if (IS_FUNCTION_PROTO(&v)) {
-                    stack[a]                 = semiValueFunctionCreate(&vm->gc, AS_FUNCTION_PROTO(&v));
-                    ObjectFunction* function = AS_COMPILED_FUNCTION(&stack[a]);
-                    TRAP_ON_ERROR(vm, captureUpvalues(vm, stack, function), "Failed to capture upvalues for function");
-                } else if (IS_OBJECT_RANGE(&v)) {
-                    ObjectRange* objRange = semiObjectRangeCopy(&vm->gc, AS_OBJECT_RANGE(&v));
-                    if (!objRange) {
-                        TRAP_ON_ERROR(vm, SEMI_ERROR_MEMORY_ALLOCATION_FAILURE, "Failed to copy range object");
+                switch (VALUE_TYPE(&v)) {
+                    case VALUE_TYPE_OBJECT_INT_RANGE:
+                    case VALUE_TYPE_OBJECT_FLOAT_RANGE: {
+                        ObjectRange* objRange = semiObjectRangeCopy(&vm->gc, AS_OBJECT_RANGE(&v));
+                        if (!objRange) {
+                            TRAP_ON_ERROR(vm, SEMI_ERROR_MEMORY_ALLOCATION_FAILURE, "Failed to copy range object");
+                        }
+                        stack[a] = OBJECT_VALUE(objRange, VALUE_TYPE_OBJECT_INT_RANGE);
+                        break;
                     }
-                    stack[a] = OBJECT_VALUE(objRange, VALUE_TYPE_OBJECT_RANGE);
-                } else {
-                    stack[a] = v;
+                    case VALUE_TYPE_FUNCTION_PROTO: {
+                        stack[a]                 = semiValueFunctionCreate(&vm->gc, AS_FUNCTION_PROTO(&v));
+                        ObjectFunction* function = AS_COMPILED_FUNCTION(&stack[a]);
+                        TRAP_ON_ERROR(
+                            vm, captureUpvalues(vm, stack, function), "Failed to capture upvalues for function");
+                        break;
+                    }
+                    default:
+                        stack[a] = v;
                 }
-
                 break;
             }
 
@@ -612,26 +618,32 @@ static void runMainLoop(SemiVM* vm) {
                 bool canProceed = false;
                 Value nextValue;
 
-                if (IS_INLINE_RANGE(&stack[a])) {
-                    InlineRange range = AS_INLINE_RANGE(&stack[a]);
-                    canProceed        = (range.start < range.end);
-                    nextValue         = semiValueIntCreate(range.start);
-                    AS_INLINE_RANGE(&stack[a]).start += 1;
-                } else if (IS_OBJECT_RANGE(&stack[a])) {
-                    ObjectRange* range = AS_OBJECT_RANGE(&stack[a]);
-                    if (range->isIntRange) {
-                        canProceed = range->as.ir.step > 0 ? (range->as.ir.start < range->as.ir.end)
-                                                           : (range->as.ir.start > range->as.ir.end);
-                        nextValue  = semiValueIntCreate(range->as.ir.start);
+                switch (VALUE_TYPE(&stack[a])) {
+                    case VALUE_TYPE_INLINE_RANGE: {
+                        InlineRange range = AS_INLINE_RANGE(&stack[a]);
+                        canProceed        = (range.start < range.end);
+                        nextValue         = semiValueIntCreate(range.start);
+                        AS_INLINE_RANGE(&stack[a]).start += 1;
+                        break;
+                    }
+                    case VALUE_TYPE_OBJECT_INT_RANGE: {
+                        ObjectRange* range = AS_OBJECT_RANGE(&stack[a]);
+                        canProceed         = range->as.ir.step > 0 ? (range->as.ir.start < range->as.ir.end)
+                                                                   : (range->as.ir.start > range->as.ir.end);
+                        nextValue          = semiValueIntCreate(range->as.ir.start);
                         range->as.ir.start += range->as.ir.step;
-                    } else {
+                        break;
+                    }
+                    case VALUE_TYPE_OBJECT_FLOAT_RANGE: {
+                        ObjectRange* range = AS_OBJECT_RANGE(&stack[a]);
                         canProceed = range->as.fr.step > 0 ? (range->as.fr.end - range->as.fr.start > FLOAT_EPSILON)
                                                            : (range->as.fr.start - range->as.fr.end > FLOAT_EPSILON);
                         nextValue  = semiValueFloatCreate(range->as.fr.start);
                         range->as.fr.start += range->as.fr.step;
+                        break;
                     }
-                } else {
-                    TRAP_ON_ERROR(vm, SEMI_ERROR_UNEXPECTED_TYPE, "Range next called on non-range value");
+                    default:
+                        TRAP_ON_ERROR(vm, SEMI_ERROR_UNEXPECTED_TYPE, "Range next called on non-range value");
                 }
 
                 if (canProceed & i) {

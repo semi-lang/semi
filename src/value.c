@@ -79,26 +79,25 @@ Value semiValueStringCreate(GC* gc, const char* text, size_t length) {
 ─┴───────────────────────────────────────────────────────────────────────────────────────────────*/
 #pragma region
 
-// Create ObjectRange. `start`, `end`, and `step` must be NUMBER values. `step` must not be zero.
-// If one of the values is FLOAT, all values are converted to FLOAT.
-ObjectRange* semiObjectRangeCreate(GC* gc, Value start, Value end, Value step) {
+// Create ObjectRange From IntValue. `step` must be non-zero.
+ObjectRange* semiObjectIntRangeCreate(GC* gc, IntValue start, IntValue end, IntValue step) {
     ObjectRange* o = (ObjectRange*)newObject(gc, OBJECT_TYPE_RANGE, sizeof(ObjectRange));
     if (!o) {
         return NULL;  // Allocation failed
     }
 
-    bool floatValues = (IS_FLOAT(&start) || IS_FLOAT(&end) || IS_FLOAT(&step));
-    if (floatValues) {
-        o->isIntRange  = false;
-        o->as.fr.start = IS_FLOAT(&start) ? AS_FLOAT(&start) : (FloatValue)AS_INT(&start);
-        o->as.fr.end   = IS_FLOAT(&end) ? AS_FLOAT(&end) : (FloatValue)AS_INT(&end);
-        o->as.fr.step  = IS_FLOAT(&step) ? AS_FLOAT(&step) : (FloatValue)AS_INT(&step);
-    } else {
-        o->isIntRange  = true;
-        o->as.ir.start = AS_INT(&start);
-        o->as.ir.end   = AS_INT(&end);
-        o->as.ir.step  = AS_INT(&step);
+    o->as.ir = (ObjectRangeIntVariant){.start = start, .end = end, .step = step};
+    return o;
+}
+
+// Create ObjectRange From FloatValue. `step` must be non-zero.
+ObjectRange* semiObjectFloatRangeCreate(GC* gc, FloatValue start, FloatValue end, FloatValue step) {
+    ObjectRange* o = (ObjectRange*)newObject(gc, OBJECT_TYPE_RANGE, sizeof(ObjectRange));
+    if (!o) {
+        return NULL;  // Allocation failed
     }
+
+    o->as.fr = (ObjectRangeFloatVariant){.start = start, .end = end, .step = step};
     return o;
 }
 
@@ -109,13 +108,16 @@ ObjectRange* semiObjectRangeCopy(GC* gc, const ObjectRange* src) {
     }
 
     memcpy(&o->as, &src->as, sizeof(src->as));
-    o->isIntRange = src->isIntRange;
     return o;
 }
 
 // Creates either an InlineRange or ObjectRange based on the values provided.
 // `start`, `end`, and `step` must be NUMBER values. `step` must not be zero.
 Value semiValueRangeCreate(GC* gc, Value start, Value end, Value step) {
+    if (!IS_NUMBER(&start) || !IS_NUMBER(&end) || !IS_NUMBER(&step)) {
+        return INVALID_VALUE;
+    }
+
     bool stepIsOne    = (IS_INT(&step) && AS_INT(&step) == 1);
     bool satrtIsInt32 = IS_INT(&start) && AS_INT(&start) >= INT32_MIN && AS_INT(&start) <= INT32_MAX;
     bool endIsInt32   = IS_INT(&end) && AS_INT(&end) >= INT32_MIN && AS_INT(&end) <= INT32_MAX;
@@ -124,8 +126,21 @@ Value semiValueRangeCreate(GC* gc, Value start, Value end, Value step) {
         return semiValueInlineRangeCreate((int32_t)start.as.i, (int32_t)end.as.i);
     }
 
-    ObjectRange* o = semiObjectRangeCreate(gc, start, end, step);
-    return o ? (Value){.header = VALUE_TYPE_OBJECT_RANGE, .as.obj = (Object*)o} : INVALID_VALUE;
+    ObjectRange* o = semiObjectIntRangeCreate(gc, start.as.i, end.as.i, step.as.i);
+    if (!o) {
+        return INVALID_VALUE;
+    }
+
+    if (IS_FLOAT(&start) || IS_FLOAT(&end) || IS_FLOAT(&step)) {
+        o->as.fr = (ObjectRangeFloatVariant){
+            .start = IS_FLOAT(&start) ? AS_FLOAT(&start) : (FloatValue)AS_INT(&start),
+            .end   = IS_FLOAT(&end) ? AS_FLOAT(&end) : (FloatValue)AS_INT(&end),
+            .step  = IS_FLOAT(&step) ? AS_FLOAT(&step) : (FloatValue)AS_INT(&step),
+        };
+        return OBJECT_VALUE(o, VALUE_TYPE_OBJECT_FLOAT_RANGE);
+    } else {
+        return OBJECT_VALUE(o, VALUE_TYPE_OBJECT_INT_RANGE);
+    }
 }
 
 #pragma endregion

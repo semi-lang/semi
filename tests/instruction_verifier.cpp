@@ -1191,7 +1191,7 @@ void Verifier::verifyConstantString(const Value* value, const ParsedConstant& co
 
 void Verifier::verifyConstantRange(const Value* value, const ParsedConstant& constant) {
     // Verify Range constants (both InlineRange and ObjectRange)
-    if (!IS_INLINE_RANGE(value) && !IS_OBJECT_RANGE(value)) {
+    if (!IS_INLINE_RANGE(value) && !IS_OBJECT_INT_RANGE(value) && !IS_OBJECT_FLOAT_RANGE(value)) {
         ADD_FAILURE() << "Type mismatch at [Constants].(" << constant.index << "):\n"
                       << "  Expected: Range\n"
                       << "  Actual:   (not a Range)";
@@ -1210,17 +1210,16 @@ void Verifier::verifyConstantRange(const Value* value, const ParsedConstant& con
         actualStart       = range.start;
         actualEnd         = range.end;
         actualStep        = 1;  // InlineRange always has step=1
-    } else {
+    } else if (IS_OBJECT_INT_RANGE(value)) {
         ObjectRange* range = AS_OBJECT_RANGE(value);
-        if (!range->isIntRange) {
-            ADD_FAILURE() << "Type mismatch at [Constants].(" << constant.index << "):\n"
-                          << "  Expected: Range (integer)\n"
-                          << "  Actual:   Range (float)";
-            return;
-        }
-        actualStart = range->as.ir.start;
-        actualEnd   = range->as.ir.end;
-        actualStep  = range->as.ir.step;
+        actualStart        = range->as.ir.start;
+        actualEnd          = range->as.ir.end;
+        actualStep         = range->as.ir.step;
+    } else {
+        ADD_FAILURE() << "Type mismatch at [Constants].(" << constant.index << "):\n"
+                      << "  Expected: Range (integer)\n"
+                      << "  Actual:   Range (float)";
+        return;
     }
 
     // Verify start
